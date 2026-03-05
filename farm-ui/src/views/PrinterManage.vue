@@ -172,73 +172,135 @@
     <el-dialog 
       v-model="scanDialogVisible" 
       title="扫描局域网设备" 
-      width="560px"
+      width="800px"
       class="scan-dialog"
       destroy-on-close
     >
-      <div class="scan-intro">
-        <el-alert
-          title="系统将自动扫描指定网段内的 Klipper 打印机"
-          type="info"
-          :closable="false"
-          show-icon
-        />
+      <!-- 扫描输入区 -->
+      <div class="scan-input-section">
+        <el-form label-width="90px" class="scan-form">
+          <el-form-item label="网段前缀">
+            <el-input 
+              v-model="subnet" 
+              placeholder="例：192.168.1" 
+              size="default"
+              :disabled="isScanning"
+            >
+              <template #append>
+                <el-button 
+                  type="primary" 
+                  @click="handleScan" 
+                  :loading="isScanning"
+                >
+                  <el-icon><search /></el-icon>
+                  {{ isScanning ? '扫描中...' : '开始扫描' }}
+                </el-button>
+              </template>
+            </el-input>
+          </el-form-item>
+        </el-form>
       </div>
-      
-      <el-form label-width="100px" class="scan-form">
-        <el-form-item label="网段前缀">
-          <el-input 
-            v-model="subnet" 
-            placeholder="例：192.168.1" 
-            size="large"
-          >
-            <template #append>
-              <el-button type="primary" @click="handleScan" :loading="isScanning">
-                <el-icon><search /></el-icon>
-                开始扫描
-              </el-button>
-            </template>
-          </el-input>
-        </el-form-item>
-      </el-form>
 
-      <div v-if="scanResults.length > 0" class="scan-results">
-        <div class="results-header">
-          <h4>发现新设备 ({{ scanResults.length }}台)</h4>
-          <el-tag type="success" effect="dark" size="small">待入库</el-tag>
+      <!-- 加载状态 -->
+      <div v-if="isScanning" class="scan-loading">
+        <el-skeleton :rows="5" animated />
+        <p class="loading-text">正在扫描局域网设备，请稍候...</p>
+      </div>
+
+      <!-- 扫描结果表格 -->
+      <div v-else-if="scanResults.length > 0" class="scan-results-section">
+        <!-- 统计文案 -->
+        <div class="scan-stats">
+          <el-alert
+            :title="scanStatsText"
+            type="info"
+            :closable="false"
+            show-icon
+          />
         </div>
-        <div class="results-list">
-          <el-tag 
-            v-for="ip in scanResults" 
-            :key="ip" 
-            type="success" 
-            effect="plain"
-            size="large"
-            class="result-tag"
-          >
-            <el-icon><printer /></el-icon>
-            {{ ip }}
-          </el-tag>
-        </div>
+
+        <!-- 结果表格 -->
+        <el-table
+          ref="scanTableRef"
+          :data="scanResults"
+          style="width: 100%"
+          class="scan-results-table"
+          :header-cell-style="{ background: 'var(--ep-color-gray-1)' }"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="50" align="center" />
+          
+          <el-table-column label="状态" width="120" align="center">
+            <template #default="scope">
+              <el-tag 
+                :type="scope.row.isNewDevice ? 'success' : 'primary'"
+                effect="light"
+                size="small"
+              >
+                {{ scope.row.isNewDevice ? '全新设备' : '已知设备' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="MAC 地址" width="140" align="center">
+            <template #default="scope">
+              <span class="mac-address">{{ scope.row.macAddress }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="IP 地址" width="130" align="center">
+            <template #default="scope">
+              <el-tag size="small" effect="plain" type="info">
+                {{ scope.row.ipAddress }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="机器名称" min-width="150">
+            <template #default="scope">
+              <el-input
+                v-model="scope.row.name"
+                size="small"
+                placeholder="请输入机器名称"
+              >
+                <template #prefix>
+                  <el-icon><printer /></el-icon>
+                </template>
+              </el-input>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="建议名称" width="120" align="center">
+            <template #default="scope">
+              <span class="suggested-name">{{ scope.row.suggestedName }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
       
+      <!-- 空状态 -->
       <el-empty 
-        v-else-if="hasScanned" 
-        description="该网段未发现新设备"
+        v-else-if="hasScanned && !isScanning" 
+        description="该网段未发现设备"
         :image-size="80"
-      />
+      >
+        <template #description>
+          <p>该网段未发现设备</p>
+          <p class="empty-tip">请检查网段是否正确或设备是否在线</p>
+        </template>
+      </el-empty>
 
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="scanDialogVisible = false">关闭</el-button>
           <el-button 
             type="success" 
-            :disabled="scanResults.length === 0" 
+            :disabled="selectedDevices.length === 0" 
             @click="handleBatchAdd"
             :loading="isBatchAdding"
           >
             <el-icon><folder-add /></el-icon>
-            一键批量入库
+            批量导入/同步 ({{ selectedDevices.length }})
           </el-button>
         </div>
       </template>
@@ -247,7 +309,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { 
   Refresh, 
   Aim, 
@@ -307,6 +369,16 @@ const isScanning = ref(false)
 const hasScanned = ref(false)
 const scanResults = ref([])
 const isBatchAdding = ref(false)
+const selectedDevices = ref([])
+const scanTableRef = ref(null)
+
+// 扫描统计文案
+const scanStatsText = computed(() => {
+  const total = scanResults.value.length
+  const newCount = scanResults.value.filter(d => d.isNewDevice).length
+  const existingCount = total - newCount
+  return `共扫描到 ${total} 台设备，其中 ${newCount} 台新设备，${existingCount} 台已知设备`
+})
 
 // 获取状态对应颜色
 const getStatusColor = (status) => {
@@ -411,8 +483,14 @@ const handleDelete = async (id) => {
 // ===== 局域网扫描逻辑 =====
 const openScanDialog = () => {
   scanResults.value = []
+  selectedDevices.value = []
   hasScanned.value = false
   scanDialogVisible.value = true
+}
+
+// 表格多选变化
+const handleSelectionChange = (selection) => {
+  selectedDevices.value = selection
 }
 
 const handleScan = async () => {
@@ -422,9 +500,14 @@ const handleScan = async () => {
   }
   isScanning.value = true
   hasScanned.value = false
+  selectedDevices.value = []
   try {
     const res = await scanPrinters(subnet.value)
-    scanResults.value = res.data || []
+    // 为每个设备添加 name 字段（默认使用 suggestedName）
+    scanResults.value = (res.data || []).map(device => ({
+      ...device,
+      name: device.suggestedName || ''
+    }))
     hasScanned.value = true
   } catch {
     // 拦截器处理错误
@@ -434,15 +517,27 @@ const handleScan = async () => {
 }
 
 const handleBatchAdd = async () => {
-  if (scanResults.value.length === 0) return
+  if (selectedDevices.value.length === 0) return
+  
+  // 构造符合新 API 契约的请求体
+  const devicesToSubmit = selectedDevices.value.map(device => ({
+    ipAddress: device.ipAddress,
+    macAddress: device.macAddress,
+    name: device.name || device.suggestedName
+  }))
+  
   isBatchAdding.value = true
   try {
-    await batchAddPrinters(scanResults.value)
-    ElMessage.success('批量入库成功！')
+    const res = await batchAddPrinters(devicesToSubmit)
+    // 解析后端返回的 message
+    const message = res.message || res.data?.message || '批量处理完成'
+    ElMessage.success(message)
     scanDialogVisible.value = false
-    fetchData()
-  } catch {
-    // 拦截器处理
+    fetchData() // 刷新设备列表
+  } catch (error) {
+    // 拦截器会处理错误，但如果有特定错误信息可以在这里显示
+    const errorMsg = error.response?.data?.message || '批量处理失败'
+    ElMessage.error(errorMsg)
   } finally {
     isBatchAdding.value = false
   }
@@ -550,7 +645,64 @@ onMounted(() => {
   gap: var(--ep-space-3);
 }
 
-/* Scan Dialog Specific */
+/* Scan Dialog Specific Styles */
+.scan-input-section {
+  margin-bottom: var(--ep-space-4);
+}
+
+.scan-loading {
+  padding: var(--ep-space-6) 0;
+  text-align: center;
+}
+
+.loading-text {
+  margin-top: var(--ep-space-4);
+  color: var(--el-text-color-secondary);
+  font-size: var(--el-font-size-small);
+}
+
+.scan-stats {
+  margin-bottom: var(--ep-space-4);
+}
+
+.scan-results-section {
+  background: var(--ep-color-white);
+  border-radius: var(--ep-border-radius-medium);
+}
+
+/* MAC 地址等宽字体 */
+.mac-address {
+  font-family: 'Courier New', 'Monaco', monospace;
+  font-size: var(--el-font-size-small);
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+  letter-spacing: 0.5px;
+}
+
+/* 建议名称 */
+.suggested-name {
+  font-size: var(--el-font-size-small);
+  color: var(--el-text-color-secondary);
+}
+
+/* 空状态提示 */
+.empty-tip {
+  font-size: var(--el-font-size-small);
+  color: var(--el-text-color-placeholder);
+  margin-top: var(--ep-space-2);
+}
+
+/* 扫描结果表格优化 */
+.scan-results-table :deep(.el-input__wrapper) {
+  padding: 0 8px;
+}
+
+.scan-results-table :deep(.el-input__inner) {
+  height: 28px;
+  font-size: var(--el-font-size-small);
+}
+
+/* 旧样式兼容 - 可删除 */
 .scan-intro {
   margin-bottom: var(--ep-space-5);
 }

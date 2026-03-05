@@ -31,7 +31,8 @@ export function deletePrinter(id) {
   })
 }
 
-// 🚀 新增：扫描局域网设备
+// 🚀 扫描局域网设备（新契约）
+// 返回: [{ ipAddress, macAddress, isNewDevice, status, suggestedName }]
 export function scanPrinters(subnet) {
   return request({
     url: '/api/v1/printers/scan',
@@ -40,11 +41,12 @@ export function scanPrinters(subnet) {
   })
 }
 
-// 🚀 新增：批量添加设备
-export function batchAddPrinters(ips) {
+// 🚀 批量添加/同步设备（新契约）
+// 请求体: [{ ipAddress, macAddress, name }]
+export function batchAddPrinters(devices) {
   return request({
     url: '/api/v1/printers/batch-add',
     method: 'post',
-    data: ips // 直接传入 IP 数组
+    data: devices // 传入设备对象数组
   })
 }
