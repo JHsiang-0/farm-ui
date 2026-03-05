@@ -50,3 +50,31 @@ export function batchAddPrinters(devices) {
     data: devices // 传入设备对象数组
   })
 }
+
+// ============================================
+// 数字孪生看板 - 设备位置管理 API
+// ============================================
+
+/**
+ * 获取未分配位置的设备列表
+ * @returns {Promise} 返回未分配设备的数组
+ */
+export function getUnallocatedPrinters() {
+  return request({
+    url: '/api/v1/printers/unallocated',
+    method: 'get'
+  })
+}
+
+/**
+ * 批量更新设备位置（绑定/解绑/移动）
+ * @param {Array} positions - 位置更新数组，格式: [{ id, gridRow, gridCol }]
+ * @returns {Promise}
+ */
+export function batchUpdatePositions(positions) {
+  return request({
+    url: '/api/v1/printers/positions',
+    method: 'put',
+    data: positions
+  })
+}
