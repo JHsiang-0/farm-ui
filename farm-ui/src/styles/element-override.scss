@@ -1,0 +1,501 @@
+/* ============================================
+   Element Plus Component Overrides
+   企业级组件样式覆盖 - 使用 CSS 变量
+   ============================================ */
+
+/* ============================================
+   Global Reset & Base
+   ============================================ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--el-font-family);
+  font-size: var(--el-font-size-base);
+  line-height: 1.5;
+  color: var(--el-text-color-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   Button - 按钮样式优化
+   ============================================ */
+.el-button {
+  font-weight: 500;
+  border-radius: var(--el-border-radius-base);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 默认按钮 */
+.el-button:not(.is-plain):not(.is-text) {
+  box-shadow: var(--ep-box-shadow-light);
+}
+
+.el-button:not(.is-plain):not(.is-text):hover {
+  box-shadow: var(--ep-box-shadow-base);
+  transform: translateY(-1px);
+}
+
+.el-button:not(.is-plain):not(.is-text):active {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+/* 主要按钮 */
+.el-button--primary {
+  background: linear-gradient(135deg, var(--ep-color-primary) 0%, var(--ep-color-primary-dark-1) 100%);
+  border-color: transparent;
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: linear-gradient(135deg, var(--ep-color-primary-light-1) 0%, var(--ep-color-primary) 100%);
+  border-color: transparent;
+}
+
+.el-button--primary.is-plain {
+  background: var(--ep-color-primary-light-6);
+  border-color: var(--ep-color-primary-light-2);
+  color: var(--ep-color-primary);
+}
+
+.el-button--primary.is-plain:hover {
+  background: var(--ep-color-primary);
+  border-color: var(--ep-color-primary);
+  color: var(--ep-color-white);
+}
+
+/* 大尺寸按钮 */
+.el-button--large {
+  padding: 12px 24px;
+  font-size: var(--el-font-size-medium);
+  border-radius: var(--ep-border-radius-medium);
+}
+
+/* 圆形按钮 */
+.el-button.is-circle {
+  box-shadow: var(--ep-box-shadow-base);
+}
+
+/* ============================================
+   Input - 输入框样式优化
+   ============================================ */
+.el-input__wrapper {
+  border-radius: var(--el-border-radius-base);
+  box-shadow: 0 0 0 1px var(--el-border-color) inset;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 1px 12px;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--ep-color-gray-4) inset;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ep-box-shadow-primary);
+}
+
+.el-input__inner {
+  height: 40px;
+  font-size: var(--el-font-size-base);
+}
+
+.el-input__inner::placeholder {
+  color: var(--el-text-color-placeholder);
+  font-weight: 400;
+}
+
+/* 前缀/后缀图标 */
+.el-input__prefix,
+.el-input__suffix {
+  color: var(--ep-color-gray-5);
+}
+
+/* 大尺寸输入框 */
+.el-input--large .el-input__wrapper {
+  padding: 1px 16px;
+}
+
+.el-input--large .el-input__inner {
+  height: 48px;
+  font-size: var(--el-font-size-medium);
+}
+
+/* Textarea */
+.el-textarea__inner {
+  border-radius: var(--el-border-radius-base);
+  padding: 12px;
+  min-height: 80px;
+}
+
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--ep-color-gray-4) inset;
+}
+
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ep-box-shadow-primary);
+}
+
+/* ============================================
+   Card - 卡片样式优化
+   ============================================ */
+.el-card {
+  border-radius: var(--ep-border-radius-medium);
+  border: none;
+  box-shadow: var(--ep-box-shadow-base);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.el-card:hover {
+  box-shadow: var(--ep-box-shadow-medium);
+}
+
+.el-card__header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--el-border-color-light);
+  font-weight: 600;
+  font-size: var(--el-font-size-large);
+  color: var(--el-text-color-primary);
+}
+
+.el-card__body {
+  padding: 24px;
+}
+
+/* 无边框卡片 */
+.el-card.is-always-shadow {
+  box-shadow: var(--ep-box-shadow-medium);
+}
+
+/* ============================================
+   Form - 表单样式优化
+   ============================================ */
+.el-form-item {
+  margin-bottom: 20px;
+}
+
+.el-form-item__label {
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+  padding-bottom: 8px;
+  line-height: 1.25;
+}
+
+.el-form-item__error {
+  padding-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.el-form-item.is-required .el-form-item__label::before {
+  font-weight: 700;
+}
+
+/* 行内表单 */
+.el-form--inline .el-form-item {
+  margin-right: 24px;
+}
+
+/* ============================================
+   Table - 表格样式优化
+   ============================================ */
+.el-table {
+  border-radius: var(--ep-border-radius-medium);
+  overflow: hidden;
+  box-shadow: var(--ep-box-shadow-light);
+}
+
+.el-table thead th {
+  background-color: var(--ep-color-gray-1);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px;
+}
+
+.el-table thead th .cell {
+  line-height: 1.25;
+}
+
+.el-table tbody td {
+  padding: 16px;
+  color: var(--el-text-color-regular);
+  font-size: var(--el-font-size-base);
+}
+
+.el-table tbody td .cell {
+  line-height: 1.5;
+}
+
+.el-table tbody tr {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.el-table tbody tr:hover {
+  background-color: var(--ep-color-gray-2);
+}
+
+/* 斑马纹 */
+.el-table--striped tbody tr:nth-child(even) {
+  background-color: var(--ep-color-gray-1);
+}
+
+.el-table--striped tbody tr:nth-child(even):hover {
+  background-color: var(--ep-color-gray-2);
+}
+
+/* ============================================
+   Checkbox & Radio - 选择框样式优化
+   ============================================ */
+.el-checkbox__input .el-checkbox__inner {
+  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+}
+
+.el-checkbox__input .el-checkbox__inner::after {
+  left: 6px;
+  top: 3px;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.el-checkbox__label {
+  font-size: var(--el-font-size-base);
+  padding-left: 8px;
+}
+
+.el-radio__input .el-radio__inner {
+  width: 18px;
+  height: 18px;
+}
+
+.el-radio__input .el-radio__inner::after {
+  width: 8px;
+  height: 8px;
+}
+
+.el-radio__label {
+  font-size: var(--el-font-size-base);
+  padding-left: 8px;
+}
+
+/* ============================================
+   Select - 下拉选择样式优化
+   ============================================ */
+.el-select .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ep-box-shadow-primary);
+}
+
+.el-select-dropdown {
+  border-radius: var(--ep-border-radius-medium);
+  box-shadow: var(--ep-box-shadow-medium);
+  padding: 8px 0;
+}
+
+.el-select-dropdown__item {
+  padding: 0 16px;
+  height: 40px;
+  line-height: 40px;
+  font-size: var(--el-font-size-base);
+}
+
+.el-select-dropdown__item.selected {
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.el-select-dropdown__item:hover {
+  background-color: var(--ep-color-gray-1);
+}
+
+/* ============================================
+   Dialog - 对话框样式优化
+   ============================================ */
+.el-dialog {
+  border-radius: var(--ep-border-radius-large);
+  box-shadow: var(--ep-box-shadow-heavy);
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 24px;
+  border-bottom: 1px solid var(--el-border-color-light);
+  margin-right: 0;
+}
+
+.el-dialog__title {
+  font-size: var(--el-font-size-large);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.el-dialog__body {
+  padding: 24px;
+  color: var(--el-text-color-regular);
+  font-size: var(--el-font-size-base);
+  line-height: 1.75;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--el-border-color-light);
+}
+
+/* ============================================
+   Message - 消息提示样式优化
+   ============================================ */
+.el-message {
+  border-radius: var(--ep-border-radius-medium);
+  box-shadow: var(--ep-box-shadow-medium);
+  padding: 16px 20px;
+  min-width: 280px;
+}
+
+.el-message--success {
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.el-message--success .el-message__content {
+  color: var(--ep-color-success);
+}
+
+.el-message--error {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.el-message--error .el-message__content {
+  color: var(--ep-color-danger);
+}
+
+.el-message--warning {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.el-message--warning .el-message__content {
+  color: var(--ep-color-warning);
+}
+
+/* ============================================
+   Pagination - 分页样式优化
+   ============================================ */
+.el-pagination .el-pager li {
+  border-radius: 4px;
+  font-weight: 500;
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+}
+
+.el-pagination .el-pager li.active {
+  background-color: var(--el-color-primary);
+  color: var(--ep-color-white);
+}
+
+.el-pagination .el-pager li:hover {
+  color: var(--el-color-primary);
+}
+
+.el-pagination .btn-prev,
+.el-pagination .btn-next {
+  border-radius: 4px;
+  min-width: 36px;
+  height: 36px;
+}
+
+/* ============================================
+   Tag - 标签样式优化
+   ============================================ */
+.el-tag {
+  border-radius: 20px;
+  padding: 0 12px;
+  height: 28px;
+  line-height: 26px;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.el-tag--primary {
+  background-color: var(--ep-color-primary-light-6);
+  border-color: var(--ep-color-primary-light-3);
+  color: var(--ep-color-primary-dark-1);
+}
+
+.el-tag--success {
+  background-color: #d1fae5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.el-tag--warning {
+  background-color: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.el-tag--danger {
+  background-color: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+/* ============================================
+   Divider - 分割线样式优化
+   ============================================ */
+.el-divider {
+  margin: 24px 0;
+}
+
+.el-divider__text {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  font-weight: 500;
+  padding: 0 16px;
+}
+
+/* ============================================
+   Link - 链接样式优化
+   ============================================ */
+.el-link {
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.el-link.el-link--primary:hover {
+  color: var(--ep-color-primary-light-1);
+}
+
+/* ============================================
+   Tabs - 标签页样式优化
+   ============================================ */
+.el-tabs__nav-wrap::after {
+  height: 1px;
+  background-color: var(--el-border-color-light);
+}
+
+.el-tabs__item {
+  font-weight: 500;
+  font-size: var(--el-font-size-base);
+  padding: 0 16px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.el-tabs__item.is-active {
+  font-weight: 600;
+}
+
+.el-tabs__active-bar {
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
