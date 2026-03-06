@@ -1,49 +1,17 @@
 <template>
   <div class="farm-dashboard">
     <!-- 顶部标题和统计 -->
-    <div class="dashboard-header">
-      <div class="header-left">
-        <h2 class="dashboard-title">
-          <el-icon :size="24"><office-building /></el-icon>
-          3楼车间
-        </h2>
-        <div class="stats-bar">
-          <el-tag type="success" effect="dark" size="small">
-            <el-icon><circle-check /></el-icon>
-            在线: {{ statusCounts.ONLINE }}
-          </el-tag>
-          <el-tag type="primary" effect="dark" size="small">
-            <el-icon><printer /></el-icon>
-            打印中: {{ statusCounts.PRINTING }}
-          </el-tag>
-          <el-tag type="info" effect="dark" size="small">
-            <el-icon><timer /></el-icon>
-            空闲: {{ statusCounts.IDLE }}
-          </el-tag>
-          <el-tag type="danger" effect="dark" size="small">
-            <el-icon><circle-close /></el-icon>
-            离线: {{ statusCounts.OFFLINE }}
-          </el-tag>
-          <el-tag type="warning" effect="dark" size="small">
-            <el-icon><warning /></el-icon>
-            故障: {{ statusCounts.ERROR }}
-          </el-tag>
-        </div>
-      </div>
-      <div class="header-right">
-        <el-button type="primary" plain size="small" @click="handleRefresh">
-          <el-icon><refresh /></el-icon>
-          刷新状态
-        </el-button>
-      </div>
-    </div>
+    <dashboard-header
+      :status-counts="statusCounts"
+      @refresh="handleRefresh"
+    />
 
     <!-- 厂房网格布局 - 4行13列（含过道） -->
     <div class="factory-grid">
       <!-- 行标签 -->
       <div class="row-labels">
         <div v-for="row in GRID_CONFIG.ROWS" :key="`label-${row}`" class="row-label">
-          {{ String.fromCharCode(64 + row) }}排
+          {{ formatRowLabel(row) }}排
         </div>
       </div>
 
@@ -68,117 +36,41 @@
             <template v-for="(cell, colIndex) in row" :key="`cell-${rowIndex}-${colIndex}`">
               <!-- 过道占位 -->
               <div
-                v-if="colIndex === GRID_CONFIG.AISLE_COL_INDEX"
+                v-if="isAisleCell(colIndex)"
                 class="aisle-cell"
               >
                 <div class="aisle-indicator"></div>
               </div>
 
               <!-- 空槽位（可点击绑定设备） -->
-              <div
+              <empty-slot
                 v-else-if="cell === null"
-                class="empty-slot"
-                :class="{ 'drag-over': dragOverCell && dragOverCell.row === rowIndex && dragOverCell.col === colIndex }"
-                :data-row="rowIndex"
-                :data-col="colIndex"
+                :row-index="rowIndex"
+                :col-index="colIndex"
+                :is-drag-over="isDragOver(rowIndex, colIndex)"
                 @click="handleEmptySlotClick(rowIndex, colIndex)"
-                @dragover.prevent
-                @dragenter.prevent="handleDragEnter(rowIndex, colIndex)"
+                @dragenter="handleDragEnter(rowIndex, colIndex)"
                 @dragleave="handleDragLeave"
                 @drop="handleDrop(rowIndex, colIndex)"
-              >
-                <el-icon :size="20"><box /></el-icon>
-                <span class="slot-text">暂无设备</span>
-                <span class="slot-coord">{{ formatCoordinate(rowIndex + 1, getPhysicalColByIndex(colIndex)) }}</span>
-              </div>
+              />
 
-              <!-- 设备卡片（可拖动） -->
-              <el-card
+              <!-- 设备卡片 -->
+              <printer-card
                 v-else
-                class="device-card"
-                :class="[`status-${cell.status?.toLowerCase()}`, { 'dragging': draggedDevice && draggedDevice.id === cell.id }]"
-                shadow="hover"
-                draggable="true"
-                :data-device-id="cell.id"
-                :data-row="rowIndex"
-                :data-col="colIndex"
-                @dragstart="handleDragStart(cell, rowIndex, colIndex)"
+                :device="cell"
+                :row-index="rowIndex"
+                :col-index="colIndex"
+                :is-dragging="isDragging(cell)"
+                @dragstart="handleDragStart"
                 @dragend="handleDragEnd"
-                @dragover.prevent
-                @dragenter.prevent="handleDragEnter(rowIndex, colIndex)"
+                @dragenter="handleDragEnter"
                 @dragleave="handleDragLeave"
-                @drop="handleDrop(rowIndex, colIndex)"
-              >
-                <!-- 卡片头部：机器编号和状态 -->
-                <div class="card-header">
-                  <span class="machine-number">{{ cell.machineNumber || '-' }}</span>
-                  <div class="status-wrapper">
-                    <el-tag :type="getStatusType(cell.status)" size="small" effect="plain">
-                      {{ getStatusLabel(cell.status) }}
-                    </el-tag>
-                    <div class="status-dot" :class="cell.status?.toLowerCase()"></div>
-                  </div>
-                </div>
-
-                <!-- 卡片内容区 -->
-                <div class="card-content">
-                  <div class="info-row">
-                    <el-icon :size="12"><connection /></el-icon>
-                    <span class="info-text" :title="cell.ipAddress">{{ cell.ipAddress || '-' }}</span>
-                  </div>
-                  <div class="info-row">
-                    <el-icon :size="12"><coin /></el-icon>
-                    <span class="info-text" :title="cell.currentMaterial">{{ cell.currentMaterial || '无耗材' }}</span>
-                  </div>
-                  <div class="info-row">
-                    <el-icon :size="12"><tools /></el-icon>
-                    <span class="info-text">喷头: {{ cell.nozzleSize ? cell.nozzleSize + 'mm' : '-' }}</span>
-                  </div>
-                  <div v-if="cell.currentJobId" class="info-row job-info">
-                    <el-icon :size="12"><document /></el-icon>
-                    <span class="info-text">任务 #{{ cell.currentJobId }}</span>
-                  </div>
-                </div>
-
-                <!-- 底部操作区 -->
-                <div class="card-actions">
-                  <el-button-group size="small">
-                    <el-button type="primary" plain @click="handleDetail(cell)">
-                      <el-icon><zoom-in /></el-icon>
-                    </el-button>
-                    <el-button
-                      v-if="cell.status === 'ONLINE'"
-                      type="success"
-                      plain
-                      @click="handleStart(cell)"
-                    >
-                      <el-icon><video-play /></el-icon>
-                    </el-button>
-                    <el-button
-                      v-if="cell.status === 'PRINTING'"
-                      type="warning"
-                      plain
-                      @click="handlePause(cell)"
-                    >
-                      <el-icon><video-pause /></el-icon>
-                    </el-button>
-                    <!-- 移除设备按钮（带二次确认） -->
-                    <el-popconfirm
-                      title="确定要将此设备从当前物理位置移除吗？"
-                      confirm-button-text="确认"
-                      cancel-button-text="取消"
-                      confirm-button-type="danger"
-                      @confirm="handleRemove(cell)"
-                    >
-                      <template #reference>
-                        <el-button type="danger" plain>
-                          <el-icon><delete /></el-icon>
-                        </el-button>
-                      </template>
-                    </el-popconfirm>
-                  </el-button-group>
-                </div>
-              </el-card>
+                @drop="handleDrop"
+                @detail="handleDetail"
+                @start="handleStart"
+                @pause="handlePause"
+                @remove="handleRemove"
+              />
             </template>
           </template>
         </div>
@@ -186,82 +78,26 @@
     </div>
 
     <!-- 绑定设备弹窗 -->
-    <el-dialog
-      v-model="bindDialogVisible"
-      :title="`绑定设备至 ${targetSlotLabel}`"
-      width="700px"
-      destroy-on-close
-      :close-on-click-modal="false"
-    >
-      <!-- 搜索框 -->
-      <div class="search-bar">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="请输入 IP 或机器编号搜索"
-          clearable
-          prefix-icon="Search"
-          @input="handleSearch"
-        />
-      </div>
-
-      <!-- 未分配设备列表 -->
-      <el-table
-        v-loading="unallocatedLoading"
-        :data="filteredUnallocatedList"
-        height="400"
-        style="width: 100%"
-        @row-click="handleRowClick"
-      >
-        <el-table-column prop="machineNumber" label="机器编号" width="120">
-          <template #default="{ row }">
-            {{ row.machineNumber || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="ipAddress" label="IP地址" width="125" />
-        <el-table-column prop="macAddress" label="MAC地址" width="145" />
-        <el-table-column prop="name" label="设备名称" width="130" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="85">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 空状态提示 -->
-      <el-empty v-if="!unallocatedLoading && filteredUnallocatedList.length === 0" description="暂无可绑定的设备" />
-    </el-dialog>
+    <bind-device-dialog
+      v-model:visible="bindDialogVisible"
+      :target-slot-label="targetSlotLabel"
+      @confirm="performBind"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  OfficeBuilding,
-  CircleCheck,
-  Printer,
-  Timer,
-  CircleClose,
-  Warning,
-  Refresh,
-  Box,
-  Connection,
-  Coin,
-  Tools,
-  Document,
-  VideoPlay,
-  VideoPause,
-  Delete,
-  ZoomIn
-} from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import {
   getPrinterList,
-  getUnallocatedPrinters,
   batchUpdatePositions,
   updatePrinter
 } from '@/api/printer'
+import DashboardHeader from './DashboardHeader.vue'
+import EmptySlot from './EmptySlot.vue'
+import PrinterCard from './PrinterCard.vue'
+import BindDeviceDialog from './BindDeviceDialog.vue'
 
 defineOptions({ name: 'FarmDashboard' })
 
@@ -281,13 +117,9 @@ const GRID_CONFIG = {
   AISLE_COL_INDEX: 7 // 过道列的数组索引（0-based）
 }
 
-/** 状态映射配置 */
-const STATUS_MAP = {
-  ONLINE: { label: '在线', type: 'success' },
-  OFFLINE: { label: '离线', type: 'info' },
-  PRINTING: { label: '打印中', type: 'primary' },
-  ERROR: { label: '故障', type: 'danger' },
-  IDLE: { label: '空闲', type: 'success' }
+/** ASCII 码常量 */
+const ASCII = {
+  UPPER_A: 65 // 'A' 的 ASCII 码
 }
 
 // ============================================
@@ -307,14 +139,7 @@ const dragOverCell = ref(null)
 
 /** 绑定设备弹窗相关状态 */
 const bindDialogVisible = ref(false)
-const unallocatedList = ref([])
-const unallocatedLoading = ref(false)
-const selectedDeviceId = ref(null)
-const bindLoading = ref(false)
 const targetSlot = ref({ row: null, col: null }) // 目标槽位坐标（物理坐标）
-
-/** 搜索相关状态 */
-const searchKeyword = ref('')
 
 // ============================================
 // Computed Properties
@@ -325,7 +150,7 @@ const searchKeyword = ref('')
  */
 const targetSlotLabel = computed(() => {
   if (targetSlot.value.row === null || targetSlot.value.col === null) return ''
-  const rowLabel = String.fromCharCode(64 + targetSlot.value.row)
+  const rowLabel = formatRowLabel(targetSlot.value.row)
   return `${rowLabel}-${targetSlot.value.col.toString().padStart(2, '0')}`
 })
 
@@ -388,27 +213,18 @@ const statusCounts = computed(() => {
   return counts
 })
 
+// ============================================
+// Utility Functions
+// ============================================
+
 /**
- * 根据搜索关键词过滤未分配设备列表
- * @returns {Array} 过滤后的设备列表
+ * 格式化行标签（数字转字母）
+ * @param {number} row - 行号（1-based）
+ * @returns {string} 行标签（如 A, B, C...）
  */
-const filteredUnallocatedList = computed(() => {
-  if (!searchKeyword.value.trim()) {
-    return unallocatedList.value
-  }
-
-  const keyword = searchKeyword.value.toLowerCase().trim()
-  return unallocatedList.value.filter(device => {
-    const ipMatch = device.ipAddress && device.ipAddress.toLowerCase().includes(keyword)
-    const machineNumMatch = device.machineNumber && device.machineNumber.toLowerCase().includes(keyword)
-    const nameMatch = device.name && device.name.toLowerCase().includes(keyword)
-    return ipMatch || machineNumMatch || nameMatch
-  })
-})
-
-// ============================================
-// Coordinate Mapping Functions
-// ============================================
+function formatRowLabel(row) {
+  return String.fromCharCode(ASCII.UPPER_A + row - 1)
+}
 
 /**
  * 根据网格列号获取物理列号（排除过道）
@@ -432,184 +248,36 @@ function getPhysicalColByIndex(colIndex) {
   return getPhysicalCol(colIndex + 1)
 }
 
-// ============================================
-// Utility Functions
-// ============================================
-
 /**
- * 获取状态对应的Element Plus标签类型
- * @param {string} status - 设备状态
- * @returns {string} Element Plus标签类型
- */
-const getStatusType = (status) => {
-  const typeMap = {
-    ONLINE: 'success',
-    OFFLINE: 'info',
-    PRINTING: 'primary',
-    ERROR: 'danger'
-  }
-  return typeMap[status] || 'info'
-}
-
-/**
- * 获取状态显示标签
- * @param {string} status - 设备状态
- * @returns {string} 状态中文标签
- */
-const getStatusLabel = (status) => {
-  return STATUS_MAP[status]?.label || status
-}
-
-/**
- * 格式化坐标显示
- * @param {number} row - 行号
- * @param {number} col - 列号
- * @returns {string} 格式化后的坐标字符串
- */
-const formatCoordinate = (row, col) => {
-  const rowLabel = String.fromCharCode(64 + row)
-  return `${rowLabel}-${col.toString().padStart(2, '0')}`
-}
-
-// ============================================
-// Bind Device - 绑定设备功能
-// ============================================
-
-/**
- * 处理空槽位点击事件 - 打开绑定设备弹窗
- * @param {number} rowIndex - 行索引（0-based）
+ * 判断是否为过道单元格
  * @param {number} colIndex - 列索引（0-based）
+ * @returns {boolean} 是否为过道
  */
-const handleEmptySlotClick = (rowIndex, colIndex) => {
-  // 记录目标槽位物理坐标
-  targetSlot.value = {
-    row: rowIndex + 1,
-    col: getPhysicalColByIndex(colIndex)
-  }
-  selectedDeviceId.value = null
-  bindDialogVisible.value = true
-
-  // 获取未分配设备列表
-  fetchUnallocatedDevices()
+function isAisleCell(colIndex) {
+  return colIndex === GRID_CONFIG.AISLE_COL_INDEX
 }
 
 /**
- * 获取未分配位置的设备列表
+ * 判断指定单元格是否处于拖拽悬停状态
+ * @param {number} rowIndex - 行索引
+ * @param {number} colIndex - 列索引
+ * @returns {boolean} 是否悬停
  */
-const fetchUnallocatedDevices = async () => {
-  unallocatedLoading.value = true
-  try {
-    const res = await getUnallocatedPrinters()
-    unallocatedList.value = res.data || []
-  } catch (error) {
-    console.error('获取未分配设备失败:', error)
-    ElMessage.error('获取未分配设备列表失败')
-    unallocatedList.value = []
-  } finally {
-    unallocatedLoading.value = false
-  }
+function isDragOver(rowIndex, colIndex) {
+  return dragOverCell.value?.row === rowIndex && dragOverCell.value?.col === colIndex
 }
 
 /**
- * 处理搜索输入
+ * 判断设备是否正在拖拽中
+ * @param {Object} device - 设备对象
+ * @returns {boolean} 是否正在拖拽
  */
-const handleSearch = () => {
-  // 搜索逻辑由 computed 属性 filteredUnallocatedList 自动处理
-  // 清空选中项，避免过滤后选中的设备不在列表中
-  selectedDeviceId.value = null
-}
-
-/**
- * 处理表格行点击 - 直接确认绑定
- * @param {Object} row - 点击的行数据
- */
-const handleRowClick = (row) => {
-  if (!row) return
-
-  // 弹出确认对话框
-  ElMessageBox.confirm(
-    `确定要将设备 "${row.name}" 绑定到 ${targetSlotLabel.value} 吗？`,
-    '确认绑定',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'info'
-    }
-  ).then(() => {
-    // 用户确认，执行绑定
-    performBind(row.id, targetSlotLabel.value)
-  }).catch(() => {
-    // 用户取消，不做任何操作
-  })
-}
-
-/**
- * 执行设备绑定
- * @param {number} deviceId - 设备ID
- * @param {string} slotLabel - 槽位标签（如 A-01）
- */
-const performBind = async (deviceId, slotLabel) => {
-  bindLoading.value = true
-  try {
-    // 先调用位置更新 API
-    const positionPayload = [{
-      id: deviceId,
-      gridRow: targetSlot.value.row,
-      gridCol: targetSlot.value.col
-    }]
-
-    await batchUpdatePositions(positionPayload)
-
-    // 再调用打印机更新 API 设置 machineNumber
-    await updatePrinter({
-      id: deviceId,
-      machineNumber: slotLabel
-    })
-
-    ElMessage.success('设备绑定成功')
-    bindDialogVisible.value = false
-
-    // 刷新看板数据
-    await fetchDeviceData()
-  } catch (error) {
-    console.error('绑定设备失败:', error)
-    ElMessage.error('绑定设备失败，请重试')
-  } finally {
-    bindLoading.value = false
-  }
+function isDragging(device) {
+  return draggedDevice.value?.id === device.id
 }
 
 // ============================================
-// Remove Device - 移除设备功能
-// ============================================
-
-/**
- * 从看板移除设备（解绑）
- * @param {Object} device - 要移除的设备对象
- */
-const handleRemove = async (device) => {
-  try {
-    // 构建请求参数 - gridRow 和 gridCol 传 null 表示解绑
-    const payload = [{
-      id: device.id,
-      gridRow: null,
-      gridCol: null
-    }]
-
-    await batchUpdatePositions(payload)
-
-    ElMessage.success(`设备 ${device.machine_number} 已从看板移除`)
-
-    // 刷新看板数据
-    await fetchDeviceData()
-  } catch (error) {
-    console.error('移除设备失败:', error)
-    ElMessage.error('移除设备失败，请重试')
-  }
-}
-
-// ============================================
-// Drag and Drop Handlers
+// Event Handlers - Drag & Drop
 // ============================================
 
 /**
@@ -618,7 +286,7 @@ const handleRemove = async (device) => {
  * @param {number} rowIndex - 起始行索引
  * @param {number} colIndex - 起始列索引
  */
-const handleDragStart = (device, rowIndex, colIndex) => {
+function handleDragStart(device, rowIndex, colIndex) {
   draggedDevice.value = device
   draggedFrom.value = { row: rowIndex, col: colIndex }
 }
@@ -628,23 +296,23 @@ const handleDragStart = (device, rowIndex, colIndex) => {
  * @param {number} rowIndex - 目标行索引
  * @param {number} colIndex - 目标列索引
  */
-const handleDragEnter = (rowIndex, colIndex) => {
+function handleDragEnter(rowIndex, colIndex) {
   // 不能放置到过道
-  if (colIndex === GRID_CONFIG.AISLE_COL_INDEX) return
+  if (isAisleCell(colIndex)) return
   dragOverCell.value = { row: rowIndex, col: colIndex }
 }
 
 /**
  * 处理拖拽离开事件
  */
-const handleDragLeave = () => {
+function handleDragLeave() {
   dragOverCell.value = null
 }
 
 /**
  * 处理拖拽结束事件
  */
-const handleDragEnd = () => {
+function handleDragEnd() {
   draggedDevice.value = null
   draggedFrom.value = null
   dragOverCell.value = null
@@ -655,9 +323,9 @@ const handleDragEnd = () => {
  * @param {number} targetRowIndex - 目标行索引
  * @param {number} targetColIndex - 目标列索引
  */
-const handleDrop = async (targetRowIndex, targetColIndex) => {
+async function handleDrop(targetRowIndex, targetColIndex) {
   // 防止放置到过道
-  if (targetColIndex === GRID_CONFIG.AISLE_COL_INDEX) return
+  if (isAisleCell(targetColIndex)) return
 
   // 如果没有拖拽的设备，不处理
   if (!draggedDevice.value || !draggedFrom.value) return
@@ -705,14 +373,17 @@ const handleDrop = async (targetRowIndex, targetColIndex) => {
   }
 }
 
+// ============================================
+// Device Operations
+// ============================================
+
 /**
  * 移动设备到空位置
  * @param {Object} device - 要移动的设备
  * @param {Object} from - 原位置 {row, col}
  * @param {Object} to - 新位置 {row, col}
  */
-const moveDeviceToEmptySlot = async (device, from, to) => {
-  // 使用批量更新API
+async function moveDeviceToEmptySlot(device, from, to) {
   const payload = [{
     id: device.id,
     gridRow: to.row,
@@ -720,8 +391,6 @@ const moveDeviceToEmptySlot = async (device, from, to) => {
   }]
 
   await batchUpdatePositions(payload)
-
-  // 刷新数据
   await fetchDeviceData()
 }
 
@@ -732,7 +401,7 @@ const moveDeviceToEmptySlot = async (device, from, to) => {
  * @param {Object} device2 - 第二台设备
  * @param {Object} pos2 - 第二台设备原位置 {row, col}
  */
-const swapDevicesPosition = async (device1, pos1, device2, pos2) => {
+async function swapDevicesPosition(device1, pos1, device2, pos2) {
   // 计算物理坐标
   const device1NewRow = pos2.row + 1
   const device1NewCol = getPhysicalColByIndex(pos2.col)
@@ -754,19 +423,85 @@ const swapDevicesPosition = async (device1, pos1, device2, pos2) => {
   ]
 
   await batchUpdatePositions(payload)
-
-  // 刷新数据
   await fetchDeviceData()
 }
 
+/**
+ * 处理空槽位点击事件 - 打开绑定设备弹窗
+ * @param {number} rowIndex - 行索引（0-based）
+ * @param {number} colIndex - 列索引（0-based）
+ */
+function handleEmptySlotClick(rowIndex, colIndex) {
+  targetSlot.value = {
+    row: rowIndex + 1,
+    col: getPhysicalColByIndex(colIndex)
+  }
+  bindDialogVisible.value = true
+}
+
+/**
+ * 执行设备绑定
+ * @param {number} deviceId - 设备ID
+ */
+async function performBind(deviceId) {
+  try {
+    // 先调用位置更新 API
+    const positionPayload = [{
+      id: deviceId,
+      gridRow: targetSlot.value.row,
+      gridCol: targetSlot.value.col
+    }]
+
+    await batchUpdatePositions(positionPayload)
+
+    // 再调用打印机更新 API 设置 machineNumber
+    await updatePrinter({
+      id: deviceId,
+      machineNumber: targetSlotLabel.value
+    })
+
+    ElMessage.success('设备绑定成功')
+    bindDialogVisible.value = false
+
+    // 刷新看板数据
+    await fetchDeviceData()
+  } catch (error) {
+    console.error('绑定设备失败:', error)
+    ElMessage.error('绑定设备失败，请重试')
+  }
+}
+
+/**
+ * 从看板移除设备（解绑）
+ * @param {Object} device - 要移除的设备对象
+ */
+async function handleRemove(device) {
+  try {
+    const payload = [{
+      id: device.id,
+      gridRow: null,
+      gridCol: null
+    }]
+
+    await batchUpdatePositions(payload)
+
+    ElMessage.success(`设备 ${device.machineNumber} 已从看板移除`)
+
+    await fetchDeviceData()
+  } catch (error) {
+    console.error('移除设备失败:', error)
+    ElMessage.error('移除设备失败，请重试')
+  }
+}
+
 // ============================================
-// Event Handlers
+// Action Handlers
 // ============================================
 
 /**
  * 处理刷新按钮点击
  */
-const handleRefresh = () => {
+function handleRefresh() {
   fetchDeviceData()
   ElMessage.success('状态已刷新')
 }
@@ -775,8 +510,8 @@ const handleRefresh = () => {
  * 查看设备详情
  * @param {Object} device - 设备对象
  */
-const handleDetail = (device) => {
-  ElMessage.info(`查看设备详情: ${device.machine_number}`)
+function handleDetail(device) {
+  ElMessage.info(`查看设备详情: ${device.machineNumber}`)
   console.log('Device detail:', device)
 }
 
@@ -784,8 +519,8 @@ const handleDetail = (device) => {
  * 开始打印任务
  * @param {Object} device - 设备对象
  */
-const handleStart = (device) => {
-  ElMessage.success(`启动设备: ${device.machine_number}`)
+function handleStart(device) {
+  ElMessage.success(`启动设备: ${device.machineNumber}`)
   console.log('Start device:', device)
 }
 
@@ -793,8 +528,8 @@ const handleStart = (device) => {
  * 暂停打印任务
  * @param {Object} device - 设备对象
  */
-const handlePause = (device) => {
-  ElMessage.warning(`暂停设备: ${device.machine_number}`)
+function handlePause(device) {
+  ElMessage.warning(`暂停设备: ${device.machineNumber}`)
   console.log('Pause device:', device)
 }
 
@@ -805,16 +540,22 @@ const handlePause = (device) => {
 /**
  * 获取设备数据
  */
-const fetchDeviceData = async () => {
+async function fetchDeviceData() {
   loading.value = true
   try {
     const response = await getPrinterList({ pageSize: 1000 })
-    // 只保留有坐标的设备（在看板上显示的）- 后端使用驼峰命名 gridRow/gridCol
-    rawDeviceList.value = (response.data.records || []).filter(d => d.gridRow && d.gridCol)
+    // 只保留有坐标的设备（在看板上显示的）
+    // 注意：gridRow 和 gridCol 是数字类型，需要判断是否为有效数字
+    const records = response.data?.records || []
+    rawDeviceList.value = records.filter(d => {
+      const hasValidRow = typeof d.gridRow === 'number' && d.gridRow > 0
+      const hasValidCol = typeof d.gridCol === 'number' && d.gridCol > 0
+      return hasValidRow && hasValidCol
+    })
   } catch (error) {
     console.error('获取设备数据失败:', error)
     ElMessage.error('获取设备数据失败')
-    // 使用模拟数据作为降级
+    // 降级使用模拟数据
     rawDeviceList.value = generateMockData()
   } finally {
     loading.value = false
@@ -825,32 +566,32 @@ const fetchDeviceData = async () => {
  * 生成模拟设备数据（用于开发测试）
  * @returns {Array<Object>} 模拟设备数组
  */
-const generateMockData = () => {
+function generateMockData() {
   const devices = []
   const statuses = ['ONLINE', 'OFFLINE', 'PRINTING', 'ERROR']
   const materials = ['PLA', 'ABS', 'PETG', 'TPU', 'ASA', null]
-  const nozzleSizes = ['0.4mm', '0.6mm', '0.8mm']
+  const nozzleSizes = ['0.4', '0.6', '0.8']
 
   // 随机填充约70%的位置
   for (let row = 1; row <= GRID_CONFIG.ROWS; row++) {
     for (let col = 1; col <= GRID_CONFIG.COLS; col++) {
       if (Math.random() > 0.3) {
         const status = statuses[Math.floor(Math.random() * statuses.length)]
-        const rowLabel = String.fromCharCode(64 + row)
+        const rowLabel = formatRowLabel(row)
 
         devices.push({
           id: `printer_${row}_${col}`,
           name: `打印机 ${rowLabel}-${col}`,
-          ip_address: `192.168.1.${100 + row * 12 + col}`,
-          mac_address: `AA:BB:CC:DD:${row.toString(16).padStart(2, '0')}:${col.toString(16).padStart(2, '0')}`,
-          firmware_type: Math.random() > 0.5 ? 'Klipper' : 'Marlin',
+          ipAddress: `192.168.1.${100 + row * 12 + col}`,
+          macAddress: `AA:BB:CC:DD:${row.toString(16).padStart(2, '0')}:${col.toString(16).padStart(2, '0')}`,
+          firmwareType: Math.random() > 0.5 ? 'Klipper' : 'Marlin',
           status: status,
-          current_job_id: status === 'PRINTING' ? Math.floor(Math.random() * 10000) : null,
-          current_material: materials[Math.floor(Math.random() * materials.length)],
-          nozzle_size: nozzleSizes[Math.floor(Math.random() * nozzleSizes.length)],
-          grid_row: row,
-          grid_col: col,
-          machine_number: `#${rowLabel}-${col.toString().padStart(2, '0')}`
+          currentJobId: status === 'PRINTING' ? Math.floor(Math.random() * 10000) : null,
+          currentMaterial: materials[Math.floor(Math.random() * materials.length)],
+          nozzleSize: nozzleSizes[Math.floor(Math.random() * nozzleSizes.length)],
+          gridRow: row,
+          gridCol: col,
+          machineNumber: `#${rowLabel}-${col.toString().padStart(2, '0')}`
         })
       }
     }
@@ -879,64 +620,6 @@ onMounted(() => {
   gap: var(--ep-space-4);
   padding: var(--ep-space-4);
   background-color: var(--ep-background-color-base);
-}
-
-/* ============================================
-   Dashboard Header
-   ============================================ */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--ep-space-4) var(--ep-space-5);
-  background: var(--ep-color-white);
-  border-radius: var(--ep-border-radius-medium);
-  box-shadow: var(--ep-box-shadow-light);
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-6);
-}
-
-.dashboard-title {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-2);
-  margin: 0;
-  font-size: var(--ep-font-size-large);
-  font-weight: var(--ep-font-weight-semibold);
-  color: var(--ep-text-color-primary);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.stats-bar {
-  display: flex;
-  gap: var(--ep-space-2);
-  flex-wrap: nowrap;
-}
-
-.stats-bar .el-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.stats-bar .el-tag :deep(.el-icon) {
-  display: inline-flex;
-  vertical-align: middle;
-  margin-right: 2px;
-}
-
-.stats-bar .el-tag :deep(span) {
-  display: inline;
-  vertical-align: middle;
 }
 
 /* ============================================
@@ -1042,221 +725,6 @@ onMounted(() => {
 }
 
 /* ============================================
-   Empty Slot - 空槽位
-   ============================================ */
-.empty-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  border: 1px dashed var(--ep-border-color-base);
-  border-radius: var(--ep-border-radius-base);
-  background: transparent;
-  gap: var(--ep-space-1);
-  color: var(--ep-text-color-placeholder);
-  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
-  cursor: pointer;
-}
-
-.empty-slot:hover {
-  border-color: var(--ep-color-primary-light-1);
-  background: var(--ep-color-primary-light-6);
-}
-
-.empty-slot.drag-over {
-  border-color: var(--ep-color-primary);
-  background: var(--ep-color-primary-light-5);
-  transform: scale(1.02);
-}
-
-.empty-slot .el-icon {
-  opacity: 0.5;
-}
-
-.slot-text {
-  font-size: var(--ep-font-size-extra-small);
-  color: var(--ep-text-color-placeholder);
-}
-
-.slot-coord {
-  font-size: 10px;
-  color: var(--ep-text-color-placeholder);
-  font-family: 'Courier New', monospace;
-}
-
-/* ============================================
-   Device Card - 设备卡片
-   ============================================ */
-.device-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--ep-border-radius-base);
-  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
-  cursor: grab;
-  user-select: none;
-}
-
-.device-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--ep-box-shadow-medium);
-}
-
-.device-card.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-  transform: rotate(3deg);
-}
-
-.device-card :deep(.el-card__body) {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: var(--ep-space-3);
-  gap: var(--ep-space-2);
-}
-
-/* 状态样式 */
-.device-card.status-online {
-  border-top: 3px solid var(--ep-color-success);
-}
-
-.device-card.status-offline {
-  border-top: 3px solid var(--ep-color-info);
-  opacity: 0.8;
-}
-
-.device-card.status-printing {
-  border-top: 3px solid var(--ep-color-primary);
-}
-
-.device-card.status-error {
-  border-top: 3px solid var(--ep-color-danger);
-}
-
-/* 卡片头部 */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.machine-number {
-  font-family: 'Courier New', monospace;
-  font-size: var(--ep-font-size-small);
-  font-weight: var(--ep-font-weight-bold);
-  color: var(--ep-text-color-primary);
-}
-
-.status-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.online {
-  background-color: var(--ep-color-success);
-  box-shadow: 0 0 6px var(--ep-color-success);
-}
-
-.status-dot.offline {
-  background-color: var(--ep-color-info);
-}
-
-.status-dot.printing {
-  background-color: var(--ep-color-primary);
-  box-shadow: 0 0 6px var(--ep-color-primary);
-  animation: pulse 2s infinite;
-}
-
-.status-dot.error {
-  background-color: var(--ep-color-danger);
-  box-shadow: 0 0 6px var(--ep-color-danger);
-  animation: blink 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-/* 卡片内容区 */
-.card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  overflow: hidden;
-}
-
-.info-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--ep-text-color-secondary);
-}
-
-.info-row .el-icon {
-  flex-shrink: 0;
-  color: var(--ep-color-primary-light-1);
-}
-
-.info-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.job-info {
-  color: var(--ep-color-primary);
-  font-weight: var(--ep-font-weight-medium);
-}
-
-/* 底部操作区 */
-.card-actions {
-  margin-top: auto;
-  padding-top: var(--ep-space-2);
-  border-top: 1px solid var(--ep-border-color-lighter);
-}
-
-.card-actions :deep(.el-button) {
-  padding: 4px 8px;
-}
-
-/* ============================================
-   Dialog Styles - 弹窗样式
-   ============================================ */
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--ep-space-3);
-}
-
-/* 搜索框样式 */
-.search-bar {
-  margin-bottom: var(--ep-space-4);
-}
-
-.search-bar .el-input {
-  width: 100%;
-}
-
-/* ============================================
    Responsive Design
    ============================================ */
 @media (max-width: 1400px) {
@@ -1270,20 +738,21 @@ onMounted(() => {
 }
 
 @media (max-width: 1200px) {
-  .dashboard-header {
+  .factory-grid {
     flex-direction: column;
-    gap: var(--ep-space-3);
-    align-items: flex-start;
   }
 
-  .header-left {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--ep-space-3);
+  .row-labels {
+    flex-direction: row;
+    padding-top: 0;
+    padding-left: 32px;
+    height: auto;
   }
 
-  .stats-bar {
-    flex-wrap: wrap;
+  .row-label {
+    width: 100px;
+    height: 30px;
+    writing-mode: horizontal-tb;
   }
 }
 </style>
