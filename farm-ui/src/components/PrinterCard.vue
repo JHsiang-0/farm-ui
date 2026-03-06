@@ -2,38 +2,34 @@
   <el-card
     class="device-card"
     :class="[`status-${normalizedStatus}`, { 'dragging': isDragging }]"
+    :style="cardBackgroundStyle"
     shadow="hover"
     draggable="true"
     :data-device-id="device.id"
     :data-row="rowIndex"
     :data-col="colIndex"
+    @click="handleCardClick"
     @dragstart="$emit('dragstart', device, rowIndex, colIndex)"
     @dragend="$emit('dragend')"
     @dragover.prevent
     @dragenter.prevent="$emit('dragenter', rowIndex, colIndex)"
-    @dragleave="$emit('dragleleave')"
+    @dragleave="$emit('dragleave')"
     @drop="$emit('drop', rowIndex, colIndex)"
   >
-    <!-- 卡片头部：机器编号和状态 -->
+<!-- 卡片头部：机器编号 -->
     <div class="card-header">
       <span class="machine-number">{{ device.machineNumber || '-' }}</span>
-      <div class="status-wrapper">
-        <el-tag :type="statusType" size="small" effect="plain">
-          {{ statusLabel }}
-        </el-tag>
-        <div class="status-dot" :class="normalizedStatus"></div>
-      </div>
     </div>
 
     <!-- 卡片内容区 -->
     <div class="card-content">
       <div class="info-row">
-        <el-icon :size="12"><connection /></el-icon>
-        <span class="info-text" :title="device.ipAddress">{{ device.ipAddress || '-' }}</span>
+        <el-icon :size="12"><odometer /></el-icon>
+        <span class="info-text">喷头: {{ formatTemperature(realTimeData?.nozzleTemp) }}°C</span>
       </div>
       <div class="info-row">
-        <el-icon :size="12"><coin /></el-icon>
-        <span class="info-text" :title="device.currentMaterial">{{ device.currentMaterial || '无耗材' }}</span>
+        <el-icon :size="12"><hot-water /></el-icon>
+        <span class="info-text">热床: {{ formatTemperature(realTimeData?.bedTemp) }}°C</span>
       </div>
       <div class="info-row">
         <el-icon :size="12"><tools /></el-icon>
@@ -45,43 +41,33 @@
       </div>
     </div>
 
-    <!-- 底部操作区 -->
-    <div class="card-actions">
-      <el-button-group size="small">
-        <el-button type="primary" plain @click="$emit('detail', device)">
-          <el-icon><zoom-in /></el-icon>
-        </el-button>
-        <el-button
-          v-if="canStart"
-          type="success"
-          plain
-          @click="$emit('start', device)"
-        >
-          <el-icon><video-play /></el-icon>
-        </el-button>
-        <el-button
-          v-if="canPause"
-          type="warning"
-          plain
-          @click="$emit('pause', device)"
-        >
-          <el-icon><video-pause /></el-icon>
-        </el-button>
-        <!-- 移除设备按钮（带二次确认） -->
-        <el-popconfirm
-          title="确定要将此设备从当前物理位置移除吗？"
-          confirm-button-text="确认"
-          cancel-button-text="取消"
-          confirm-button-type="danger"
-          @confirm="$emit('remove', device)"
-        >
-          <template #reference>
-            <el-button type="danger" plain>
-              <el-icon><delete /></el-icon>
-            </el-button>
-          </template>
-        </el-popconfirm>
-      </el-button-group>
+<!-- 卡片底部：状态 -->
+    <div class="card-footer">
+      <!-- 非打印状态：显示胶囊按钮 -->
+      <template v-if="!isPrinting">
+        <div class="status-wrapper">
+          <div class="status-dot" :class="normalizedStatus"></div>
+          <el-tag :type="statusType" size="small" effect="light">
+            {{ statusLabel }}
+          </el-tag>
+        </div>
+      </template>
+      <!-- 打印中状态：显示实时进度 -->
+      <template v-else>
+        <div class="printing-status">
+          <div class="progress-text">
+            打印中 {{ printProgress.toFixed(1) }}%
+          </div>
+          <el-progress
+            :percentage="printProgress"
+            :stroke-width="10"
+            striped
+            striped-flow
+            :duration="2"
+            :show-text="false"
+          />
+        </div>
+      </template>
     </div>
   </el-card>
 </template>
@@ -89,14 +75,10 @@
 <script setup>
 import { computed } from 'vue'
 import {
-  Connection,
-  Coin,
+  Odometer,
+  HotWater,
   Tools,
-  Document,
-  VideoPlay,
-  VideoPause,
-  Delete,
-  ZoomIn
+  Document
 } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'PrinterCard' })
@@ -110,6 +92,11 @@ const props = defineProps({
   device: {
     type: Object,
     required: true
+  },
+  /** 实时状态数据 */
+  realTimeData: {
+    type: Object,
+    default: null
   },
   /** 行索引 */
   rowIndex: {
@@ -128,16 +115,13 @@ const props = defineProps({
   }
 })
 
-defineEmits([
+const emit = defineEmits([
   'dragstart',
   'dragend',
   'dragenter',
-  'dragleleave',
+  'dragleave',
   'drop',
-  'detail',
-  'start',
-  'pause',
-  'remove'
+  'click'
 ])
 
 // ============================================
@@ -153,40 +137,117 @@ const STATUS_MAP = {
   IDLE: { label: '空闲', type: 'success' }
 }
 
+/** 状态背景色映射 - Element Plus 原生变量
+ * ONLINE(在线): 浅绿色
+ * IDLE(空闲/就绪): 浅青色（与 ONLINE 区分）
+ * PRINTING(打印中): 浅蓝色
+ * ERROR(故障): 浅红色
+ * OFFLINE(离线): 浅灰色
+ */
+const STATUS_BG_MAP = {
+  ONLINE: 'var(--el-color-success-light-8)',
+  IDLE: '#e6f7ff', // 浅青色
+  PRINTING: 'var(--el-color-primary-light-9)',
+  ERROR: 'var(--el-color-danger-light-9)',
+  OFFLINE: 'var(--el-color-info-light-9)'
+}
+
 // ============================================
 // Computed Properties
 // ============================================
 
 /** 标准化状态值（小写） */
 const normalizedStatus = computed(() => {
+  // 优先使用 WebSocket 推送的实时状态
+  const rtState = props.realTimeData?.state
+  if (rtState) {
+    return rtState.toLowerCase()
+  }
   return props.device.status?.toLowerCase() || 'offline'
 })
 
 /** 状态标签类型 */
 const statusType = computed(() => {
+  // 优先使用 WebSocket 推送的实时状态
+  const rtState = props.realTimeData?.state
+  const status = rtState ? rtState.toUpperCase() : props.device.status
   const typeMap = {
     ONLINE: 'success',
+    IDLE: 'success',
     OFFLINE: 'info',
     PRINTING: 'primary',
     ERROR: 'danger'
   }
-  return typeMap[props.device.status] || 'info'
+  return typeMap[status] || 'info'
 })
 
 /** 状态显示标签 */
 const statusLabel = computed(() => {
+  // 优先使用 WebSocket 推送的实时状态
+  const rtState = props.realTimeData?.state
+  if (rtState) {
+    return STATUS_MAP[rtState.toUpperCase()]?.label || rtState
+  }
   return STATUS_MAP[props.device.status]?.label || props.device.status
 })
 
-/** 是否可以启动 */
-const canStart = computed(() => {
-  return props.device.status === 'ONLINE'
+/** 卡片动态背景色样式 */
+const cardBackgroundStyle = computed(() => {
+  // 优先使用 WebSocket 推送的实时状态
+  const rtState = props.realTimeData?.state
+  const status = rtState ? rtState.toUpperCase() : props.device.status
+  const bgColor = STATUS_BG_MAP[status] || 'var(--el-color-info-light-9)'
+  return {
+    backgroundColor: bgColor,
+    cursor: 'pointer'
+  }
 })
 
-/** 是否可以暂停 */
-const canPause = computed(() => {
+/** 是否正在打印中 - 优先使用 WebSocket 实时状态 */
+const isPrinting = computed(() => {
+  // 如果有 WebSocket 实时数据，优先使用
+  if (props.realTimeData?.state) {
+    return props.realTimeData.state.toLowerCase() === 'printing'
+  }
+  // 否则使用设备基础状态
   return props.device.status === 'PRINTING'
 })
+
+/** 实时进度 - 仅使用 WebSocket 数据 */
+const printProgress = computed(() => {
+  // 只使用 WebSocket 推送的实时进度
+  if (props.realTimeData?.progress !== undefined && props.realTimeData?.progress !== null) {
+    return props.realTimeData.progress
+  }
+  return 0
+})
+
+// ============================================
+// Utility Functions
+// ============================================
+
+/**
+ * 格式化温度显示
+ * @param {number|null|undefined} temp - 温度值
+ * @returns {string} 格式化后的温度字符串
+ */
+function formatTemperature(temp) {
+  if (temp === null || temp === undefined || isNaN(temp)) {
+    return '--'
+  }
+  return Number(temp).toFixed(1)
+}
+
+// ============================================
+// Event Handlers
+// ============================================
+
+/**
+ * 处理卡片点击事件
+ */
+function handleCardClick() {
+  emit('click', props.device)
+}
 </script>
 
 <style scoped>
@@ -222,22 +283,9 @@ const canPause = computed(() => {
   gap: var(--ep-space-2);
 }
 
-/* 状态样式 */
-.device-card.status-online {
-  border-top: 3px solid var(--ep-color-success);
-}
-
+/* 状态样式 - 统一卡片风格，仅通过背景色区分 */
 .device-card.status-offline {
-  border-top: 3px solid var(--ep-color-info);
-  opacity: 0.8;
-}
-
-.device-card.status-printing {
-  border-top: 3px solid var(--ep-color-primary);
-}
-
-.device-card.status-error {
-  border-top: 3px solid var(--ep-color-danger);
+  opacity: 0.85;
 }
 
 /* 卡片头部 */
@@ -280,23 +328,11 @@ const canPause = computed(() => {
 .status-dot.printing {
   background-color: var(--ep-color-primary);
   box-shadow: 0 0 6px var(--ep-color-primary);
-  animation: pulse 2s infinite;
 }
 
 .status-dot.error {
   background-color: var(--ep-color-danger);
   box-shadow: 0 0 6px var(--ep-color-danger);
-  animation: blink 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
 }
 
 /* 卡片内容区 */
@@ -332,14 +368,61 @@ const canPause = computed(() => {
   font-weight: var(--ep-font-weight-medium);
 }
 
-/* 底部操作区 */
-.card-actions {
-  margin-top: auto;
+/* 卡片底部 - 状态区域 */
+.card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding-top: var(--ep-space-2);
+  margin-top: auto;
   border-top: 1px solid var(--ep-border-color-lighter);
+  gap: var(--ep-space-1);
 }
 
-.card-actions :deep(.el-button) {
-  padding: 4px 8px;
+.card-footer .status-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 打印进度条 - 旧版兼容 */
+.print-progress {
+  width: 100%;
+  padding: 0 var(--ep-space-1);
+}
+
+.print-progress :deep(.el-progress-bar__outer) {
+  background-color: var(--ep-fill-color);
+}
+
+/* 打印中状态展示 */
+.printing-status {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-text {
+  font-size: 11px;
+  font-weight: var(--ep-font-weight-semibold);
+  color: var(--ep-color-primary);
+  text-align: center;
+}
+
+.printing-status :deep(.el-progress) {
+  width: 100%;
+}
+
+.printing-status :deep(.el-progress-bar__outer) {
+  border-radius: 5px;
+  background-color: var(--ep-fill-color);
+}
+
+.printing-status :deep(.el-progress-bar__inner) {
+  border-radius: 5px;
 }
 </style>
