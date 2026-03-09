@@ -1,7 +1,7 @@
 <template>
   <el-card v-cloak class="device-card" :class="[`status-${stateClass}`, { 'dragging': isDragging }]" shadow="hover"
-    draggable="true" :data-device-id="device.id" :data-row="rowIndex" :data-col="colIndex" @click="handleCardClick"
-    @dragstart="$emit('dragstart', device, rowIndex, colIndex)" @dragend="$emit('dragend')" @dragover.prevent
+    :draggable="isEditMode" :data-device-id="device.id" :data-row="rowIndex" :data-col="colIndex"
+    @click="handleCardClick" @dragstart="handleDragStart" @dragend="$emit('dragend')" @dragover.prevent
     @dragenter.prevent="$emit('dragenter', rowIndex, colIndex)" @dragleave.prevent="$emit('dragleave')"
     @drop="$emit('drop', rowIndex, colIndex)">
     <!-- 卡片头部：机器编号 -->
@@ -125,6 +125,11 @@ const props = defineProps({
   },
   /** 是否正在拖拽中 */
   isDragging: {
+    type: Boolean,
+    default: false
+  },
+  /** 是否处于编辑模式 */
+  isEditMode: {
     type: Boolean,
     default: false
   }
@@ -271,6 +276,15 @@ const displayProgress = computed(() => {
 function handleCardClick() {
   emit('click', props.device)
 }
+
+/** 处理拖拽开始事件 - 仅在编辑模式下允许拖拽 */
+function handleDragStart(event) {
+  if (!props.isEditMode) {
+    event.preventDefault()
+    return
+  }
+  emit('dragstart', props.device, props.rowIndex, props.colIndex)
+}
 </script>
 
 <style scoped>
@@ -290,7 +304,7 @@ function handleCardClick() {
   flex-direction: column;
   border-radius: 4px;
   transition: all var(--ep-transition-duration) var(--ep-transition-timing);
-  cursor: grab;
+  cursor: pointer;
   user-select: none;
   /* 默认背景色 - 白色 */
   background-color: #ffffff !important;
@@ -305,6 +319,19 @@ function handleCardClick() {
   opacity: 0.5;
   cursor: grabbing;
   transform: rotate(3deg);
+}
+
+/* 编辑模式下的拖拽样式 */
+.device-card[draggable="true"] {
+  cursor: grab;
+}
+
+.device-card[draggable="true"]:hover {
+  cursor: grab;
+}
+
+.device-card[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 /* 强制覆盖 Element Plus 卡片默认样式 */

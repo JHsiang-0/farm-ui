@@ -47,6 +47,8 @@
       </div>
     </div>
     <div class="header-right">
+      <!-- 外部传入的操作按钮 -->
+      <slot name="actions"></slot>
       <el-button type="primary" plain size="small" @click="$emit('refresh')">
         <el-icon>
           <refresh />

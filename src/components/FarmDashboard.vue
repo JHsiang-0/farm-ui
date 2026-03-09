@@ -1,50 +1,69 @@
 <template>
-  <div v-cloak class="farm-dashboard">
+  <div v-cloak class="farm-dashboard" :class="{ 'is-edit-mode': isEditMode }">
     <!-- 顶部标题和统计 -->
-    <dashboard-header :status-counts="store.statusCounts" @refresh="handleRefresh" />
+    <dashboard-header :status-counts="store.statusCounts" @refresh="handleRefresh">
+      <!-- 布局锁定/编辑模式切换按钮 -->
+      <template #actions>
+        <el-button v-if="!isEditMode" type="default" :icon="Lock" @click="toggleEditMode">
+          解锁布局
+        </el-button>
+        <el-button v-else type="primary" :icon="Unlock" @click="saveLayout">
+          保存布局
+        </el-button>
+      </template>
+    </dashboard-header>
 
-    <!-- 厂房网格布局 - 4行13列（含过道） -->
-    <div class="factory-grid">
-      <!-- 行标签 -->
-      <div class="row-labels">
-        <div v-for="row in store.GRID_CONFIG.ROWS" :key="`label-${row}`" class="row-label">
-          {{ store.formatRowLabel(row) }}{{ labels.rowSuffix }}
-        </div>
+    <!-- 独立车间看板容器 -->
+    <div class="workshop-canvas-wrapper">
+      <!-- 车间水印标识 -->
+      <div class="workshop-watermark">
+        <span class="watermark-icon">📍</span>
+        <span class="watermark-text">3F-一号车间</span>
       </div>
 
-      <!-- 网格主体 -->
-      <div class="grid-container">
-        <!-- 列标题 -->
-        <div class="col-headers">
-          <div v-for="col in store.GRID_CONFIG.TOTAL_COLS" :key="`header-${col}`" class="col-header"
-            :class="{ 'aisle-header': col === store.GRID_CONFIG.AISLE_COL }">
-            <template v-if="col === store.GRID_CONFIG.AISLE_COL">{{ labels.aisle }}</template>
-            <template v-else>{{ store.getPhysicalCol(col) }}</template>
+      <!-- 厂房网格布局 - 4行13列（含过道） -->
+      <div class="factory-grid workshop-canvas">
+        <!-- 行标签 -->
+        <div class="row-labels">
+          <div v-for="row in store.GRID_CONFIG.ROWS" :key="`label-${row}`" class="row-label">
+            {{ store.formatRowLabel(row) }}{{ labels.rowSuffix }}
           </div>
         </div>
 
-        <!-- 设备网格 - 4行 x 13列 -->
-        <div class="device-matrix">
-          <template v-for="(row, rowIndex) in store.deviceMatrix" :key="`row-${rowIndex}`">
-            <template v-for="(cell, colIndex) in row" :key="`cell-${rowIndex}-${colIndex}`">
-              <!-- 过道占位 -->
-              <div v-if="store.isAisleCell(colIndex)" class="aisle-cell">
-                <div class="aisle-indicator"></div>
-              </div>
+        <!-- 网格主体 -->
+        <div class="grid-container">
+          <!-- 列标题 -->
+          <div class="col-headers">
+            <div v-for="col in store.GRID_CONFIG.TOTAL_COLS" :key="`header-${col}`" class="col-header"
+              :class="{ 'aisle-header': col === store.GRID_CONFIG.AISLE_COL }">
+              <template v-if="col === store.GRID_CONFIG.AISLE_COL">{{ labels.aisle }}</template>
+              <template v-else>{{ store.getPhysicalCol(col) }}</template>
+            </div>
+          </div>
 
-              <!-- 空槽位（可点击绑定设备） -->
-              <empty-slot v-else-if="cell === null" :row-index="rowIndex" :col-index="colIndex"
-                :is-drag-over="isDragOver(rowIndex, colIndex)" @click="handleEmptySlotClick(rowIndex, colIndex)"
-                @dragenter="handleDragEnter(rowIndex, colIndex)" @dragleave="handleDragLeave"
-                @drop="handleDrop(rowIndex, colIndex)" />
+          <!-- 设备网格 - 4行 x 13列 -->
+          <div class="device-matrix">
+            <template v-for="(row, rowIndex) in store.deviceMatrix" :key="`row-${rowIndex}`">
+              <template v-for="(cell, colIndex) in row" :key="`cell-${rowIndex}-${colIndex}`">
+                <!-- 过道占位 -->
+                <div v-if="store.isAisleCell(colIndex)" class="aisle-cell">
+                  <div class="aisle-indicator"></div>
+                </div>
 
-              <!-- 设备卡片 -->
-              <printer-card v-else :device="cell" :real-time-data="store.realTimeStatus[String(cell.id)]"
-                :row-index="rowIndex" :col-index="colIndex" :is-dragging="isDragging(cell)" @dragstart="handleDragStart"
-                @dragend="handleDragEnd" @dragenter="handleDragEnter" @dragleave="handleDragLeave" @drop="handleDrop"
-                @click="openDeviceDetail" />
+                <!-- 空槽位（可点击绑定设备） -->
+                <empty-slot v-else-if="cell === null" :row-index="rowIndex" :col-index="colIndex"
+                  :is-drag-over="isDragOver(rowIndex, colIndex)" @click="handleEmptySlotClick(rowIndex, colIndex)"
+                  @dragenter="handleDragEnter(rowIndex, colIndex)" @dragleave="handleDragLeave"
+                  @drop="handleDrop(rowIndex, colIndex)" />
+
+                <!-- 设备卡片 -->
+                <printer-card v-else :device="cell" :real-time-data="store.realTimeStatus[String(cell.id)]"
+                  :row-index="rowIndex" :col-index="colIndex" :is-dragging="isDragging(cell)" :is-edit-mode="isEditMode"
+                  @dragstart="handleDragStart" @dragend="handleDragEnd" @dragenter="handleDragEnter"
+                  @dragleave="handleDragLeave" @drop="handleDrop" @click="openDeviceDetail" />
+              </template>
             </template>
-          </template>
+          </div>
         </div>
       </div>
     </div>
@@ -235,7 +254,9 @@ import {
   VideoPlay,
   CircleClose,
   Refresh,
-  Warning
+  Warning,
+  Lock,
+  Unlock
 } from '@element-plus/icons-vue'
 import { usePrinterStore } from '@/stores/printerStore'
 import { PRINTER_STATE, PRINTER_STATE_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
@@ -264,6 +285,9 @@ const labels = {
 // ============================================
 // Reactive State
 // ============================================
+
+/** 编辑模式状态 - 默认锁定监控模式 */
+const isEditMode = ref(false)
 
 /** 拖拽相关状态 */
 const draggedDevice = ref(null)
@@ -698,6 +722,48 @@ async function handleRemoveFromBoard() {
 }
 
 // ============================================
+// Layout Edit Mode Functions
+// ============================================
+
+/**
+ * 切换编辑模式
+ */
+function toggleEditMode() {
+  isEditMode.value = true
+  ElMessage.info('已进入编辑模式，现在可以拖拽设备调整位置')
+}
+
+/**
+ * 保存布局位置
+ * 预留函数桩，用于后续对接保存到数据库的 API
+ */
+async function saveLayoutPositions() {
+  // TODO: 实现保存布局到数据库的逻辑
+  // 示例：
+  // const positions = store.devices.map(device => ({
+  //   id: device.id,
+  //   gridRow: device.gridRow,
+  //   gridCol: device.gridCol
+  // }))
+  // await api.saveLayoutPositions(positions)
+  console.log('[saveLayoutPositions] 保存布局位置到数据库...')
+}
+
+/**
+ * 保存布局并退出编辑模式
+ */
+async function saveLayout() {
+  try {
+    await saveLayoutPositions()
+    isEditMode.value = false
+    ElMessage.success('布局已保存')
+  } catch (error) {
+    console.error('保存布局失败:', error)
+    ElMessage.error('保存布局失败，请重试')
+  }
+}
+
+// ============================================
 // Action Handlers
 // ============================================
 
@@ -746,13 +812,105 @@ onUnmounted(() => {
 }
 
 /* ============================================
+   Workshop Canvas Wrapper - 独立车间看板容器
+   ============================================ */
+.workshop-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 180px);
+  /* 扣除 Header(60px) + DashboardHeader(~60px) + padding */
+  padding: 24px;
+  background: linear-gradient(145deg, #f5f7fa 0%, #e8ecf1 50%, #eef1f5 100%);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.05),
+    0 8px 32px rgba(0, 21, 41, 0.12),
+    0 2px 8px rgba(0, 21, 41, 0.08);
+  overflow: auto;
+  /* 美化滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--ep-color-gray-4) transparent;
+}
+
+/* Webkit 浏览器滚动条样式 */
+.workshop-canvas-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.workshop-canvas-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.workshop-canvas-wrapper::-webkit-scrollbar-thumb {
+  background: var(--ep-color-gray-4);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.workshop-canvas-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--ep-color-gray-5);
+}
+
+.workshop-canvas-wrapper::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 车间水印标识 */
+.workshop-watermark {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.watermark-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.watermark-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ep-text-color-primary);
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, var(--ep-text-color-primary) 0%, var(--ep-color-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
    Factory Grid Layout
    ============================================ */
 .factory-grid {
   display: flex;
   flex: 1;
   gap: var(--ep-space-2);
-  overflow: hidden;
+  min-width: 1400px;
+  /* 确保网格不会被压缩 */
+}
+
+/* 网格容器样式 */
+.grid-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  /* 改为 visible，因为外层 wrapper 已经处理了滚动 */
 }
 
 .row-labels {
@@ -784,7 +942,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow: visible;
 }
 
 .col-headers {
@@ -847,34 +1005,81 @@ onUnmounted(() => {
 }
 
 /* ============================================
-   Responsive Design
+   Responsive Design - 物理空间响应式方案
    ============================================ */
+
+/* 小屏幕适配：保持网格定宽，通过外层滚动查看 */
 @media (max-width: 1400px) {
-  .device-matrix {
-    grid-template-columns: repeat(13, minmax(90px, 1fr));
+  .workshop-canvas-wrapper {
+    height: calc(100vh - 160px);
   }
 
-  .col-headers {
-    grid-template-columns: repeat(13, minmax(90px, 1fr));
+  /* 保持网格定宽，不压缩 */
+  .factory-grid {
+    min-width: 1400px;
   }
 }
 
 @media (max-width: 1200px) {
+  .workshop-canvas-wrapper {
+    height: calc(100vh - 140px);
+    padding: 16px;
+  }
+
   .factory-grid {
-    flex-direction: column;
+    min-width: 1400px;
+    flex-direction: row;
+    /* 保持横向布局 */
   }
 
   .row-labels {
-    flex-direction: row;
-    padding-top: 0;
-    padding-left: 32px;
-    height: auto;
+    flex-direction: column;
+    padding-top: 32px;
+    padding-left: 0;
+    height: 100%;
   }
 
   .row-label {
-    width: 100px;
-    height: 30px;
-    writing-mode: horizontal-tb;
+    width: 40px;
+    height: 140px;
+    writing-mode: vertical-rl;
+  }
+
+  .workshop-watermark {
+    top: 12px;
+    right: 16px;
+    padding: 6px 12px;
+  }
+
+  .watermark-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .workshop-canvas-wrapper {
+    height: calc(100vh - 120px);
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .factory-grid {
+    min-width: 1200px;
+    /* 移动端稍微减小最小宽度 */
+  }
+
+  .workshop-watermark {
+    top: 8px;
+    right: 12px;
+    padding: 4px 10px;
+  }
+
+  .watermark-icon {
+    font-size: 14px;
+  }
+
+  .watermark-text {
+    font-size: 11px;
   }
 }
 
@@ -1099,5 +1304,88 @@ onUnmounted(() => {
   justify-content: flex-end;
   padding: var(--ep-space-3) var(--ep-space-4);
   border-top: 1px solid var(--ep-border-color-lighter);
+}
+
+/* ============================================
+   Edit Mode Visual Feedback - 编辑模式视觉反馈
+   ============================================ */
+
+/* 编辑模式：工程网格背景 */
+.is-edit-mode .workshop-canvas {
+  background-image:
+    linear-gradient(to right, var(--ep-border-color-light) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ep-border-color-light) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center center;
+  border-radius: var(--ep-border-radius-base);
+  padding: var(--ep-space-3);
+  background-color: var(--ep-fill-color-lighter);
+}
+
+/* 编辑模式：设备卡片悬停效果 */
+.is-edit-mode :deep(.device-card) {
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.is-edit-mode :deep(.device-card:hover) {
+  cursor: grab;
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.is-edit-mode :deep(.device-card:active) {
+  cursor: grabbing;
+}
+
+/* 编辑模式：拖拽中的卡片 */
+.is-edit-mode :deep(.device-card.dragging) {
+  transform: scale(1.05) rotate(2deg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+/* 编辑模式：空槽位更加明显 */
+.is-edit-mode :deep(.empty-slot) {
+  border: 2px dashed var(--ep-color-primary-light-3);
+  background: var(--ep-color-primary-light-9);
+  opacity: 0.8;
+}
+
+.is-edit-mode :deep(.empty-slot:hover) {
+  border-color: var(--ep-color-primary);
+  background: var(--ep-color-primary-light-8);
+  opacity: 1;
+}
+
+/* 编辑模式：空槽位拖拽悬停效果 */
+.is-edit-mode :deep(.empty-slot.drag-over) {
+  border-color: var(--ep-color-success);
+  background: var(--ep-color-success-light-8);
+  transform: scale(1.02);
+}
+
+/* 编辑模式：行标签和列标题高亮 */
+.is-edit-mode .row-label {
+  background: var(--ep-color-primary-light-7);
+  color: var(--ep-color-primary);
+  font-weight: var(--ep-font-weight-bold);
+}
+
+.is-edit-mode .col-header {
+  background: var(--ep-color-primary-light-7);
+  color: var(--ep-color-primary);
+  font-weight: var(--ep-font-weight-bold);
+}
+
+.is-edit-mode .col-header.aisle-header {
+  background: var(--ep-color-gray-4);
+  color: var(--ep-text-color-regular);
+}
+
+/* 编辑模式：过道区域淡化 */
+.is-edit-mode .aisle-cell {
+  background: var(--ep-color-gray-4);
+  opacity: 0.6;
 }
 </style>

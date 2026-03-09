@@ -12,12 +12,28 @@
       <el-menu router :default-active="$route.path" :collapse="isCollapse" :collapse-transition="false"
         background-color="var(--ep-color-white)" text-color="var(--ep-text-color-regular)"
         active-text-color="var(--el-color-primary)" class="custom-menu">
-        <el-menu-item index="/">
-          <el-icon>
-            <odometer />
-          </el-icon>
-          <template #title>监控大屏</template>
-        </el-menu-item>
+        <el-sub-menu index="/dashboard">
+          <template #title>
+            <el-icon>
+              <odometer />
+            </el-icon>
+            <span>车间大屏监控</span>
+          </template>
+          <el-menu-item index="/" class="workshop-menu-item">
+            <span class="workshop-dot workshop-dot--active"></span>
+            <span class="workshop-name">3F-一号车间</span>
+          </el-menu-item>
+          <el-menu-item index="/workshop-2" class="workshop-menu-item" disabled>
+            <span class="workshop-dot"></span>
+            <span class="workshop-name">3F-二号车间</span>
+            <el-tag size="small" type="info" class="workshop-status">规划中</el-tag>
+          </el-menu-item>
+          <el-menu-item index="/workshop-3" class="workshop-menu-item" disabled>
+            <span class="workshop-dot"></span>
+            <span class="workshop-name">2F-原型车间</span>
+            <el-tag size="small" type="info" class="workshop-status">规划中</el-tag>
+          </el-menu-item>
+        </el-sub-menu>
 
         <el-menu-item index="/printers">
           <el-icon>
@@ -211,15 +227,26 @@ const handleLogout = () => {
    ============================================ */
 .aside {
   background-color: var(--ep-color-white);
-  box-shadow: 2px 0 8px rgba(0, 21, 41, 0.08);
+  box-shadow: 4px 0 16px rgba(0, 21, 41, 0.12), 2px 0 6px rgba(0, 21, 41, 0.08);
   display: flex;
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
+  position: relative;
+}
+
+.aside::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--el-border-color-lighter) 20%, var(--el-border-color-lighter) 80%, transparent);
 }
 
 .logo {
-  height: 60px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,18 +254,38 @@ const handleLogout = () => {
   border-bottom: 1px solid var(--el-border-color-light);
   overflow: hidden;
   white-space: nowrap;
+  background: linear-gradient(135deg, var(--ep-color-white) 0%, var(--ep-fill-color-light) 100%);
+  position: relative;
+}
+
+.logo::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--el-color-primary-light-5) 20%, var(--el-color-primary) 50%, var(--el-color-primary-light-5) 80%, transparent);
+  opacity: 0.6;
 }
 
 .logo-icon {
   color: var(--el-color-primary);
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(var(--el-color-primary-rgb), 0.2));
 }
 
 .logo-text {
-  font-size: var(--el-font-size-large);
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--el-text-color-primary);
   transition: opacity 0.3s;
+  letter-spacing: 0.5px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, var(--el-text-color-primary) 0%, var(--el-color-primary-dark-2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .custom-menu {
@@ -272,6 +319,74 @@ const handleLogout = () => {
 :deep(.el-menu-item .el-icon) {
   font-size: 18px;
   margin-right: var(--ep-space-3);
+}
+
+/* 子菜单样式优化 */
+:deep(.el-sub-menu__title) {
+  height: 50px;
+  line-height: 50px;
+  margin: 4px 12px;
+  border-radius: var(--ep-border-radius-base);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background-color: var(--ep-color-gray-1);
+  color: var(--el-color-primary);
+}
+
+:deep(.el-sub-menu.is-active .el-sub-menu__title) {
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+
+/* 车间子菜单项样式 */
+:deep(.workshop-menu-item) {
+  height: 44px;
+  line-height: 44px;
+  margin: 2px 12px 2px 24px;
+  padding-left: 12px !important;
+  border-radius: var(--ep-border-radius-base);
+}
+
+:deep(.workshop-menu-item.is-active) {
+  background-color: var(--ep-color-primary-light-7);
+  border-left: none;
+  margin-left: 24px;
+  padding-left: 12px !important;
+}
+
+:deep(.workshop-menu-item .workshop-dot) {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--ep-color-gray-4);
+  margin-right: 10px;
+  transition: all 0.2s;
+}
+
+:deep(.workshop-menu-item.is-active .workshop-dot--active) {
+  background-color: var(--el-color-primary);
+  box-shadow: 0 0 0 3px var(--ep-color-primary-light-7);
+}
+
+:deep(.workshop-menu-item .workshop-name) {
+  font-size: 13px;
+  flex: 1;
+}
+
+:deep(.workshop-menu-item .workshop-status) {
+  margin-left: 8px;
+  font-size: 11px;
+  height: 20px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+/* 子菜单展开/收起动画优化 */
+:deep(.el-sub-menu .el-menu) {
+  background-color: transparent;
 }
 
 /* 折叠状态下的菜单样式 */
