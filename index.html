@@ -1,10 +1,19 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    <title>3D打印农场管理系统</title>
+    <!-- 防止 FOUC: 设置卡片默认背景色为白灰色，覆盖 Element Plus 默认蓝色 -->
+    <style>
+      /* 关键：在 Element Plus 样式加载前设置默认背景色 */
+      .device-card,
+      .device-card .el-card__body,
+      .el-card.device-card {
+        background-color: #f3f4f6 !important;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

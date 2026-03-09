@@ -1,7 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { WebSocketClient } from '@/utils/websocket'
 import { getPrinterList, batchUpdatePositions, updatePrinter } from '@/api/printer'
+import { PRINTER_STATE, GRID_CONFIG } from '@/utils/constants'
 
 /**
  * 打印机状态管理 Store
@@ -18,8 +19,11 @@ export const usePrinterStore = defineStore('printer', () => {
   /** 加载状态 */
   const loading = ref(false)
 
-  /** WebSocket 实时状态数据 - 按 printerId 存储 */
-  const realTimeStatus = ref({})
+  /**
+   * WebSocket 实时状态数据 - 以 printerId 为 Key 的响应式字典
+   * 使用 reactive 维护农场状态，防止 FOUC（无样式内容闪烁）
+   */
+  const realTimeStatus = reactive({})
 
   /** WebSocket 客户端实例 */
   let wsClient = null
@@ -27,20 +31,6 @@ export const usePrinterStore = defineStore('printer', () => {
   // ============================================
   // Constants
   // ============================================
-
-  /** 网格配置常量 */
-  const GRID_CONFIG = {
-    ROWS: 4,
-    COLS: 12, // 实际设备列数
-    TOTAL_COLS: 13, // 包含过道的总列数
-    AISLE_COL: 8, // 过道在第8列（视觉位置，1-based）
-    AISLE_COL_INDEX: 7 // 过道列的数组索引（0-based）
-  }
-
-  /** ASCII 码常量 */
-  const ASCII = {
-    UPPER_A: 65 // 'A' 的 ASCII 码
-  }
 
   /** WebSocket 配置 */
   const WS_CONFIG = {
@@ -86,27 +76,36 @@ export const usePrinterStore = defineStore('printer', () => {
 
   /**
    * 各状态设备数量统计
+   * 基于 WebSocket 实时状态统计
    * @returns {Object} 状态计数对象
    */
   const statusCounts = computed(() => {
     const counts = {
-      ONLINE: 0,
-      OFFLINE: 0,
-      PRINTING: 0,
-      ERROR: 0,
-      IDLE: 0
+      [PRINTER_STATE.PRINTING]: 0,
+      [PRINTER_STATE.STANDBY]: 0,
+      [PRINTER_STATE.PAUSED]: 0,
+      [PRINTER_STATE.COMPLETED]: 0,
+      [PRINTER_STATE.FAULT]: 0,
+      [PRINTER_STATE.SYS_ERROR]: 0,
+      [PRINTER_STATE.PRINT_ERROR]: 0,
+      [PRINTER_STATE.STARTING]: 0,
+      [PRINTER_STATE.CANCELLED]: 0
     }
 
-    rawDeviceList.value.forEach(device => {
-      const status = device.status
-      if (Object.prototype.hasOwnProperty.call(counts, status)) {
-        counts[status]++
-      }
-      // ONLINE状态视为空闲
-      if (status === 'ONLINE') {
-        counts.IDLE++
+    // 统计有实时状态的设备
+    Object.values(realTimeStatus).forEach(status => {
+      const state = status.state
+      if (state && Object.prototype.hasOwnProperty.call(counts, state)) {
+        counts[state]++
       }
     })
+
+    // 未收到实时状态的设备视为待机
+    const devicesWithStatus = Object.keys(realTimeStatus).length
+    const totalDevices = rawDeviceList.value.length
+    if (totalDevices > devicesWithStatus) {
+      counts[PRINTER_STATE.STANDBY] += (totalDevices - devicesWithStatus)
+    }
 
     return counts
   })
@@ -132,6 +131,30 @@ export const usePrinterStore = defineStore('printer', () => {
   // ============================================
 
   /**
+   * 初始化占位数据
+   * 在 WebSocket 连上之前，为所有设备创建默认状态
+   * 防止页面加载瞬间出现错位或闪烁（FOUC）
+   */
+  function initializePlaceholderData() {
+    rawDeviceList.value.forEach(device => {
+      const idKey = String(device.id)
+      // 只有在没有实时数据时才设置默认值
+      if (!realTimeStatus[idKey]) {
+        realTimeStatus[idKey] = {
+          state: PRINTER_STATE.STANDBY,
+          progress: 0,
+          toolTemperature: 0,
+          bedTemperature: 0,
+          printDuration: 0,
+          filamentUsed: 0,
+          systemMessage: '',
+          lastUpdate: null
+        }
+      }
+    })
+  }
+
+  /**
    * 获取设备数据
    */
   async function fetchDeviceData() {
@@ -145,10 +168,14 @@ export const usePrinterStore = defineStore('printer', () => {
         const hasValidCol = typeof d.gridCol === 'number' && d.gridCol > 0
         return hasValidRow && hasValidCol
       })
+
+      // 初始化占位数据，防止 FOUC
+      initializePlaceholderData()
     } catch (error) {
       console.error('获取设备数据失败:', error)
       // 降级使用模拟数据
       rawDeviceList.value = generateMockData()
+      initializePlaceholderData()
       throw error
     } finally {
       loading.value = false
@@ -197,7 +224,9 @@ export const usePrinterStore = defineStore('printer', () => {
       wsClient = null
     }
     // 清空实时状态数据
-    realTimeStatus.value = {}
+    Object.keys(realTimeStatus).forEach(key => {
+      delete realTimeStatus[key]
+    })
   }
 
   /**
@@ -213,16 +242,22 @@ export const usePrinterStore = defineStore('printer', () => {
     }
 
     // 将 printerId 统一转换为字符串作为 key
-    // 因为后端可能返回数字，而前端设备 id 可能是字符串
     const idKey = String(printerId)
 
-    // 更新实时状态数据
-    realTimeStatus.value[idKey] = {
-      ...data,
+    // 更新实时状态数据（使用 reactive 直接修改）
+    // 优先使用 unifiedState，后端已统一处理状态优先级
+    realTimeStatus[idKey] = {
+      state: data.unifiedState || data.state || PRINTER_STATE.STANDBY,
+      progress: data.progress ?? 0,
+      toolTemperature: data.toolTemperature ?? 0,
+      bedTemperature: data.bedTemperature ?? 0,
+      printDuration: data.printDuration ?? 0,
+      filamentUsed: data.filamentUsed ?? 0,
+      systemMessage: data.systemMessage || '',
       lastUpdate: timestamp
     }
 
-    console.log('[PrinterStore] 更新实时状态:', idKey, data)
+    console.log('[PrinterStore] 更新实时状态:', idKey, realTimeStatus[idKey])
   }
 
   /**
@@ -266,7 +301,7 @@ export const usePrinterStore = defineStore('printer', () => {
    * @returns {string} 行标签（如 A, B, C...）
    */
   function formatRowLabel(row) {
-    return String.fromCharCode(ASCII.UPPER_A + row - 1)
+    return String.fromCharCode(65 + row - 1)
   }
 
   /**
@@ -306,14 +341,14 @@ export const usePrinterStore = defineStore('printer', () => {
    */
   function generateMockData() {
     const devices = []
-    const statuses = ['ONLINE', 'OFFLINE', 'PRINTING', 'ERROR']
+    const states = Object.values(PRINTER_STATE)
     const nozzleSizes = ['0.4', '0.6', '0.8']
 
     // 随机填充约70%的位置
     for (let row = 1; row <= GRID_CONFIG.ROWS; row++) {
       for (let col = 1; col <= GRID_CONFIG.COLS; col++) {
         if (Math.random() > 0.3) {
-          const status = statuses[Math.floor(Math.random() * statuses.length)]
+          const state = states[Math.floor(Math.random() * states.length)]
           const rowLabel = formatRowLabel(row)
 
           devices.push({
@@ -322,7 +357,7 @@ export const usePrinterStore = defineStore('printer', () => {
             ipAddress: `192.168.1.${100 + row * 12 + col}`,
             macAddress: `AA:BB:CC:DD:${row.toString(16).padStart(2, '0')}:${col.toString(16).padStart(2, '0')}`,
             firmwareType: Math.random() > 0.5 ? 'Klipper' : 'Marlin',
-            status: status,
+            status: state,
             nozzleSize: nozzleSizes[Math.floor(Math.random() * nozzleSizes.length)],
             gridRow: row,
             gridCol: col,
@@ -341,14 +376,16 @@ export const usePrinterStore = defineStore('printer', () => {
    * @returns {Object|null}
    */
   function getDeviceRealTimeStatus(printerId) {
-    return realTimeStatus.value[printerId] || null
+    return realTimeStatus[String(printerId)] || null
   }
 
   /**
    * 清空实时状态数据
    */
   function clearRealTimeStatus() {
-    realTimeStatus.value = {}
+    Object.keys(realTimeStatus).forEach(key => {
+      delete realTimeStatus[key]
+    })
   }
 
   // ============================================
@@ -377,6 +414,7 @@ export const usePrinterStore = defineStore('printer', () => {
     updateDevicePositions,
     updateDevice,
     removeDeviceFromBoard,
+    initializePlaceholderData,
 
     // Utilities
     formatRowLabel,

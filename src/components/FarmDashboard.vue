@@ -1,17 +1,14 @@
 <template>
-  <div class="farm-dashboard">
+  <div v-cloak class="farm-dashboard">
     <!-- 顶部标题和统计 -->
-    <dashboard-header
-      :status-counts="store.statusCounts"
-      @refresh="handleRefresh"
-    />
+    <dashboard-header :status-counts="store.statusCounts" @refresh="handleRefresh" />
 
     <!-- 厂房网格布局 - 4行13列（含过道） -->
     <div class="factory-grid">
       <!-- 行标签 -->
       <div class="row-labels">
         <div v-for="row in store.GRID_CONFIG.ROWS" :key="`label-${row}`" class="row-label">
-          {{ store.formatRowLabel(row) }}排
+          {{ store.formatRowLabel(row) }}{{ labels.rowSuffix }}
         </div>
       </div>
 
@@ -19,13 +16,9 @@
       <div class="grid-container">
         <!-- 列标题 -->
         <div class="col-headers">
-          <div
-            v-for="col in store.GRID_CONFIG.TOTAL_COLS"
-            :key="`header-${col}`"
-            class="col-header"
-            :class="{ 'aisle-header': col === store.GRID_CONFIG.AISLE_COL }"
-          >
-            <template v-if="col === store.GRID_CONFIG.AISLE_COL">过道</template>
+          <div v-for="col in store.GRID_CONFIG.TOTAL_COLS" :key="`header-${col}`" class="col-header"
+            :class="{ 'aisle-header': col === store.GRID_CONFIG.AISLE_COL }">
+            <template v-if="col === store.GRID_CONFIG.AISLE_COL">{{ labels.aisle }}</template>
             <template v-else>{{ store.getPhysicalCol(col) }}</template>
           </div>
         </div>
@@ -35,40 +28,21 @@
           <template v-for="(row, rowIndex) in store.deviceMatrix" :key="`row-${rowIndex}`">
             <template v-for="(cell, colIndex) in row" :key="`cell-${rowIndex}-${colIndex}`">
               <!-- 过道占位 -->
-              <div
-                v-if="store.isAisleCell(colIndex)"
-                class="aisle-cell"
-              >
+              <div v-if="store.isAisleCell(colIndex)" class="aisle-cell">
                 <div class="aisle-indicator"></div>
               </div>
 
               <!-- 空槽位（可点击绑定设备） -->
-              <empty-slot
-                v-else-if="cell === null"
-                :row-index="rowIndex"
-                :col-index="colIndex"
-                :is-drag-over="isDragOver(rowIndex, colIndex)"
-                @click="handleEmptySlotClick(rowIndex, colIndex)"
-                @dragenter="handleDragEnter(rowIndex, colIndex)"
-                @dragleave="handleDragLeave"
-                @drop="handleDrop(rowIndex, colIndex)"
-              />
+              <empty-slot v-else-if="cell === null" :row-index="rowIndex" :col-index="colIndex"
+                :is-drag-over="isDragOver(rowIndex, colIndex)" @click="handleEmptySlotClick(rowIndex, colIndex)"
+                @dragenter="handleDragEnter(rowIndex, colIndex)" @dragleave="handleDragLeave"
+                @drop="handleDrop(rowIndex, colIndex)" />
 
               <!-- 设备卡片 -->
-              <printer-card
-                v-else
-                :device="cell"
-                :real-time-data="store.realTimeStatus[String(cell.id)]"
-                :row-index="rowIndex"
-                :col-index="colIndex"
-                :is-dragging="isDragging(cell)"
-                @dragstart="handleDragStart"
-                @dragend="handleDragEnd"
-                @dragenter="handleDragEnter"
-                @dragleave="handleDragLeave"
-                @drop="handleDrop"
-                @click="openDeviceDetail"
-              />
+              <printer-card v-else :device="cell" :real-time-data="store.realTimeStatus[String(cell.id)]"
+                :row-index="rowIndex" :col-index="colIndex" :is-dragging="isDragging(cell)" @dragstart="handleDragStart"
+                @dragend="handleDragEnd" @dragenter="handleDragEnter" @dragleave="handleDragLeave" @drop="handleDrop"
+                @click="openDeviceDetail" />
             </template>
           </template>
         </div>
@@ -76,82 +50,169 @@
     </div>
 
     <!-- 绑定设备弹窗 -->
-    <bind-device-dialog
-      v-model:visible="bindDialogVisible"
-      :target-slot-label="targetSlotLabel"
-      @confirm="performBind"
-    />
+    <bind-device-dialog v-model:visible="bindDialogVisible" :target-slot-label="targetSlotLabel"
+      @confirm="performBind" />
 
     <!-- 设备详情抽屉 -->
-    <el-drawer
-      v-model="drawerVisible"
-      title="设备详细信息"
-      size="400px"
-      :destroy-on-close="true"
-    >
+    <el-drawer v-model="drawerVisible" :title="drawerTitle" size="480px" :destroy-on-close="true"
+      class="printer-detail-drawer">
       <div v-if="activeDevice" class="device-detail-content">
-        <!-- 设备信息描述列表 -->
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="机器编号">
-            {{ activeDevice.machineNumber || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="设备名称">
-            {{ activeDevice.name || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="IP 地址">
-            <div class="ip-address-row">
-              <span>{{ activeDevice.ipAddress || '-' }}</span>
-              <el-button
-                v-if="activeDevice.ipAddress"
-                type="primary"
-                tag="a"
-                :href="'http://' + activeDevice.ipAddress"
-                target="_blank"
-                rel="noopener noreferrer"
-                size="small"
-              >
-                <el-icon><link /></el-icon>
-                进入 Mainsail
+        <!-- 实时状态概览卡片 -->
+        <div class="status-overview-card" :class="`status-${currentStateClass}`">
+          <div class="status-header">
+            <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="status-tag">
+              {{ currentStateConfig.label }}
+            </el-tag>
+            <span v-if="activeRealTimeData?.progress !== undefined && isPrintingState" class="progress-text">
+              {{ activeRealTimeData.progress }}%
+            </span>
+          </div>
+          <div v-if="activeRealTimeData?.systemMessage && isErrorState" class="error-message">
+            <el-icon>
+              <warning />
+            </el-icon>
+            <span>{{ activeRealTimeData.systemMessage }}</span>
+          </div>
+        </div>
+
+        <!-- 温度监控 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <el-icon>
+              <odometer />
+            </el-icon>
+            温度监控
+          </div>
+          <div class="temp-grid">
+            <div class="temp-item">
+              <span class="temp-label">喷头温度</span>
+              <span class="temp-value" :class="{ 'temp-hot': nozzleTemp > 50 }">
+                {{ formatTemp(nozzleTemp) }}
+              </span>
+            </div>
+            <div class="temp-item">
+              <span class="temp-label">热床温度</span>
+              <span class="temp-value" :class="{ 'temp-hot': bedTemp > 40 }">
+                {{ formatTemp(bedTemp) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 打印任务信息 -->
+        <div v-if="isPrintingOrRelated" class="detail-section">
+          <div class="section-title">
+            <el-icon>
+              <printer />
+            </el-icon>
+            打印任务
+          </div>
+          <div class="task-info-grid">
+            <div class="task-item">
+              <span class="task-label">打印时长</span>
+              <span class="task-value">{{ formatDuration(activeRealTimeData?.printDuration) }}</span>
+            </div>
+            <div class="task-item">
+              <span class="task-label">已用耗材</span>
+              <span class="task-value">{{ formatFilament(activeRealTimeData?.filamentUsed) }}</span>
+            </div>
+            <div v-if="isPrintingState" class="task-item full-width">
+              <span class="task-label">打印进度</span>
+              <el-progress :percentage="activeRealTimeData?.progress || 0" :status="progressStatus" :stroke-width="10"
+                class="task-progress" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 设备信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <el-icon><info-filled /></el-icon>
+            设备信息
+          </div>
+          <el-descriptions :column="2" size="small" border>
+            <el-descriptions-item label="机器编号" :span="2">
+              {{ activeDevice.machineNumber || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="设备名称" :span="2">
+              {{ activeDevice.name || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="IP 地址" :span="2">
+              {{ activeDevice.ipAddress || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="固件类型">
+              {{ activeDevice.firmwareType || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="喷头尺寸">
+              {{ activeDevice.nozzleSize ? activeDevice.nozzleSize + 'mm' : '-' }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- Moonraker / Mainsail 快捷操作 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <el-icon>
+              <monitor />
+            </el-icon>
+            远程控制 (Moonraker / Mainsail)
+          </div>
+          <div class="quick-actions">
+            <el-button v-if="activeDevice.ipAddress" type="primary" size="large" class="action-btn mainsail-btn" tag="a"
+              :href="mainsailUrl" target="_blank" rel="noopener noreferrer">
+              <el-icon>
+                <monitor />
+              </el-icon>
+              打开 Mainsail 界面
+            </el-button>
+
+            <div class="control-grid">
+              <el-button type="warning" :disabled="!canPause" @click="handlePrinterAction('pause')">
+                <el-icon><video-pause /></el-icon>
+                暂停打印
+              </el-button>
+              <el-button type="success" :disabled="!canResume" @click="handlePrinterAction('resume')">
+                <el-icon><video-play /></el-icon>
+                恢复打印
+              </el-button>
+              <el-button type="danger" :disabled="!canCancel" @click="handlePrinterAction('cancel')">
+                <el-icon><circle-close /></el-icon>
+                取消任务
+              </el-button>
+              <el-button type="info" @click="handlePrinterAction('reboot')">
+                <el-icon>
+                  <refresh />
+                </el-icon>
+                重启主机
               </el-button>
             </div>
-          </el-descriptions-item>
-          <el-descriptions-item label="MAC 地址">
-            {{ activeDevice.macAddress || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="固件类型">
-            {{ activeDevice.firmwareType || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="喷头尺寸">
-            {{ activeDevice.nozzleSize ? activeDevice.nozzleSize + 'mm' : '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="当前耗材">
-            {{ activeDevice.currentMaterial || '无耗材' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="设备状态">
-            <el-tag :type="getStatusType(activeDevice.status)" size="small">
-              {{ getStatusLabel(activeDevice.status) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="activeDevice.currentJobId" label="当前任务">
-            #{{ activeDevice.currentJobId }}
-          </el-descriptions-item>
-        </el-descriptions>
+
+            <div v-if="isFatalError" class="emergency-actions">
+              <el-divider>
+                <el-tag type="danger" effect="dark">紧急操作</el-tag>
+              </el-divider>
+              <el-button type="danger" size="large" class="emergency-btn" @click="handleEmergencyStop">
+                <el-icon>
+                  <warning />
+                </el-icon>
+                紧急停机 (ESTOP)
+              </el-button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 抽屉底部操作区 -->
       <template #footer>
         <div class="drawer-footer">
-          <el-popconfirm
-            title="确定要将此设备从该物理位置下架吗？"
-            confirm-button-text="确认下架"
-            cancel-button-text="取消"
-            confirm-button-type="danger"
-            @confirm="handleRemoveFromBoard"
-          >
+          <el-popconfirm title="确定要将此设备从该物理位置下架吗？" confirm-button-text="确认下架" cancel-button-text="取消"
+            confirm-button-type="danger" @confirm="handleRemoveFromBoard">
             <template #reference>
               <el-button type="danger" plain>
-                <el-icon><delete /></el-icon>
-                从看板下架 (移除)
+                <el-icon>
+                  <delete />
+                </el-icon>
+                从看板下架
               </el-button>
             </template>
           </el-popconfirm>
@@ -164,8 +225,20 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import {
+  Delete,
+  Odometer,
+  Printer,
+  InfoFilled,
+  Monitor,
+  VideoPause,
+  VideoPlay,
+  CircleClose,
+  Refresh,
+  Warning
+} from '@element-plus/icons-vue'
 import { usePrinterStore } from '@/stores/printerStore'
+import { PRINTER_STATE, PRINTER_STATE_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
 import DashboardHeader from './DashboardHeader.vue'
 import EmptySlot from './EmptySlot.vue'
 import PrinterCard from './PrinterCard.vue'
@@ -178,6 +251,15 @@ defineOptions({ name: 'FarmDashboard' })
 // ============================================
 
 const store = usePrinterStore()
+
+// ============================================
+// Data - 中文标签配置（数据驱动，避免硬编码）
+// ============================================
+
+const labels = {
+  rowSuffix: '排',
+  aisle: '过道'
+}
 
 // ============================================
 // Reactive State
@@ -206,7 +288,104 @@ const activeDevice = ref(null)
 const targetSlotLabel = computed(() => {
   if (targetSlot.value.row === null || targetSlot.value.col === null) return ''
   const rowLabel = store.formatRowLabel(targetSlot.value.row)
-  return `${rowLabel}-${targetSlot.value.row.toString().padStart(2, '0')}`
+  return `${rowLabel}-${targetSlot.value.col.toString().padStart(2, '0')}`
+})
+
+// ============================================
+// Device Detail Drawer Computed Properties
+// ============================================
+
+/** 抽屉标题 */
+const drawerTitle = computed(() => {
+  if (!activeDevice.value) return '设备详细信息'
+  return `${activeDevice.value.machineNumber || activeDevice.value.name} - 详细信息`
+})
+
+/** 当前设备的实时状态数据 */
+const activeRealTimeData = computed(() => {
+  if (!activeDevice.value) return null
+  return store.realTimeStatus[String(activeDevice.value.id)]
+})
+
+/** 当前状态 */
+const currentState = computed(() => {
+  return activeRealTimeData.value?.state || PRINTER_STATE.STANDBY
+})
+
+/** 当前状态配置 */
+const currentStateConfig = computed(() => {
+  return PRINTER_STATE_MAP[currentState.value] || PRINTER_STATE_MAP[PRINTER_STATE.STANDBY]
+})
+
+/** 当前状态类名 */
+const currentStateClass = computed(() => {
+  return currentState.value.toLowerCase()
+})
+
+/** 是否为打印中状态 */
+const isPrintingState = computed(() => {
+  return currentState.value === PRINTER_STATE.PRINTING
+})
+
+/** 是否为打印中或相关状态 */
+const isPrintingOrRelated = computed(() => {
+  const relatedStates = [
+    PRINTER_STATE.PRINTING,
+    PRINTER_STATE.PAUSED,
+    PRINTER_STATE.PRINT_ERROR,
+    PRINTER_STATE.COMPLETED,
+    PRINTER_STATE.CANCELLED
+  ]
+  return relatedStates.includes(currentState.value)
+})
+
+/** 是否为错误状态 */
+const isErrorState = computed(() => {
+  return currentState.value === PRINTER_STATE.FAULT ||
+    currentState.value === PRINTER_STATE.SYS_ERROR ||
+    currentState.value === PRINTER_STATE.PRINT_ERROR
+})
+
+/** 是否为致命错误 */
+const isFatalError = computed(() => {
+  return currentState.value === PRINTER_STATE.FAULT ||
+    currentState.value === PRINTER_STATE.SYS_ERROR
+})
+
+/** 喷头温度 */
+const nozzleTemp = computed(() => {
+  return activeRealTimeData.value?.toolTemperature || 0
+})
+
+/** 热床温度 */
+const bedTemp = computed(() => {
+  return activeRealTimeData.value?.bedTemperature || 0
+})
+
+/** Mainsail 访问地址 */
+const mainsailUrl = computed(() => {
+  if (!activeDevice.value?.ipAddress) return '#'
+  return `http://${activeDevice.value.ipAddress}`
+})
+
+/** 进度条状态 */
+const progressStatus = computed(() => {
+  return PROGRESS_STATUS_MAP[currentState.value] || ''
+})
+
+/** 是否可以暂停 */
+const canPause = computed(() => {
+  return currentState.value === PRINTER_STATE.PRINTING
+})
+
+/** 是否可以恢复 */
+const canResume = computed(() => {
+  return currentState.value === PRINTER_STATE.PAUSED
+})
+
+/** 是否可以取消 */
+const canCancel = computed(() => {
+  return [PRINTER_STATE.PRINTING, PRINTER_STATE.PAUSED, PRINTER_STATE.PRINT_ERROR].includes(currentState.value)
 })
 
 // ============================================
@@ -436,35 +615,66 @@ function openDeviceDetail(device) {
 }
 
 /**
- * 获取状态标签类型
- * @param {string} status - 设备状态
- * @returns {string} Element Plus 标签类型
+ * 格式化温度
+ * @param {number} temp - 温度值
+ * @returns {string} 格式化后的温度字符串
  */
-function getStatusType(status) {
-  const typeMap = {
-    ONLINE: 'success',
-    IDLE: 'success',
-    OFFLINE: 'info',
-    PRINTING: 'primary',
-    ERROR: 'danger'
-  }
-  return typeMap[status] || 'info'
+function formatTemp(temp) {
+  if (temp === undefined || temp === null) return '--°C'
+  return `${Math.round(temp)}°C`
 }
 
 /**
- * 获取状态显示标签
- * @param {string} status - 设备状态
- * @returns {string} 状态标签文本
+ * 格式化时长
+ * @param {number} seconds - 秒数
+ * @returns {string} 格式化后的时长字符串
  */
-function getStatusLabel(status) {
-  const labelMap = {
-    ONLINE: '在线',
-    IDLE: '空闲',
-    OFFLINE: '离线',
-    PRINTING: '打印中',
-    ERROR: '故障'
+function formatDuration(seconds) {
+  if (!seconds) return '00:00:00'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+/**
+ * 格式化耗材使用量
+ * @param {number} mm - 毫米数
+ * @returns {string} 格式化后的米数字符串
+ */
+function formatFilament(mm) {
+  if (!mm) return '0.00m'
+  return `${(mm / 1000).toFixed(2)}m`
+}
+
+/**
+ * 处理打印机操作
+ * @param {string} action - 操作类型
+ */
+function handlePrinterAction(action) {
+  if (!activeDevice.value) return
+
+  const actionMap = {
+    pause: '暂停打印',
+    resume: '恢复打印',
+    cancel: '取消任务',
+    reboot: '重启主机'
   }
-  return labelMap[status] || status
+
+  // TODO: 调用 Moonraker API
+  ElMessage.info(`正在发送 ${actionMap[action]} 指令到 ${activeDevice.value.machineNumber}...`)
+  console.log(`[Printer Action] ${action} -> ${activeDevice.value.ipAddress}`)
+}
+
+/**
+ * 处理紧急停机
+ */
+function handleEmergencyStop() {
+  if (!activeDevice.value) return
+
+  // TODO: 调用 Moonraker ESTOP API
+  ElMessage.warning(`正在发送紧急停机指令到 ${activeDevice.value.machineNumber}...`)
+  console.log(`[Emergency Stop] ESTOP -> ${activeDevice.value.ipAddress}`)
 }
 
 /**
@@ -517,6 +727,13 @@ onUnmounted(() => {
 
 <style scoped>
 /* ============================================
+   v-cloak: 防止 Vue 未加载完成时显示内容
+   ============================================ */
+[v-cloak] {
+  display: none !important;
+}
+
+/* ============================================
    Layout Container
    ============================================ */
 .farm-dashboard {
@@ -543,7 +760,8 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: flex-start;
   gap: var(--ep-space-3);
-  padding-top: 32px; /* 列标题高度 */
+  padding-top: 32px;
+  /* 列标题高度 */
   height: 100%;
 }
 
@@ -620,13 +838,11 @@ onUnmounted(() => {
 .aisle-indicator {
   width: 4px;
   height: 80%;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--ep-color-gray-5) 0,
-    var(--ep-color-gray-5) 4px,
-    transparent 4px,
-    transparent 8px
-  );
+  background: repeating-linear-gradient(to bottom,
+      var(--ep-color-gray-5) 0,
+      var(--ep-color-gray-5) 4px,
+      transparent 4px,
+      transparent 8px);
   opacity: 0.4;
 }
 
@@ -665,20 +881,223 @@ onUnmounted(() => {
 /* ============================================
    Device Detail Drawer Styles
    ============================================ */
-.device-detail-content {
-  padding: var(--ep-space-4);
+
+/* 抽屉整体样式 */
+.printer-detail-drawer :deep(.el-drawer__body) {
+  padding: 0;
+  overflow-y: auto;
 }
 
-.ip-address-row {
+.printer-detail-drawer :deep(.el-drawer__header) {
+  margin-bottom: 0;
+  padding: var(--ep-space-4);
+  border-bottom: 1px solid var(--ep-border-color-lighter);
+}
+
+.device-detail-content {
+  padding: var(--ep-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ep-space-5);
+}
+
+/* 状态概览卡片 */
+.status-overview-card {
+  padding: var(--ep-space-4);
+  border-radius: var(--ep-border-radius-base);
+  background: var(--ep-fill-color-light);
+  border: 1px solid var(--ep-border-color);
+}
+
+.status-overview-card.status-fault,
+.status-overview-card.status-sys_error {
+  background: var(--ep-color-danger-light-9);
+  border-color: var(--ep-color-danger);
+}
+
+.status-overview-card.status-print_error,
+.status-overview-card.status-starting,
+.status-overview-card.status-paused {
+  background: var(--ep-color-warning-light-9);
+  border-color: var(--ep-color-warning);
+}
+
+.status-overview-card.status-printing {
+  background: var(--ep-color-primary-light-9);
+  border-color: var(--ep-color-primary);
+}
+
+.status-overview-card.status-completed {
+  background: var(--ep-color-success-light-9);
+  border-color: var(--ep-color-success);
+}
+
+.status-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--ep-space-3);
+}
+
+.status-tag {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.progress-text {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--ep-color-primary);
+}
+
+.error-message {
+  margin-top: var(--ep-space-3);
+  padding: var(--ep-space-3);
+  background: var(--ep-color-danger-light-9);
+  border-radius: var(--ep-border-radius-small);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ep-space-2);
+  font-size: 13px;
+  color: var(--ep-color-danger);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-message .el-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* 详情区块 */
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ep-space-3);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ep-space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ep-text-color-primary);
+}
+
+.section-title .el-icon {
+  color: var(--ep-color-primary);
+}
+
+/* 温度网格 */
+.temp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--ep-space-3);
+}
+
+.temp-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ep-space-1);
+  padding: var(--ep-space-3);
+  background: var(--ep-fill-color-light);
+  border-radius: var(--ep-border-radius-base);
+}
+
+.temp-label {
+  font-size: 12px;
+  color: var(--ep-text-color-secondary);
+}
+
+.temp-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--ep-text-color-primary);
+}
+
+.temp-value.temp-hot {
+  color: var(--ep-color-danger);
+}
+
+/* 任务信息网格 */
+.task-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--ep-space-3);
+}
+
+.task-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ep-space-1);
+  padding: var(--ep-space-3);
+  background: var(--ep-fill-color-light);
+  border-radius: var(--ep-border-radius-base);
+}
+
+.task-item.full-width {
+  grid-column: span 2;
+}
+
+.task-label {
+  font-size: 12px;
+  color: var(--ep-text-color-secondary);
+}
+
+.task-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ep-text-color-primary);
+}
+
+.task-progress {
+  margin-top: var(--ep-space-2);
+}
+
+/* 快捷操作区域 */
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ep-space-3);
+}
+
+.action-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.mainsail-btn {
+  height: 44px;
+  font-size: 14px;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--ep-space-2);
 }
 
+.control-grid .el-button {
+  height: 40px;
+}
+
+.emergency-actions {
+  margin-top: var(--ep-space-3);
+}
+
+.emergency-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+/* 底部操作区 */
 .drawer-footer {
   display: flex;
   justify-content: flex-end;
   padding: var(--ep-space-3) var(--ep-space-4);
+  border-top: 1px solid var(--ep-border-color-lighter);
 }
 </style>

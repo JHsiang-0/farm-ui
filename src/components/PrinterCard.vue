@@ -1,71 +1,75 @@
 <template>
-  <el-card
-    class="device-card"
-    :class="[`status-${normalizedStatus}`, { 'dragging': isDragging }]"
-    :style="cardBackgroundStyle"
-    shadow="hover"
-    draggable="true"
-    :data-device-id="device.id"
-    :data-row="rowIndex"
-    :data-col="colIndex"
-    @click="handleCardClick"
-    @dragstart="$emit('dragstart', device, rowIndex, colIndex)"
-    @dragend="$emit('dragend')"
-    @dragover.prevent
-    @dragenter.prevent="$emit('dragenter', rowIndex, colIndex)"
-    @dragleave="$emit('dragleave')"
-    @drop="$emit('drop', rowIndex, colIndex)"
-  >
-<!-- 卡片头部：机器编号 -->
+  <el-card v-cloak class="device-card" :class="[`status-${stateClass}`, { 'dragging': isDragging }]" shadow="hover"
+    draggable="true" :data-device-id="device.id" :data-row="rowIndex" :data-col="colIndex" @click="handleCardClick"
+    @dragstart="$emit('dragstart', device, rowIndex, colIndex)" @dragend="$emit('dragend')" @dragover.prevent
+    @dragenter.prevent="$emit('dragenter', rowIndex, colIndex)" @dragleave.prevent="$emit('dragleave')"
+    @drop="$emit('drop', rowIndex, colIndex)">
+    <!-- 卡片头部：机器编号 -->
     <div class="card-header">
-      <span class="machine-number">{{ device.machineNumber || '-' }}</span>
+      <span class="machine-number">{{ displayMachineNumber }}</span>
     </div>
 
     <!-- 卡片内容区 -->
     <div class="card-content">
-      <div class="info-row">
-        <el-icon :size="12"><odometer /></el-icon>
-        <span class="info-text">喷头: {{ formatTemperature(realTimeData?.nozzleTemp) }}°C</span>
-      </div>
-      <div class="info-row">
-        <el-icon :size="12"><hot-water /></el-icon>
-        <span class="info-text">热床: {{ formatTemperature(realTimeData?.bedTemp) }}°C</span>
-      </div>
-      <div class="info-row">
-        <el-icon :size="12"><tools /></el-icon>
-        <span class="info-text">喷头: {{ device.nozzleSize ? device.nozzleSize + 'mm' : '-' }}</span>
-      </div>
-      <div v-if="device.currentJobId" class="info-row job-info">
-        <el-icon :size="12"><document /></el-icon>
-        <span class="info-text">任务 #{{ device.currentJobId }}</span>
-      </div>
-    </div>
-
-<!-- 卡片底部：状态 -->
-    <div class="card-footer">
-      <!-- 非打印状态：显示胶囊按钮 -->
-      <template v-if="!isPrinting">
-        <div class="status-wrapper">
-          <div class="status-dot" :class="normalizedStatus"></div>
-          <el-tag :type="statusType" size="small" effect="light">
-            {{ statusLabel }}
-          </el-tag>
+      <!-- 致命错误状态：只显示错误提示，隐藏所有数据 -->
+      <template v-if="isFatalError">
+        <div class="fatal-error-message">
+          <el-icon :size="24" color="var(--ep-color-danger)"><warning-filled /></el-icon>
+          <span class="error-text">{{ stateConfig.label }}</span>
         </div>
       </template>
-      <!-- 打印中状态：显示实时进度 -->
+      <!-- 正常状态：显示温度等信息 -->
       <template v-else>
-        <div class="printing-status">
-          <div class="progress-text">
-            打印中 {{ printProgress.toFixed(1) }}%
+        <!-- 温度信息 -->
+        <div class="info-row">
+          <el-icon :size="12">
+            <odometer />
+          </el-icon>
+          <span class="info-text">喷头: {{ displayNozzleTemp }}</span>
+        </div>
+        <div class="info-row">
+          <el-icon :size="12"><hot-water /></el-icon>
+          <span class="info-text">热床: {{ displayBedTemp }}</span>
+        </div>
+
+        <!-- 打印任务信息 -->
+        <template v-if="isPrintingOrRelated">
+          <div class="info-row">
+            <el-icon :size="12">
+              <timer />
+            </el-icon>
+            <span class="info-text">时长: {{ displayDuration }}</span>
           </div>
-          <el-progress
-            :percentage="printProgress"
-            :stroke-width="10"
-            striped
-            striped-flow
-            :duration="2"
-            :show-text="false"
-          />
+          <div class="info-row">
+            <el-icon :size="12">
+              <data-line />
+            </el-icon>
+            <span class="info-text">耗材: {{ displayFilamentUsed }}</span>
+          </div>
+        </template>
+
+        <!-- 喷头尺寸 -->
+        <div class="info-row">
+          <el-icon :size="12">
+            <tools />
+          </el-icon>
+          <span class="info-text">喷头: {{ displayNozzleSize }}</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- 卡片底部：状态横条 -->
+    <div class="card-footer">
+      <!-- 非打印状态：显示状态横条 -->
+      <template v-if="!isPrinting">
+        <div class="status-bar" :class="`status-bg-${stateClass}`">
+          <span class="status-text">{{ stateConfig.label }}</span>
+        </div>
+      </template>
+      <!-- 打印中状态：显示实时进度横条 -->
+      <template v-else>
+        <div class="status-bar status-bg-printing">
+          <span class="status-text">打印中 {{ displayProgress }}%</span>
         </div>
       </template>
     </div>
@@ -78,8 +82,19 @@ import {
   Odometer,
   HotWater,
   Tools,
-  Document
+  Timer,
+  DataLine,
+  WarningFilled
 } from '@element-plus/icons-vue'
+import {
+  PRINTER_STATE,
+  PRINTER_STATE_MAP
+} from '@/utils/constants'
+import {
+  formatTemperature,
+  formatDuration,
+  formatFilamentUsed
+} from '@/utils/printerUtils'
 
 defineOptions({ name: 'PrinterCard' })
 
@@ -125,126 +140,134 @@ const emit = defineEmits([
 ])
 
 // ============================================
-// Constants
-// ============================================
-
-/** 状态映射配置 */
-const STATUS_MAP = {
-  ONLINE: { label: '在线', type: 'success' },
-  OFFLINE: { label: '离线', type: 'info' },
-  PRINTING: { label: '打印中', type: 'primary' },
-  ERROR: { label: '故障', type: 'danger' },
-  IDLE: { label: '空闲', type: 'success' }
-}
-
-/** 状态背景色映射 - Element Plus 原生变量
- * ONLINE(在线): 浅绿色
- * IDLE(空闲/就绪): 浅青色（与 ONLINE 区分）
- * PRINTING(打印中): 浅蓝色
- * ERROR(故障): 浅红色
- * OFFLINE(离线): 浅灰色
- */
-const STATUS_BG_MAP = {
-  ONLINE: 'var(--el-color-success-light-8)',
-  IDLE: '#e6f7ff', // 浅青色
-  PRINTING: 'var(--el-color-primary-light-9)',
-  ERROR: 'var(--el-color-danger-light-9)',
-  OFFLINE: 'var(--el-color-info-light-9)'
-}
-
-// ============================================
-// Computed Properties
-// ============================================
-
-/** 标准化状态值（小写） */
-const normalizedStatus = computed(() => {
-  // 优先使用 WebSocket 推送的实时状态
-  const rtState = props.realTimeData?.state
-  if (rtState) {
-    return rtState.toLowerCase()
-  }
-  return props.device.status?.toLowerCase() || 'offline'
-})
-
-/** 状态标签类型 */
-const statusType = computed(() => {
-  // 优先使用 WebSocket 推送的实时状态
-  const rtState = props.realTimeData?.state
-  const status = rtState ? rtState.toUpperCase() : props.device.status
-  const typeMap = {
-    ONLINE: 'success',
-    IDLE: 'success',
-    OFFLINE: 'info',
-    PRINTING: 'primary',
-    ERROR: 'danger'
-  }
-  return typeMap[status] || 'info'
-})
-
-/** 状态显示标签 */
-const statusLabel = computed(() => {
-  // 优先使用 WebSocket 推送的实时状态
-  const rtState = props.realTimeData?.state
-  if (rtState) {
-    return STATUS_MAP[rtState.toUpperCase()]?.label || rtState
-  }
-  return STATUS_MAP[props.device.status]?.label || props.device.status
-})
-
-/** 卡片动态背景色样式 */
-const cardBackgroundStyle = computed(() => {
-  // 优先使用 WebSocket 推送的实时状态
-  const rtState = props.realTimeData?.state
-  const status = rtState ? rtState.toUpperCase() : props.device.status
-  const bgColor = STATUS_BG_MAP[status] || 'var(--el-color-info-light-9)'
-  return {
-    backgroundColor: bgColor,
-    cursor: 'pointer'
-  }
-})
-
-/** 是否正在打印中 - 优先使用 WebSocket 实时状态 */
-const isPrinting = computed(() => {
-  // 如果有 WebSocket 实时数据，优先使用
-  if (props.realTimeData?.state) {
-    return props.realTimeData.state.toLowerCase() === 'printing'
-  }
-  // 否则使用设备基础状态
-  return props.device.status === 'PRINTING'
-})
-
-/** 实时进度 - 仅使用 WebSocket 数据 */
-const printProgress = computed(() => {
-  // 只使用 WebSocket 推送的实时进度
-  if (props.realTimeData?.progress !== undefined && props.realTimeData?.progress !== null) {
-    return props.realTimeData.progress
-  }
-  return 0
-})
-
-// ============================================
-// Utility Functions
+// State & Config
 // ============================================
 
 /**
- * 格式化温度显示
- * @param {number|null|undefined} temp - 温度值
- * @returns {string} 格式化后的温度字符串
+ * 获取打印机状态对象
+ * 优先使用 WebSocket 实时数据，否则使用设备基础数据
  */
-function formatTemperature(temp) {
-  if (temp === null || temp === undefined || isNaN(temp)) {
-    return '--'
+const printerState = computed(() => {
+  return props.realTimeData || {
+    state: PRINTER_STATE.STANDBY,
+    progress: 0,
+    toolTemperature: 0,
+    bedTemperature: 0,
+    printDuration: 0,
+    filamentUsed: 0,
+    systemMessage: ''
   }
-  return Number(temp).toFixed(1)
-}
+})
+
+/**
+ * 当前状态值（大写）
+ */
+const currentState = computed(() => {
+  return printerState.value.state || PRINTER_STATE.STANDBY
+})
+
+/**
+ * 状态配置（标签、类型、级别）
+ */
+const stateConfig = computed(() => {
+  return PRINTER_STATE_MAP[currentState.value] || PRINTER_STATE_MAP[PRINTER_STATE.STANDBY]
+})
+
+/**
+ * 状态类名（小写，用于 CSS）
+ */
+const stateClass = computed(() => {
+  return currentState.value.toLowerCase()
+})
+
+/**
+ * 是否为打印中状态
+ */
+const isPrinting = computed(() => {
+  return currentState.value === PRINTER_STATE.PRINTING
+})
+
+/**
+ * 是否为致命错误状态（FAULT/SYS_ERROR）
+ * 此时隐藏后端数据，只显示错误状态
+ */
+const isFatalError = computed(() => {
+  return [PRINTER_STATE.FAULT, PRINTER_STATE.SYS_ERROR].includes(currentState.value)
+})
+
+/**
+ * 是否为打印中或相关状态（显示额外信息）
+ */
+const isPrintingOrRelated = computed(() => {
+  const relatedStates = [
+    PRINTER_STATE.PRINTING,
+    PRINTER_STATE.PAUSED,
+    PRINTER_STATE.PRINT_ERROR,
+    PRINTER_STATE.COMPLETED,
+    PRINTER_STATE.CANCELLED
+  ]
+  return relatedStates.includes(currentState.value)
+})
+
+// ============================================
+// Display Computed Properties
+// ============================================
+
+/** 机器编号显示 */
+const displayMachineNumber = computed(() => {
+  if (props.device.machineNumber) {
+    return props.device.machineNumber
+  }
+  // 根据 gridRow 和 gridCol 动态生成
+  const row = props.device.gridRow
+  const col = props.device.gridCol
+  if (row && col) {
+    const rowLabel = String.fromCharCode(64 + row)
+    return `${rowLabel}-${col.toString().padStart(2, '0')}`
+  }
+  return '-'
+})
+
+/** 喷头温度显示 */
+const displayNozzleTemp = computed(() => {
+  return formatTemperature(printerState.value.toolTemperature)
+})
+
+/** 热床温度显示 */
+const displayBedTemp = computed(() => {
+  return formatTemperature(printerState.value.bedTemperature)
+})
+
+/** 打印时长显示 */
+const displayDuration = computed(() => {
+  return formatDuration(printerState.value.printDuration)
+})
+
+/** 耗材使用量显示 */
+const displayFilamentUsed = computed(() => {
+  return formatFilamentUsed(printerState.value.filamentUsed)
+})
+
+/** 喷头尺寸显示 */
+const displayNozzleSize = computed(() => {
+  return props.device.nozzleSize ? props.device.nozzleSize + 'mm' : '-'
+})
+
+/** 显示进度 */
+const displayProgress = computed(() => {
+  const progress = printerState.value.progress
+  if (progress === undefined || progress === null) {
+    return 0
+  }
+  return Math.min(100, Math.max(0, Number(progress)))
+})
+
 
 // ============================================
 // Event Handlers
 // ============================================
 
-/**
- * 处理卡片点击事件
- */
+/** 处理卡片点击事件 */
 function handleCardClick() {
   emit('click', props.device)
 }
@@ -252,16 +275,25 @@ function handleCardClick() {
 
 <style scoped>
 /* ============================================
+   v-cloak: 防止 Vue 未加载完成时显示内容
+   ============================================ */
+[v-cloak] {
+  display: none !important;
+}
+
+/* ============================================
    Device Card - 设备卡片
    ============================================ */
 .device-card {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-radius: var(--ep-border-radius-base);
+  border-radius: 4px;
   transition: all var(--ep-transition-duration) var(--ep-transition-timing);
   cursor: grab;
   user-select: none;
+  /* 默认背景色 - 白色 */
+  background-color: #ffffff !important;
 }
 
 .device-card:hover {
@@ -275,25 +307,107 @@ function handleCardClick() {
   transform: rotate(3deg);
 }
 
+/* 强制覆盖 Element Plus 卡片默认样式 */
+.device-card :deep(.el-card) {
+  background-color: #ffffff !important;
+  border: none;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .device-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: var(--ep-space-3);
   gap: var(--ep-space-2);
+  background-color: #ffffff !important;
+  border-radius: 4px;
 }
 
-/* 状态样式 - 统一卡片风格，仅通过背景色区分 */
-.device-card.status-offline {
-  opacity: 0.85;
+/* ============================================
+   9种状态卡片背景色 - 强制不透明
+   ============================================ */
+
+/* 🔴 致命级 - 淡红色背景 */
+.device-card.status-fault,
+.device-card.status-fault :deep(.el-card),
+.device-card.status-fault :deep(.el-card__body) {
+  background-color: #fee2e2 !important;
+  border: 1px solid var(--ep-color-danger);
 }
 
-/* 卡片头部 */
+.device-card.status-sys_error,
+.device-card.status-sys_error :deep(.el-card),
+.device-card.status-sys_error :deep(.el-card__body) {
+  background-color: #fee2e2 !important;
+  border: 1px solid var(--ep-color-danger);
+}
+
+/* 🟡 警告级 - 淡黄色背景 */
+.device-card.status-print_error,
+.device-card.status-print_error :deep(.el-card),
+.device-card.status-print_error :deep(.el-card__body) {
+  background-color: #fef3c7 !important;
+  border: 1px solid var(--ep-color-warning);
+}
+
+.device-card.status-starting,
+.device-card.status-starting :deep(.el-card),
+.device-card.status-starting :deep(.el-card__body) {
+  background-color: #fef3c7 !important;
+  border: 1px solid var(--ep-color-warning);
+}
+
+.device-card.status-paused,
+.device-card.status-paused :deep(.el-card),
+.device-card.status-paused :deep(.el-card__body) {
+  background-color: #fef3c7 !important;
+  border: 1px solid var(--ep-color-warning);
+}
+
+/* 🔵 正常业务级 */
+/* 打印中 - 淡蓝色 */
+.device-card.status-printing,
+.device-card.status-printing :deep(.el-card),
+.device-card.status-printing :deep(.el-card__body) {
+  background-color: #dbeafe !important;
+  border: 1px solid var(--ep-color-primary);
+}
+
+/* 已完成 - 淡绿色 */
+.device-card.status-completed,
+.device-card.status-completed :deep(.el-card),
+.device-card.status-completed :deep(.el-card__body) {
+  background-color: #d1fae5 !important;
+  border: 1px solid var(--ep-color-success);
+}
+
+/* 待机 - 淡灰色 */
+.device-card.status-standby,
+.device-card.status-standby :deep(.el-card),
+.device-card.status-standby :deep(.el-card__body) {
+  background-color: #f3f4f6 !important;
+  border: 1px solid var(--ep-color-gray-4);
+}
+
+/* 已取消 - 淡灰色 */
+.device-card.status-cancelled,
+.device-card.status-cancelled :deep(.el-card),
+.device-card.status-cancelled :deep(.el-card__body) {
+  background-color: #f3f4f6 !important;
+  border: 1px solid var(--ep-color-gray-4);
+}
+
+/* ============================================
+   卡片头部
+   ============================================ */
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
+  gap: 8px;
 }
 
 .machine-number {
@@ -303,39 +417,9 @@ function handleCardClick() {
   color: var(--ep-text-color-primary);
 }
 
-.status-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.online {
-  background-color: var(--ep-color-success);
-  box-shadow: 0 0 6px var(--ep-color-success);
-}
-
-.status-dot.offline {
-  background-color: var(--ep-color-info);
-}
-
-.status-dot.printing {
-  background-color: var(--ep-color-primary);
-  box-shadow: 0 0 6px var(--ep-color-primary);
-}
-
-.status-dot.error {
-  background-color: var(--ep-color-danger);
-  box-shadow: 0 0 6px var(--ep-color-danger);
-}
-
-/* 卡片内容区 */
+/* ============================================
+   卡片内容区
+   ============================================ */
 .card-content {
   display: flex;
   flex-direction: column;
@@ -363,66 +447,88 @@ function handleCardClick() {
   text-overflow: ellipsis;
 }
 
-.job-info {
-  color: var(--ep-color-primary);
-  font-weight: var(--ep-font-weight-medium);
-}
-
-/* 卡片底部 - 状态区域 */
-.card-footer {
+/* 致命错误状态的消息显示 */
+.fatal-error-message {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  gap: 6px;
+  padding: 8px 0;
+  min-height: 0;
+}
+
+.fatal-error-message .error-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ep-color-danger);
+}
+
+/* ============================================
+   卡片底部 - 状态横条区域
+   ============================================ */
+.card-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
   padding-top: var(--ep-space-2);
   margin-top: auto;
   border-top: 1px solid var(--ep-border-color-lighter);
-  gap: var(--ep-space-1);
-}
-
-.card-footer .status-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-/* 打印进度条 - 旧版兼容 */
-.print-progress {
   width: 100%;
-  padding: 0 var(--ep-space-1);
 }
 
-.print-progress :deep(.el-progress-bar__outer) {
-  background-color: var(--ep-fill-color);
-}
-
-/* 打印中状态展示 */
-.printing-status {
+/* 状态横条 - 与卡片等宽 */
+.status-bar {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.progress-text {
-  font-size: 11px;
-  font-weight: var(--ep-font-weight-semibold);
-  color: var(--ep-color-primary);
+  padding: 6px 0;
   text-align: center;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.printing-status :deep(.el-progress) {
-  width: 100%;
+.status-text {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.printing-status :deep(.el-progress-bar__outer) {
-  border-radius: 5px;
-  background-color: var(--ep-fill-color);
+/* ============================================
+   9种状态横条背景色
+   ============================================ */
+
+/* 🔴 致命级 (Danger) */
+.status-bar.status-bg-fault,
+.status-bar.status-bg-sys_error {
+  background-color: var(--ep-color-danger);
 }
 
-.printing-status :deep(.el-progress-bar__inner) {
-  border-radius: 5px;
+/* 🟡 警告级 (Warning) */
+.status-bar.status-bg-print_error,
+.status-bar.status-bg-starting,
+.status-bar.status-bg-paused {
+  background-color: var(--ep-color-warning);
+}
+
+/* 🔵 正常业务级 */
+/* 打印中 - 蓝色 */
+.status-bar.status-bg-printing {
+  background-color: var(--ep-color-primary);
+}
+
+/* 已完成 - 绿色 */
+.status-bar.status-bg-completed {
+  background-color: var(--ep-color-success);
+}
+
+/* 待机 - 灰色 */
+.status-bar.status-bg-standby {
+  background-color: var(--ep-color-info);
+}
+
+/* 已取消 - 灰色 */
+.status-bar.status-bg-cancelled {
+  background-color: var(--ep-color-info);
 }
 </style>

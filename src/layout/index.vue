@@ -1,43 +1,40 @@
 <template>
-  <el-container class="layout-container">
+  <el-container v-cloak class="layout-container">
     <!-- 侧边栏 -->
-    <el-aside 
-      :width="isCollapse ? '64px' : '220px'" 
-      class="aside"
-      :class="{ 'is-collapse': isCollapse }"
-    >
+    <el-aside :width="isCollapse ? '64px' : '220px'" class="aside" :class="{ 'is-collapse': isCollapse }">
       <div class="logo">
-        <el-icon :size="32" class="logo-icon"><monitor /></el-icon>
+        <el-icon :size="32" class="logo-icon">
+          <monitor />
+        </el-icon>
         <span v-show="!isCollapse" class="logo-text">3D打印农场</span>
       </div>
-      
-      <el-menu 
-        router 
-        :default-active="$route.path" 
-        :collapse="isCollapse"
-        :collapse-transition="false"
-        background-color="var(--ep-color-white)" 
-        text-color="var(--ep-text-color-regular)" 
-        active-text-color="var(--el-color-primary)"
-        class="custom-menu"
-      >
+
+      <el-menu router :default-active="$route.path" :collapse="isCollapse" :collapse-transition="false"
+        background-color="var(--ep-color-white)" text-color="var(--ep-text-color-regular)"
+        active-text-color="var(--el-color-primary)" class="custom-menu">
         <el-menu-item index="/">
-          <el-icon><odometer /></el-icon>
+          <el-icon>
+            <odometer />
+          </el-icon>
           <template #title>监控大屏</template>
         </el-menu-item>
-        
+
         <el-menu-item index="/printers">
-          <el-icon><printer /></el-icon>
+          <el-icon>
+            <printer />
+          </el-icon>
           <template #title>机器管理</template>
         </el-menu-item>
-        
+
         <el-menu-item index="/files">
           <el-icon><folder-opened /></el-icon>
           <template #title>切片文件库</template>
         </el-menu-item>
-        
+
         <el-menu-item index="/jobs">
-          <el-icon><list /></el-icon>
+          <el-icon>
+            <list />
+          </el-icon>
           <template #title>生产队列</template>
         </el-menu-item>
       </el-menu>
@@ -47,51 +44,49 @@
       <!-- 顶栏 -->
       <el-header class="header">
         <div class="header-left">
-          <div 
-            class="collapse-btn" 
-            @click="toggleCollapse"
-            :title="isCollapse ? '展开菜单' : '收起菜单'"
-          >
+          <div class="collapse-btn" @click="toggleCollapse" :title="isCollapse ? '展开菜单' : '收起菜单'">
             <el-icon :size="18" :class="{ 'is-rotate': isCollapse }">
               <fold v-if="!isCollapse" />
               <expand v-else />
             </el-icon>
           </div>
-          
+
           <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
             <el-breadcrumb-item v-if="currentRoute.name">{{ currentRoute.name }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
-        
+
         <div class="header-right">
           <!-- 消息通知 -->
           <el-badge :value="3" class="message-badge" type="danger">
-            <el-icon :size="20" class="message-icon"><bell /></el-icon>
+            <el-icon :size="20" class="message-icon">
+              <bell />
+            </el-icon>
           </el-badge>
-          
+
           <!-- 用户下拉菜单 -->
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="user-info">
-              <el-avatar 
-                :size="36" 
-                :src="userStore.userInfo.avatar || defaultAvatar"
-                class="user-avatar"
-              >
+              <el-avatar :size="36" :src="userStore.userInfo.avatar || defaultAvatar" class="user-avatar">
                 {{ userStore.userInfo.username?.charAt(0).toUpperCase() || 'U' }}
               </el-avatar>
               <span v-show="!isCollapse" class="username">{{ userStore.userInfo.username || '管理员' }}</span>
               <el-icon class="dropdown-icon"><arrow-down /></el-icon>
             </div>
-            
+
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
-                  <el-icon><user /></el-icon>
+                  <el-icon>
+                    <user />
+                  </el-icon>
                   个人中心
                 </el-dropdown-item>
                 <el-dropdown-item command="settings">
-                  <el-icon><setting /></el-icon>
+                  <el-icon>
+                    <setting />
+                  </el-icon>
                   系统设置
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
@@ -193,11 +188,18 @@ const handleLogout = () => {
     userStore.logout()
     router.push('/login')
     ElMessage.success('已退出登录')
-  }).catch(() => {})
+  }).catch(() => { })
 }
 </script>
 
 <style scoped>
+/* ============================================
+   v-cloak: 防止 Vue 未加载完成时显示内容
+   ============================================ */
+[v-cloak] {
+  display: none !important;
+}
+
 .layout-container {
   height: 100vh;
   width: 100vw;
@@ -460,15 +462,15 @@ const handleLogout = () => {
     bottom: 0;
     transform: translateX(-100%);
   }
-  
+
   .aside.is-collapse {
     transform: translateX(0);
   }
-  
+
   .main-wrapper {
     margin-left: 0;
   }
-  
+
   .username {
     display: none;
   }

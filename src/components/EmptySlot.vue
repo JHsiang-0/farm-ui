@@ -1,17 +1,11 @@
 <template>
-  <div
-    class="empty-slot"
-    :class="{ 'drag-over': isDragOver }"
-    :data-row="rowIndex"
-    :data-col="colIndex"
-    @click="$emit('click')"
-    @dragover.prevent
-    @dragenter.prevent="$emit('dragenter')"
-    @dragleave="$emit('dragleleave')"
-    @drop="$emit('drop')"
-  >
-    <el-icon :size="20"><box /></el-icon>
-    <span class="slot-text">暂无设备</span>
+  <div v-cloak class="empty-slot" :class="{ 'drag-over': isDragOver }" :data-row="rowIndex" :data-col="colIndex"
+    @click="$emit('click')" @dragover.prevent @dragenter.prevent="$emit('dragenter')" @dragleave="$emit('dragleleave')"
+    @drop="$emit('drop')">
+    <el-icon :size="20">
+      <box />
+    </el-icon>
+    <span class="slot-text">{{ labels.emptySlot }}</span>
     <span class="slot-coord">{{ coordinateLabel }}</span>
   </div>
 </template>
@@ -21,6 +15,14 @@ import { computed } from 'vue'
 import { Box } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'EmptySlot' })
+
+// ============================================
+// Data - 中文标签配置（数据驱动，避免硬编码）
+// ============================================
+
+const labels = {
+  emptySlot: '暂无设备'
+}
 
 const props = defineProps({
   /** 行索引 */
@@ -79,6 +81,13 @@ const coordinateLabel = computed(() => {
 </script>
 
 <style scoped>
+/* ============================================
+   v-cloak: 防止 Vue 未加载完成时显示内容
+   ============================================ */
+[v-cloak] {
+  display: none !important;
+}
+
 .empty-slot {
   display: flex;
   flex-direction: column;
