@@ -1,7 +1,8 @@
 <template>
   <div v-cloak class="farm-dashboard" :class="{ 'is-edit-mode': isEditMode }">
     <!-- 顶部标题和统计 -->
-    <dashboard-header :status-counts="store.statusCounts" @refresh="handleRefresh">
+    <dashboard-header :status-counts="store.statusCounts" :workshop-name="workshopName"
+      :last-update-time="lastUpdateTime" @refresh="handleRefresh">
       <!-- 布局锁定/编辑模式切换按钮 -->
       <template #actions>
         <el-button v-if="!isEditMode" type="default" :icon="Lock" @click="toggleEditMode">
@@ -15,12 +16,6 @@
 
     <!-- 独立车间看板容器 -->
     <div class="workshop-canvas-wrapper">
-      <!-- 车间水印标识 -->
-      <div class="workshop-watermark">
-        <span class="watermark-icon">📍</span>
-        <span class="watermark-text">3F-一号车间</span>
-      </div>
-
       <!-- 厂房网格布局 - 4行13列（含过道） -->
       <div class="factory-grid workshop-canvas">
         <!-- 行标签 -->
@@ -97,20 +92,24 @@
         <!-- 温度监控 -->
         <div class="detail-section">
           <div class="section-title">
-            <el-icon>
-              <odometer />
-            </el-icon>
+            <IconNozzle class="section-icon icon-nozzle" />
             温度监控
           </div>
           <div class="temp-grid">
             <div class="temp-item">
-              <span class="temp-label">喷头温度</span>
+              <span class="temp-label">
+                <IconNozzle class="temp-icon icon-nozzle" />
+                喷头温度
+              </span>
               <span class="temp-value" :class="{ 'temp-hot': nozzleTemp > 50 }">
                 {{ formatTemp(nozzleTemp) }}
               </span>
             </div>
             <div class="temp-item">
-              <span class="temp-label">热床温度</span>
+              <span class="temp-label">
+                <IconBed class="temp-icon icon-bed" />
+                热床温度
+              </span>
               <span class="temp-value" :class="{ 'temp-hot': bedTemp > 40 }">
                 {{ formatTemp(bedTemp) }}
               </span>
@@ -132,7 +131,10 @@
               <span class="task-value">{{ formatDuration(activeRealTimeData?.printDuration) }}</span>
             </div>
             <div class="task-item">
-              <span class="task-label">已用耗材</span>
+              <span class="task-label">
+                <IconSpool class="task-icon icon-spool" />
+                已用耗材
+              </span>
               <span class="task-value">{{ formatFilament(activeRealTimeData?.filamentUsed) }}</span>
             </div>
             <div v-if="isPrintingState" class="task-item full-width">
@@ -246,7 +248,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Delete,
-  Odometer,
   Printer,
   InfoFilled,
   Monitor,
@@ -258,6 +259,9 @@ import {
   Lock,
   Unlock
 } from '@element-plus/icons-vue'
+import IconNozzle from './icons/IconNozzle.vue'
+import IconBed from './icons/IconBed.vue'
+import IconSpool from './icons/IconSpool.vue'
 import { usePrinterStore } from '@/stores/printerStore'
 import { PRINTER_STATE, PRINTER_STATE_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
 import DashboardHeader from './DashboardHeader.vue'
@@ -301,6 +305,26 @@ const targetSlot = ref({ row: null, col: null }) // 目标槽位坐标（物理�
 /** 设备详情抽屉相关状态 */
 const drawerVisible = ref(false)
 const activeDevice = ref(null)
+
+/** 车间信息 */
+const workshopName = ref('3F-一号车间')
+
+/** 最后更新时间 */
+const lastUpdateTime = ref('')
+
+/**
+ * 更新最后更新时间
+ */
+function updateLastUpdateTime() {
+  const now = new Date()
+  const hours = now.getHours().toString().padStart(2, '0')
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  const seconds = now.getSeconds().toString().padStart(2, '0')
+  lastUpdateTime.value = `${hours}:${minutes}:${seconds}`
+}
+
+// 初始化更新时间
+updateLastUpdateTime()
 
 // ============================================
 // Computed Properties
@@ -772,6 +796,7 @@ async function saveLayout() {
  */
 async function handleRefresh() {
   await store.fetchDeviceData()
+  updateLastUpdateTime()
   ElMessage.success('状态已刷新')
 }
 
@@ -857,40 +882,6 @@ onUnmounted(() => {
 
 .workshop-canvas-wrapper::-webkit-scrollbar-corner {
   background: transparent;
-}
-
-/* 车间水印标识 */
-.workshop-watermark {
-  position: absolute;
-  top: 16px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  z-index: 10;
-  pointer-events: none;
-}
-
-.watermark-icon {
-  font-size: 18px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-}
-
-.watermark-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ep-text-color-primary);
-  letter-spacing: 0.5px;
-  background: linear-gradient(135deg, var(--ep-text-color-primary) 0%, var(--ep-color-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 /* ============================================
@@ -1044,16 +1035,6 @@ onUnmounted(() => {
     height: 140px;
     writing-mode: vertical-rl;
   }
-
-  .workshop-watermark {
-    top: 12px;
-    right: 16px;
-    padding: 6px 12px;
-  }
-
-  .watermark-text {
-    font-size: 12px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -1066,20 +1047,6 @@ onUnmounted(() => {
   .factory-grid {
     min-width: 1200px;
     /* 移动端稍微减小最小宽度 */
-  }
-
-  .workshop-watermark {
-    top: 8px;
-    right: 12px;
-    padding: 4px 10px;
-  }
-
-  .watermark-icon {
-    font-size: 14px;
-  }
-
-  .watermark-text {
-    font-size: 11px;
   }
 }
 
@@ -1192,6 +1159,34 @@ onUnmounted(() => {
 
 .section-title .el-icon {
   color: var(--ep-color-primary);
+}
+
+.section-icon {
+  font-size: 16px;
+}
+
+.temp-icon,
+.task-icon {
+  font-size: 14px;
+  margin-right: 4px;
+}
+
+.icon-nozzle {
+  color: var(--ep-color-danger);
+}
+
+.icon-bed {
+  color: var(--ep-color-warning);
+}
+
+.icon-spool {
+  color: var(--ep-color-success);
+}
+
+.temp-label,
+.task-label {
+  display: flex;
+  align-items: center;
 }
 
 /* 温度网格 */

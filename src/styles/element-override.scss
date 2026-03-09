@@ -1,6 +1,6 @@
 /* ============================================
    Element Plus Component Overrides
-   企业级组件样式覆盖 - 使用 CSS 变量
+   企业级组件样式覆盖 - 卡通扁平风 (Soft Flat / Neo-Brutalism)
    ============================================ */
 
 /* ============================================
@@ -11,151 +11,214 @@
 }
 
 body {
-  font-family: var(--el-font-family);
+  font-family: 'Nunito', 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: var(--el-font-size-base);
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--el-text-color-primary);
+  background-color: var(--ep-background-color-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================
-   Button - 按钮样式优化
+   Button - 按钮卡通扁平风改造
    ============================================ */
 .el-button {
-  font-weight: 500;
-  border-radius: var(--el-border-radius-base);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: var(--ep-font-weight-semibold);
+  border-radius: var(--ep-border-radius-base);
+  border-width: 3px !important;
+  border-style: solid;
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+  position: relative;
 }
 
-/* 默认按钮 */
-.el-button:not(.is-plain):not(.is-text) {
-  box-shadow: var(--ep-box-shadow-light);
+/* 默认按钮 - 硬阴影风格 */
+.el-button:not(.is-plain):not(.is-text):not(.is-link) {
+  box-shadow: var(--ep-box-shadow-hard);
+  border-color: var(--ep-color-black);
 }
 
-.el-button:not(.is-plain):not(.is-text):hover {
-  box-shadow: var(--ep-box-shadow-base);
-  transform: translateY(-1px);
+.el-button:not(.is-plain):not(.is-text):not(.is-link):hover {
+  box-shadow: var(--ep-box-shadow-hard-hover);
+  transform: translateY(-2px);
 }
 
-.el-button:not(.is-plain):not(.is-text):active {
-  box-shadow: none;
-  transform: translateY(0);
+.el-button:not(.is-plain):not(.is-text):not(.is-link):active {
+  box-shadow: var(--ep-box-shadow-hard-active);
+  transform: scale(0.95) translateY(0);
 }
 
-/* 主要按钮 */
+/* 主要按钮 - 鲜艳色彩 */
 .el-button--primary {
-  background: linear-gradient(135deg, var(--ep-color-primary) 0%, var(--ep-color-primary-dark-1) 100%);
-  border-color: transparent;
+  background: linear-gradient(135deg, var(--ep-color-primary) 0%, var(--ep-color-primary-light-1) 100%);
+  border-color: var(--ep-color-primary-dark-2) !important;
+  color: white;
 }
 
 .el-button--primary:hover,
 .el-button--primary:focus {
-  background: linear-gradient(135deg, var(--ep-color-primary-light-1) 0%, var(--ep-color-primary) 100%);
-  border-color: transparent;
+  background: linear-gradient(135deg, var(--ep-color-primary-light-1) 0%, var(--ep-color-primary-light-2) 100%);
+  border-color: var(--ep-color-primary-dark-1) !important;
 }
 
 .el-button--primary.is-plain {
-  background: var(--ep-color-primary-light-6);
-  border-color: var(--ep-color-primary-light-2);
-  color: var(--ep-color-primary);
+  background: var(--ep-color-primary-light-5);
+  border-color: var(--ep-color-primary) !important;
+  color: var(--ep-color-primary-dark-1);
 }
 
 .el-button--primary.is-plain:hover {
   background: var(--ep-color-primary);
-  border-color: var(--ep-color-primary);
-  color: var(--ep-color-white);
+  border-color: var(--ep-color-primary-dark-2) !important;
+  color: white;
+}
+
+/* 成功按钮 */
+.el-button--success {
+  background: linear-gradient(135deg, var(--ep-color-success) 0%, #34d399 100%);
+  border-color: #059669 !important;
+}
+
+.el-button--success:hover {
+  background: linear-gradient(135deg, #34d399 0%, #6ee7b7 100%);
+}
+
+/* 警告按钮 */
+.el-button--warning {
+  background: linear-gradient(135deg, var(--ep-color-warning) 0%, #fbbf24 100%);
+  border-color: #d97706 !important;
+}
+
+.el-button--warning:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #fcd34d 100%);
+}
+
+/* 危险按钮 */
+.el-button--danger {
+  background: linear-gradient(135deg, var(--ep-color-danger) 0%, #f87171 100%);
+  border-color: #dc2626 !important;
+}
+
+.el-button--danger:hover {
+  background: linear-gradient(135deg, #f87171 0%, #fca5a5 100%);
+}
+
+/* 信息按钮 */
+.el-button--info {
+  background: linear-gradient(135deg, var(--ep-color-info) 0%, #94a3b8 100%);
+  border-color: #475569 !important;
+}
+
+.el-button--info:hover {
+  background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%);
 }
 
 /* 大尺寸按钮 */
 .el-button--large {
-  padding: 12px 24px;
+  padding: 14px 28px;
   font-size: var(--el-font-size-medium);
   border-radius: var(--ep-border-radius-medium);
+  border-width: 3px !important;
 }
 
 /* 圆形按钮 */
 .el-button.is-circle {
-  box-shadow: var(--ep-box-shadow-base);
+  box-shadow: var(--ep-box-shadow-hard);
+  border-width: 3px !important;
 }
 
 /* ============================================
-   Input - 输入框样式优化
+   Input - 输入框卡通扁平风改造
    ============================================ */
 .el-input__wrapper {
-  border-radius: var(--el-border-radius-base);
-  box-shadow: 0 0 0 1px var(--el-border-color) inset;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 1px 12px;
+  border-radius: var(--ep-border-radius-base);
+  border: 3px solid var(--ep-border-color-base);
+  box-shadow: none !important;
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+  padding: 2px 14px;
+  background: white;
 }
 
 .el-input__wrapper:hover {
-  box-shadow: 0 0 0 1px var(--ep-color-gray-4) inset;
+  border-color: var(--ep-color-primary-light-2);
+  box-shadow: 0 2px 0 var(--ep-color-primary-light-3) !important;
 }
 
 .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ep-box-shadow-primary);
+  border-color: var(--ep-color-primary);
+  box-shadow: 0 3px 0 var(--ep-color-primary-light-2) !important;
+  outline: none;
 }
 
 .el-input__inner {
-  height: 40px;
+  height: 42px;
   font-size: var(--el-font-size-base);
+  font-weight: var(--ep-font-weight-regular);
 }
 
 .el-input__inner::placeholder {
   color: var(--el-text-color-placeholder);
-  font-weight: 400;
+  font-weight: var(--ep-font-weight-light);
 }
 
 /* 前缀/后缀图标 */
 .el-input__prefix,
 .el-input__suffix {
-  color: var(--ep-color-gray-5);
+  color: var(--ep-color-gray-6);
 }
 
 /* 大尺寸输入框 */
 .el-input--large .el-input__wrapper {
-  padding: 1px 16px;
+  padding: 2px 18px;
+  border-radius: var(--ep-border-radius-medium);
+  border-width: 3px;
 }
 
 .el-input--large .el-input__inner {
-  height: 48px;
+  height: 52px;
   font-size: var(--el-font-size-medium);
 }
 
 /* Textarea */
 .el-textarea__inner {
-  border-radius: var(--el-border-radius-base);
-  padding: 12px;
-  min-height: 80px;
+  border-radius: var(--ep-border-radius-base);
+  border: 3px solid var(--ep-border-color-base);
+  padding: 14px;
+  min-height: 100px;
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
 }
 
 .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px var(--ep-color-gray-4) inset;
+  border-color: var(--ep-color-primary-light-2);
+  box-shadow: 0 2px 0 var(--ep-color-primary-light-3);
 }
 
 .el-textarea__inner:focus {
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ep-box-shadow-primary);
+  border-color: var(--ep-color-primary);
+  box-shadow: 0 3px 0 var(--ep-color-primary-light-2);
+  outline: none;
 }
 
 /* ============================================
-   Card - 卡片样式优化
+   Card - 卡片卡通扁平风改造
    ============================================ */
 .el-card {
-  border-radius: var(--ep-border-radius-medium);
-  border: none;
-  box-shadow: var(--ep-box-shadow-base);
-  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--ep-border-radius-large) !important;
+  border: 3px solid var(--ep-color-black);
+  box-shadow: var(--ep-box-shadow-hard);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+  background: white;
 }
 
 .el-card:hover {
-  box-shadow: var(--ep-box-shadow-medium);
+  box-shadow: var(--ep-box-shadow-hard-hover);
+  transform: translateY(-4px);
 }
 
 .el-card__header {
   padding: 20px 24px;
-  border-bottom: 1px solid var(--el-border-color-light);
-  font-weight: 600;
+  border-bottom: 3px solid var(--ep-border-color-base);
+  font-weight: var(--ep-font-weight-bold);
   font-size: var(--el-font-size-large);
   color: var(--el-text-color-primary);
 }
@@ -166,31 +229,72 @@ body {
 
 /* 无边框卡片 */
 .el-card.is-always-shadow {
-  box-shadow: var(--ep-box-shadow-medium);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+/* ============================================
+   Dialog - 弹窗卡通扁平风改造
+   ============================================ */
+.el-dialog {
+  border-radius: var(--ep-border-radius-large) !important;
+  border: 3px solid var(--ep-color-black);
+  box-shadow: var(--ep-box-shadow-hard-hover);
+  overflow: hidden;
+}
+
+.el-dialog:hover {
+  box-shadow: 8px 8px 0px var(--ep-border-color-darker);
+}
+
+.el-dialog__header {
+  padding: 24px;
+  border-bottom: 3px solid var(--ep-border-color-base);
+  margin-right: 0;
+  background: var(--ep-color-primary-light-6);
+}
+
+.el-dialog__title {
+  font-size: var(--el-font-size-large);
+  font-weight: var(--ep-font-weight-bold);
+  color: var(--el-text-color-primary);
+}
+
+.el-dialog__body {
+  padding: 24px;
+  color: var(--el-text-color-regular);
+  font-size: var(--el-font-size-base);
+  line-height: 1.75;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 3px solid var(--ep-border-color-base);
+  background: var(--ep-color-gray-1);
 }
 
 /* ============================================
    Form - 表单样式优化
    ============================================ */
 .el-form-item {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .el-form-item__label {
-  font-weight: 500;
+  font-weight: var(--ep-font-weight-semibold);
   color: var(--el-text-color-regular);
   padding-bottom: 8px;
   line-height: 1.25;
 }
 
 .el-form-item__error {
-  padding-top: 4px;
+  padding-top: 6px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: var(--ep-font-weight-semibold);
+  color: var(--ep-color-danger);
 }
 
 .el-form-item.is-required .el-form-item__label::before {
-  font-weight: 700;
+  font-weight: var(--ep-font-weight-bold);
 }
 
 /* 行内表单 */
@@ -204,17 +308,19 @@ body {
 .el-table {
   border-radius: var(--ep-border-radius-medium);
   overflow: hidden;
-  box-shadow: var(--ep-box-shadow-light);
+  border: 3px solid var(--ep-border-color-base);
+  box-shadow: var(--ep-box-shadow-hard);
 }
 
 .el-table thead th {
-  background-color: var(--ep-color-gray-1);
-  font-weight: 600;
+  background-color: var(--ep-color-primary-light-6);
+  font-weight: var(--ep-font-weight-bold);
   color: var(--el-text-color-primary);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 16px;
+  border-bottom: 3px solid var(--ep-border-color-base);
 }
 
 .el-table thead th .cell {
@@ -225,6 +331,7 @@ body {
   padding: 16px;
   color: var(--el-text-color-regular);
   font-size: var(--el-font-size-base);
+  border-bottom: 2px solid var(--ep-border-color-lighter);
 }
 
 .el-table tbody td .cell {
@@ -232,11 +339,11 @@ body {
 }
 
 .el-table tbody tr {
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--ep-transition-duration) var(--ep-transition-timing);
 }
 
 .el-table tbody tr:hover {
-  background-color: var(--ep-color-gray-2);
+  background-color: var(--ep-color-primary-light-6);
 }
 
 /* 斑马纹 */
@@ -245,108 +352,183 @@ body {
 }
 
 .el-table--striped tbody tr:nth-child(even):hover {
-  background-color: var(--ep-color-gray-2);
+  background-color: var(--ep-color-primary-light-6);
 }
 
 /* ============================================
    Checkbox & Radio - 选择框样式优化
    ============================================ */
 .el-checkbox__input .el-checkbox__inner {
-  border-radius: 4px;
-  width: 18px;
-  height: 18px;
+  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-width: 3px;
+  border-color: var(--ep-border-color-darker);
 }
 
 .el-checkbox__input .el-checkbox__inner::after {
   left: 6px;
-  top: 3px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border-width: 3px;
 }
 
 .el-checkbox__input.is-checked .el-checkbox__inner {
-  background-color: var(--el-color-primary);
-  border-color: var(--el-color-primary);
+  background-color: var(--ep-color-primary);
+  border-color: var(--ep-color-primary-dark-2);
 }
 
 .el-checkbox__label {
   font-size: var(--el-font-size-base);
-  padding-left: 8px;
+  padding-left: 10px;
+  font-weight: var(--ep-font-weight-regular);
 }
 
 .el-radio__input .el-radio__inner {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  border-width: 3px;
+  border-color: var(--ep-border-color-darker);
 }
 
 .el-radio__input .el-radio__inner::after {
   width: 8px;
   height: 8px;
+  background-color: var(--ep-color-primary);
+}
+
+.el-radio__input.is-checked .el-radio__inner {
+  border-color: var(--ep-color-primary);
 }
 
 .el-radio__label {
   font-size: var(--el-font-size-base);
-  padding-left: 8px;
+  padding-left: 10px;
+  font-weight: var(--ep-font-weight-regular);
 }
 
 /* ============================================
    Select - 下拉选择样式优化
    ============================================ */
 .el-select .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ep-box-shadow-primary);
+  border-color: var(--ep-color-primary);
+  box-shadow: 0 3px 0 var(--ep-color-primary-light-2);
 }
 
 .el-select-dropdown {
   border-radius: var(--ep-border-radius-medium);
-  box-shadow: var(--ep-box-shadow-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
   padding: 8px 0;
 }
 
 .el-select-dropdown__item {
-  padding: 0 16px;
-  height: 40px;
-  line-height: 40px;
+  padding: 0 18px;
+  height: 44px;
+  line-height: 44px;
   font-size: var(--el-font-size-base);
+  font-weight: var(--ep-font-weight-regular);
 }
 
 .el-select-dropdown__item.selected {
-  font-weight: 600;
-  color: var(--el-color-primary);
+  font-weight: var(--ep-font-weight-bold);
+  color: var(--ep-color-primary);
+  background: var(--ep-color-primary-light-6);
 }
 
 .el-select-dropdown__item:hover {
-  background-color: var(--ep-color-gray-1);
+  background-color: var(--ep-color-primary-light-6);
 }
 
 /* ============================================
-   Dialog - 对话框样式优化
+   Tag - 标签卡通扁平风改造
    ============================================ */
-.el-dialog {
-  border-radius: var(--ep-border-radius-large);
-  box-shadow: var(--ep-box-shadow-heavy);
-  overflow: hidden;
+.el-tag {
+  border-radius: var(--ep-border-radius-round);
+  padding: 6px 16px;
+  height: auto;
+  line-height: 1.4;
+  font-weight: var(--ep-font-weight-bold);
+  font-size: 12px;
+  border: 3px solid transparent;
+  box-shadow: 2px 2px 0px var(--ep-border-color-darker);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
 }
 
-.el-dialog__header {
-  padding: 24px;
-  border-bottom: 1px solid var(--el-border-color-light);
-  margin-right: 0;
+.el-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0px var(--ep-border-color-darker);
 }
 
-.el-dialog__title {
-  font-size: var(--el-font-size-large);
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.el-tag--primary {
+  background-color: var(--ep-color-primary-light-5);
+  border-color: var(--ep-color-primary);
+  color: var(--ep-color-primary-dark-2);
 }
 
-.el-dialog__body {
-  padding: 24px;
-  color: var(--el-text-color-regular);
-  font-size: var(--el-font-size-base);
-  line-height: 1.75;
+.el-tag--success {
+  background-color: #d1fae5;
+  border-color: var(--ep-color-success);
+  color: #065f46;
 }
 
-.el-dialog__footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--el-border-color-light);
+.el-tag--warning {
+  background-color: #fef3c7;
+  border-color: var(--ep-color-warning);
+  color: #92400e;
+}
+
+.el-tag--danger {
+  background-color: #fee2e2;
+  border-color: var(--ep-color-danger);
+  color: #991b1b;
+}
+
+.el-tag--info {
+  background-color: #f1f5f9;
+  border-color: var(--ep-color-info);
+  color: #475569;
+}
+
+/* ============================================
+   Menu - 菜单卡通扁平风改造
+   ============================================ */
+.el-menu {
+  border-right: none;
+  background: transparent;
+}
+
+.el-menu-item {
+  height: 52px;
+  line-height: 52px;
+  margin: 6px 12px;
+  border-radius: var(--ep-border-radius-medium);
+  font-weight: var(--ep-font-weight-semibold);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-menu-item:hover {
+  background-color: var(--ep-color-primary-light-6);
+}
+
+.el-menu-item.is-active {
+  background: linear-gradient(135deg, var(--ep-color-primary) 0%, var(--ep-color-primary-light-1) 100%);
+  color: white;
+  font-weight: var(--ep-font-weight-bold);
+  box-shadow: 3px 3px 0px var(--ep-color-primary-dark-2);
+}
+
+.el-sub-menu__title {
+  height: 52px;
+  line-height: 52px;
+  margin: 6px 12px;
+  border-radius: var(--ep-border-radius-medium);
+  font-weight: var(--ep-font-weight-semibold);
+}
+
+.el-sub-menu__title:hover {
+  background-color: var(--ep-color-primary-light-6);
 }
 
 /* ============================================
@@ -354,99 +536,73 @@ body {
    ============================================ */
 .el-message {
   border-radius: var(--ep-border-radius-medium);
-  box-shadow: var(--ep-box-shadow-medium);
+  border: 3px solid;
+  box-shadow: var(--ep-box-shadow-hard);
   padding: 16px 20px;
   min-width: 280px;
 }
 
 .el-message--success {
   background-color: #ecfdf5;
-  border-color: #a7f3d0;
+  border-color: var(--ep-color-success);
 }
 
 .el-message--success .el-message__content {
-  color: var(--ep-color-success);
+  color: #065f46;
+  font-weight: var(--ep-font-weight-semibold);
 }
 
 .el-message--error {
   background-color: #fef2f2;
-  border-color: #fecaca;
+  border-color: var(--ep-color-danger);
 }
 
 .el-message--error .el-message__content {
-  color: var(--ep-color-danger);
+  color: #991b1b;
+  font-weight: var(--ep-font-weight-semibold);
 }
 
 .el-message--warning {
   background-color: #fffbeb;
-  border-color: #fde68a;
+  border-color: var(--ep-color-warning);
 }
 
 .el-message--warning .el-message__content {
-  color: var(--ep-color-warning);
+  color: #92400e;
+  font-weight: var(--ep-font-weight-semibold);
 }
 
 /* ============================================
    Pagination - 分页样式优化
    ============================================ */
 .el-pagination .el-pager li {
-  border-radius: 4px;
-  font-weight: 500;
-  min-width: 36px;
-  height: 36px;
-  line-height: 36px;
+  border-radius: 8px;
+  font-weight: var(--ep-font-weight-semibold);
+  min-width: 40px;
+  height: 40px;
+  line-height: 40px;
+  border: 2px solid transparent;
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
 }
 
 .el-pagination .el-pager li.active {
-  background-color: var(--el-color-primary);
-  color: var(--ep-color-white);
+  background-color: var(--ep-color-primary);
+  color: white;
+  border-color: var(--ep-color-primary-dark-2);
+  box-shadow: 2px 2px 0px var(--ep-color-primary-dark-2);
 }
 
 .el-pagination .el-pager li:hover {
-  color: var(--el-color-primary);
+  color: var(--ep-color-primary);
+  background-color: var(--ep-color-primary-light-6);
 }
 
 .el-pagination .btn-prev,
 .el-pagination .btn-next {
-  border-radius: 4px;
-  min-width: 36px;
-  height: 36px;
-}
-
-/* ============================================
-   Tag - 标签样式优化
-   ============================================ */
-.el-tag {
-  border-radius: 20px;
-  padding: 0 12px;
-  height: 28px;
-  line-height: 26px;
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.el-tag--primary {
-  background-color: var(--ep-color-primary-light-6);
-  border-color: var(--ep-color-primary-light-3);
-  color: var(--ep-color-primary-dark-1);
-}
-
-.el-tag--success {
-  background-color: #d1fae5;
-  border-color: #a7f3d0;
-  color: #065f46;
-}
-
-.el-tag--warning {
-  background-color: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
-}
-
-.el-tag--danger {
-  background-color: #fee2e2;
-  border-color: #fecaca;
-  color: #991b1b;
+  border-radius: 8px;
+  min-width: 40px;
+  height: 40px;
+  border: 2px solid var(--ep-border-color-base);
 }
 
 /* ============================================
@@ -454,21 +610,24 @@ body {
    ============================================ */
 .el-divider {
   margin: 24px 0;
+  border-width: 2px;
+  border-color: var(--ep-border-color-base);
 }
 
 .el-divider__text {
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  font-weight: 500;
+  font-weight: var(--ep-font-weight-bold);
   padding: 0 16px;
+  background: var(--ep-background-color-base);
 }
 
 /* ============================================
    Link - 链接样式优化
    ============================================ */
 .el-link {
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: var(--ep-font-weight-semibold);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
 }
 
 .el-link.el-link--primary:hover {
@@ -479,23 +638,473 @@ body {
    Tabs - 标签页样式优化
    ============================================ */
 .el-tabs__nav-wrap::after {
-  height: 1px;
-  background-color: var(--el-border-color-light);
+  height: 3px;
+  background-color: var(--ep-border-color-base);
 }
 
 .el-tabs__item {
-  font-weight: 500;
+  font-weight: var(--ep-font-weight-semibold);
   font-size: var(--el-font-size-base);
-  padding: 0 16px;
-  height: 44px;
-  line-height: 44px;
+  padding: 0 20px;
+  height: 48px;
+  line-height: 48px;
+  border-radius: var(--ep-border-radius-base) var(--ep-border-radius-base) 0 0;
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-tabs__item:hover {
+  color: var(--ep-color-primary);
+  background-color: var(--ep-color-primary-light-6);
 }
 
 .el-tabs__item.is-active {
-  font-weight: 600;
+  font-weight: var(--ep-font-weight-bold);
+  color: var(--ep-color-primary);
 }
 
 .el-tabs__active-bar {
-  height: 3px;
-  border-radius: 3px 3px 0 0;
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+  background-color: var(--ep-color-primary);
+}
+
+/* ============================================
+   Popover & Tooltip - 气泡提示样式
+   ============================================ */
+.el-popover {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-tooltip__popper {
+  border-radius: var(--ep-border-radius-base);
+  font-weight: var(--ep-font-weight-semibold);
+}
+
+/* ============================================
+   Dropdown - 下拉菜单样式
+   ============================================ */
+.el-dropdown-menu {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+  padding: 8px 0;
+}
+
+.el-dropdown-menu__item {
+  padding: 0 18px;
+  height: 44px;
+  line-height: 44px;
+  font-weight: var(--ep-font-weight-semibold);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-dropdown-menu__item:hover {
+  background-color: var(--ep-color-primary-light-6);
+  color: var(--ep-color-primary);
+}
+
+/* ============================================
+   DatePicker - 日期选择器样式
+   ============================================ */
+.el-date-editor {
+  border-radius: var(--ep-border-radius-base);
+}
+
+.el-picker-panel {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-date-table td.current:not(.disabled) span {
+  background-color: var(--ep-color-primary);
+  color: white;
+  font-weight: var(--ep-font-weight-bold);
+}
+
+.el-date-table td.today span {
+  color: var(--ep-color-primary);
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Switch - 开关样式
+   ============================================ */
+.el-switch__core {
+  border: 2px solid var(--ep-border-color-darker);
+  border-radius: 12px;
+}
+
+.el-switch.is-checked .el-switch__core {
+  border-color: var(--ep-color-primary);
+  background-color: var(--ep-color-primary);
+}
+
+/* ============================================
+   Slider - 滑块样式
+   ============================================ */
+.el-slider__runway {
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--ep-color-gray-3);
+}
+
+.el-slider__bar {
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--ep-color-primary);
+}
+
+.el-slider__button {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--ep-color-primary);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+/* ============================================
+   Upload - 上传组件样式
+   ============================================ */
+.el-upload-dragger {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px dashed var(--ep-border-color-darker);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-upload-dragger:hover {
+  border-color: var(--ep-color-primary);
+  background-color: var(--ep-color-primary-light-6);
+}
+
+/* ============================================
+   Notification - 通知样式
+   ============================================ */
+.el-notification {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-notification__title {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   MessageBox - 消息框样式
+   ============================================ */
+.el-message-box {
+  border-radius: var(--ep-border-radius-large);
+  border: 3px solid var(--ep-color-black);
+  box-shadow: var(--ep-box-shadow-hard-hover);
+}
+
+.el-message-box__title {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Loading - 加载样式
+   ============================================ */
+.el-loading-spinner .path {
+  stroke: var(--ep-color-primary);
+}
+
+/* ============================================
+   Badge - 徽章样式
+   ============================================ */
+.el-badge__content {
+  border-radius: var(--ep-border-radius-round);
+  border: 2px solid white;
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Progress - 进度条样式
+   ============================================ */
+.el-progress-bar__outer {
+  border-radius: var(--ep-border-radius-round);
+  background-color: var(--ep-color-gray-3);
+}
+
+.el-progress-bar__inner {
+  border-radius: var(--ep-border-radius-round);
+}
+
+.el-progress__text {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Timeline - 时间线样式
+   ============================================ */
+.el-timeline-item__node {
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-timeline-item__content {
+  font-weight: var(--ep-font-weight-semibold);
+}
+
+/* ============================================
+   Steps - 步骤条样式
+   ============================================ */
+.el-step__icon {
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-step__title {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Tree - 树形控件样式
+   ============================================ */
+.el-tree-node__content {
+  height: 44px;
+  border-radius: var(--ep-border-radius-base);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-tree-node__content:hover {
+  background-color: var(--ep-color-primary-light-6);
+}
+
+.el-tree-node.is-current > .el-tree-node__content {
+  background: linear-gradient(135deg, var(--ep-color-primary) 0%, var(--ep-color-primary-light-1) 100%);
+  color: white;
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Cascader - 级联选择器样式
+   ============================================ */
+.el-cascader__dropdown {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-cascader-node {
+  height: 44px;
+  line-height: 44px;
+  font-weight: var(--ep-font-weight-semibold);
+}
+
+.el-cascader-node.in-active-path,
+.el-cascader-node.is-active {
+  color: var(--ep-color-primary);
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Transfer - 穿梭框样式
+   ============================================ */
+.el-transfer-panel {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-transfer-panel__header {
+  background-color: var(--ep-color-primary-light-6);
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Calendar - 日历样式
+   ============================================ */
+.el-calendar {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-calendar-day {
+  border-radius: var(--ep-border-radius-small);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-calendar-day:hover {
+  background-color: var(--ep-color-primary-light-6);
+}
+
+.el-calendar-day.is-selected {
+  background: linear-gradient(135deg, var(--ep-color-primary) 0%, var(--ep-color-primary-light-1) 100%);
+  color: white;
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Avatar - 头像样式
+   ============================================ */
+.el-avatar {
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+/* ============================================
+   Image - 图片样式
+   ============================================ */
+.el-image {
+  border-radius: var(--ep-border-radius-medium);
+}
+
+/* ============================================
+   Collapse - 折叠面板样式
+   ============================================ */
+.el-collapse {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+.el-collapse-item__header {
+  font-weight: var(--ep-font-weight-bold);
+  padding: 16px 20px;
+}
+
+.el-collapse-item__content {
+  padding: 20px;
+}
+
+/* ============================================
+   Descriptions - 描述列表样式
+   ============================================ */
+.el-descriptions__title {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+.el-descriptions-item__label {
+  font-weight: var(--ep-font-weight-semibold);
+  background-color: var(--ep-color-gray-1);
+}
+
+/* ============================================
+   Result - 结果样式
+   ============================================ */
+.el-result__title {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+.el-result__subtitle {
+  font-weight: var(--ep-font-weight-regular);
+}
+
+/* ============================================
+   Empty - 空状态样式
+   ============================================ */
+.el-empty__description {
+  font-weight: var(--ep-font-weight-semibold);
+}
+
+/* ============================================
+   Skeleton - 骨架屏样式
+   ============================================ */
+.el-skeleton__item {
+  border-radius: var(--ep-border-radius-base);
+}
+
+/* ============================================
+   Backtop - 回到顶部样式
+   ============================================ */
+.el-backtop {
+  border-radius: var(--ep-border-radius-circle);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-backtop:hover {
+  box-shadow: var(--ep-box-shadow-hard-hover);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   Drawer - 抽屉样式
+   ============================================ */
+.el-drawer {
+  border: 3px solid var(--ep-color-black);
+  box-shadow: var(--ep-box-shadow-hard-hover);
+}
+
+.el-drawer__header {
+  font-weight: var(--ep-font-weight-bold);
+  padding: 24px;
+  border-bottom: 3px solid var(--ep-border-color-base);
+}
+
+/* ============================================
+   ColorPicker - 颜色选择器样式
+   ============================================ */
+.el-color-picker__trigger {
+  border-radius: var(--ep-border-radius-base);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+/* ============================================
+   Rate - 评分样式
+   ============================================ */
+.el-rate__icon {
+  font-size: 24px;
+}
+
+/* ============================================
+   Carousel - 轮播图样式
+   ============================================ */
+.el-carousel__indicator--horizontal .el-carousel__button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--ep-border-color-darker);
+}
+
+.el-carousel__indicator.is-active .el-carousel__button {
+  background-color: var(--ep-color-primary);
+  border-color: var(--ep-color-primary-dark-2);
+}
+
+/* ============================================
+   Statistic - 统计数值样式
+   ============================================ */
+.el-statistic__headline {
+  font-weight: var(--ep-font-weight-semibold);
+}
+
+.el-statistic__number {
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Anchor - 锚点样式
+   ============================================ */
+.el-anchor__link {
+  font-weight: var(--ep-font-weight-semibold);
+  border-radius: var(--ep-border-radius-small);
+  transition: all var(--ep-transition-duration) var(--ep-transition-timing);
+}
+
+.el-anchor__link.is-active {
+  color: var(--ep-color-primary);
+  font-weight: var(--ep-font-weight-bold);
+}
+
+/* ============================================
+   Tour - 漫游导览样式
+   ============================================ */
+.el-tour-content {
+  border-radius: var(--ep-border-radius-medium);
+  border: 3px solid var(--ep-border-color-darker);
+  box-shadow: var(--ep-box-shadow-hard);
+}
+
+/* ============================================
+   Watermark - 水印样式
+   ============================================ */
+.el-watermark {
+  font-weight: var(--ep-font-weight-bold);
 }

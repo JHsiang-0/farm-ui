@@ -22,14 +22,12 @@
       <template v-else>
         <!-- 温度信息 -->
         <div class="info-row">
-          <el-icon :size="12">
-            <odometer />
-          </el-icon>
-          <span class="info-text">喷头: {{ displayNozzleTemp }}</span>
+          <IconNozzle class="info-icon icon-nozzle" />
+          <span class="info-text">{{ displayNozzleTemp }}</span>
         </div>
         <div class="info-row">
-          <el-icon :size="12"><hot-water /></el-icon>
-          <span class="info-text">热床: {{ displayBedTemp }}</span>
+          <IconBed class="info-icon icon-bed" />
+          <span class="info-text">{{ displayBedTemp }}</span>
         </div>
 
         <!-- 打印任务信息 -->
@@ -41,10 +39,8 @@
             <span class="info-text">时长: {{ displayDuration }}</span>
           </div>
           <div class="info-row">
-            <el-icon :size="12">
-              <data-line />
-            </el-icon>
-            <span class="info-text">耗材: {{ displayFilamentUsed }}</span>
+            <IconSpool class="info-icon icon-spool" />
+            <span class="info-text">{{ displayFilamentUsed }}</span>
           </div>
         </template>
 
@@ -79,13 +75,13 @@
 <script setup>
 import { computed } from 'vue'
 import {
-  Odometer,
-  HotWater,
-  Tools,
   Timer,
-  DataLine,
+  Tools,
   WarningFilled
 } from '@element-plus/icons-vue'
+import IconNozzle from './icons/IconNozzle.vue'
+import IconBed from './icons/IconBed.vue'
+import IconSpool from './icons/IconSpool.vue'
 import {
   PRINTER_STATE,
   PRINTER_STATE_MAP
@@ -466,6 +462,23 @@ function handleDragStart(event) {
 .info-row .el-icon {
   flex-shrink: 0;
   color: var(--ep-color-primary-light-1);
+}
+
+.info-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.icon-nozzle {
+  color: var(--ep-color-danger);
+}
+
+.icon-bed {
+  color: var(--ep-color-warning);
+}
+
+.icon-spool {
+  color: var(--ep-color-success);
 }
 
 .info-text {
