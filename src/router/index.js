@@ -45,21 +45,18 @@ const router = createRouter({
 })
 
 // 全局路由守卫（门禁系统）
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const userStore = useUserStore()
   
   // 如果用户要去非登录页，但没有 token，一律踢回登录页
   if (to.path !== '/login' && !userStore.token) {
-    next('/login')
+    return '/login'
   } 
   // 如果用户已经登录了，还想去登录页，一律踢回大屏主页
-  else if (to.path === '/login' && userStore.token) {
-    next('/')
+  if (to.path === '/login' && userStore.token) {
+    return '/'
   } 
-  // 其他情况，正常放行
-  else {
-    next()
-  }
+  // 其他情况，正常放行（不返回或返回 true/undefined）
 })
 
 export default router

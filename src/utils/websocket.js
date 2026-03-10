@@ -523,7 +523,7 @@ export class WebSocketClient {
           this.heartbeatTimeoutTimer = setTimeout(() => {
             const timeSinceLastPong = Date.now() - this._lastPongTime
             if (timeSinceLastPong >= this.config.heartbeatTimeout) {
-              console.warn('[WebSocket] 心跳超时，强制重连')
+              console.warn(`[WebSocket] 心跳超时（${timeSinceLastPong}ms >= ${this.config.heartbeatTimeout}ms），强制重连`)
               // 触发超时事件
               this._emit('heartbeatTimeout', { lastPongTime: this._lastPongTime, timeout: this.config.heartbeatTimeout })
               // 强制关闭连接，触发重连
