@@ -5,7 +5,7 @@
  */
 
 import { storeToRefs } from 'pinia'
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import { useDeviceStore } from './deviceStore'
 import { useRealtimeStore } from './realtimeStore'
 import { useGridStore } from './gridStore'
@@ -45,6 +45,9 @@ export function usePrinterStore() {
     isWsConnected,
   } = storeToRefs(realtime)
 
+  // realTimeStatus 是 computed 返回的 Proxy，不是 ref，需要特殊处理
+  const realTimeStatusRef = computed(() => realtime.realTimeStatus)
+
   const {
     statusCounts,
   } = storeToRefs(grid)
@@ -72,7 +75,7 @@ export function usePrinterStore() {
     // ============================================
     // State refs (来自 realtimeStore)
     // ============================================
-    realTimeStatus,
+    realTimeStatus: realTimeStatusRef,
     wsConnectionState,
     isWsConnected,
 

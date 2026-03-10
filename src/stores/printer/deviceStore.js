@@ -46,8 +46,6 @@ export const useDeviceStore = defineStore('device', () => {
    * 直接依赖 rawDeviceList.value，确保数据更新后自动重新计算
    */
   const deviceMatrix = computed(() => {
-    console.log('[DeviceStore] deviceMatrix 计算开始, rawDeviceList.length:', rawDeviceList.value.length)
-
     // 使用 Map 优化查找性能 O(n) -> O(1)
     const deviceMap = new Map()
     rawDeviceList.value.forEach(device => {
@@ -56,7 +54,6 @@ export const useDeviceStore = defineStore('device', () => {
     })
 
     const matrix = []
-    let totalDevicesInMatrix = 0
     for (let row = 1; row <= GRID_CONFIG.ROWS; row++) {
       const rowData = []
       for (let col = 1; col <= GRID_CONFIG.TOTAL_COLS; col++) {
@@ -72,15 +69,11 @@ export const useDeviceStore = defineStore('device', () => {
         // 使用 Map 查找设备 O(1)
         const key = `${row},${physicalCol}`
         const device = deviceMap.get(key)
-        if (device) {
-          totalDevicesInMatrix++
-        }
         rowData.push(device || null)
       }
       matrix.push(rowData)
     }
 
-    console.log('[DeviceStore] deviceMatrix 计算完成:', matrix.length, '行 x', matrix[0]?.length, '列, 设备总数:', totalDevicesInMatrix)
     return matrix
   })
 
@@ -94,26 +87,20 @@ export const useDeviceStore = defineStore('device', () => {
    */
   async function fetchDeviceData() {
     loading.value = true
-    console.log('[DeviceStore] fetchDeviceData 开始调用')
     try {
       const response = await getPrinterList({ pageSize: 1000 })
-      console.log('[DeviceStore] API 响应:', response)
       const records = response.data?.records || []
-      console.log('[DeviceStore] 原始 records:', records.length, records)
 
       // 只保留有有效坐标的设备
       const filtered = records.filter(d => {
         const hasValidRow = typeof d.gridRow === 'number' && d.gridRow > 0
         const hasValidCol = typeof d.gridCol === 'number' && d.gridCol > 0
-        console.log(`[DeviceStore] 设备 ${d.id}: gridRow=${d.gridRow}, gridCol=${d.gridCol}, valid=${hasValidRow && hasValidCol}`)
         return hasValidRow && hasValidCol
       })
 
-      console.log('[DeviceStore] 过滤后设备数:', filtered.length)
       // 直接赋值，触发 rawDeviceList 的响应式更新，deviceMatrix computed 会自动重新计算
       rawDeviceList.value = filtered
       version.value++
-      console.log('[DeviceStore] version 更新为:', version.value)
     } catch (error) {
       console.error('[DeviceStore] 获取设备数据失败:', error)
       throw error

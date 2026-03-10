@@ -55,32 +55,6 @@ defineOptions({ name: 'FarmDashboard' })
 
 const store = usePrinterStore()
 
-// 调试：监听 deviceMatrix 变化
-import { watch, toRaw } from 'vue'
-watch(() => store.deviceMatrix, (newVal) => {
-  const matrix = toRaw(newVal)
-  console.log('[FarmDashboard] deviceMatrix changed:', matrix?.length, '行')
-  if (matrix && matrix.length > 0) {
-    // 统计设备数量
-    let deviceCount = 0
-    matrix.forEach((row, rowIdx) => {
-      row.forEach((cell, colIdx) => {
-        if (cell && typeof cell === 'object' && cell !== null && cell.id) {
-          deviceCount++
-          console.log(`[FarmDashboard] 设备 at [${rowIdx}][${colIdx}]:`, cell.id, cell.machineNumber)
-        }
-      })
-    })
-    console.log('[FarmDashboard] 矩阵中设备总数:', deviceCount)
-  }
-}, { immediate: true, deep: true })
-
-// 监听 rawDeviceList
-watch(() => store.rawDeviceList, (newVal) => {
-  const list = toRaw(newVal)
-  console.log('[FarmDashboard] rawDeviceList changed:', list?.length, '个设备')
-}, { immediate: true, deep: true })
-
 // ============================================
 // Reactive State
 // ============================================

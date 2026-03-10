@@ -136,11 +136,26 @@ export const useRealtimeStore = defineStore('realtime', () => {
     pendingUpdates.forEach((update, idKey) => {
       const { data, timestamp } = update
 
+      // 将后端数据格式转换为前端组件期望的格式
       newMap.set(idKey, {
+        // 优先使用 unifiedState，这是后端融合后的最终状态
+        unifiedState: data.unifiedState,
         state: data.unifiedState || data.state || PRINTER_STATE.STANDBY,
-        progress: data.progress ?? 0,
+        progress: (data.progress ?? 0) / 100, // 后端是 0-100，前端需要 0-1
+        // 温度数据 - 兼容 extruder/heaterBed 嵌套格式
+        extruder: {
+          temperature: data.toolTemperature ?? 0,
+          target: data.toolTarget ?? 0
+        },
+        heaterBed: {
+          temperature: data.bedTemperature ?? 0,
+          target: data.bedTarget ?? 0
+        },
+        // 保留原始字段供直接访问
         toolTemperature: data.toolTemperature ?? 0,
+        toolTarget: data.toolTarget ?? 0,
         bedTemperature: data.bedTemperature ?? 0,
+        bedTarget: data.bedTarget ?? 0,
         printDuration: data.printDuration ?? 0,
         filamentUsed: data.filamentUsed ?? 0,
         systemMessage: data.systemMessage || '',

@@ -157,20 +157,35 @@ const emit = defineEmits([
 // Computed - 状态相关
 // ============================================
 
-/** 状态映射 */
+/** 状态映射 - 基于后端 unifiedState 字段 */
 const STATUS_MAP = {
-    operational: { text: '就绪', class: 'status-ready' },
-    printing: { text: '打印中', class: 'status-printing' },
-    paused: { text: '暂停', class: 'status-paused' },
-    error: { text: '错误', class: 'status-error' },
-    offline: { text: '离线', class: 'status-offline' },
-    unknown: { text: '未知', class: 'status-unknown' }
+    // 第一层：系统最高优先级拦截
+    FAULT: { text: '故障', class: 'status-error', priority: 'critical' },      // 🔴 硬件物理故障
+    SYS_ERROR: { text: '错误', class: 'status-error', priority: 'critical' }, // 🟠 系统软件错误
+    STARTING: { text: '启动中', class: 'status-warning', priority: 'warning' },  // 🟡 启动中
+
+    // 第二层：业务状态判断（systemState = ready 时）
+    STANDBY: { text: '待机', class: 'status-ready', priority: 'normal' },      // 🟢 待机就绪
+    PRINTING: { text: '打印中', class: 'status-printing', priority: 'normal' }, // 🔵 打印中
+    PAUSED: { text: '已暂停', class: 'status-paused', priority: 'warning' },   // ⏸️ 已暂停
+    COMPLETED: { text: '已完成', class: 'status-success', priority: 'normal' }, // ✅ 已完成
+    PRINT_ERROR: { text: '打印错误', class: 'status-error', priority: 'error' }, // ❌ 打印错误
+    CANCELLED: { text: '已取消', class: 'status-warning', priority: 'warning' }, // 🚫 已取消
+
+    // 兼容旧状态（保留以防万一）
+    operational: { text: '就绪', class: 'status-ready', priority: 'normal' },
+    printing: { text: '打印中', class: 'status-printing', priority: 'normal' },
+    paused: { text: '暂停', class: 'status-paused', priority: 'warning' },
+    error: { text: '错误', class: 'status-error', priority: 'error' },
+    offline: { text: '离线', class: 'status-offline', priority: 'offline' },
+    unknown: { text: '未知', class: 'status-unknown', priority: 'unknown' }
 }
 
-/** 当前状态 */
+/** 当前状态 - 优先使用 unifiedState */
 const status = computed(() => {
     if (!props.realTimeData) return 'unknown'
-    return props.realTimeData.state || 'unknown'
+    // 优先使用 unifiedState，如果没有则回退到 state
+    return props.realTimeData.unifiedState || props.realTimeData.state || 'unknown'
 })
 
 /** 状态文本 */
@@ -180,12 +195,30 @@ const statusText = computed(() => STATUS_MAP[status.value]?.text || '未知')
 const statusClass = computed(() => STATUS_MAP[status.value]?.class || 'status-unknown')
 
 /** 是否正在打印中 */
-const isPrinting = computed(() => status.value === 'printing')
+const isPrinting = computed(() => status.value === 'PRINTING' || status.value === 'printing')
+
+/** 是否显示系统错误信息 */
+const hasSystemError = computed(() => {
+    return status.value === 'FAULT' || status.value === 'SYS_ERROR'
+})
 
 /** 空闲文本 */
 const idleText = computed(() => {
     const map = {
+        // 系统层状态
+        FAULT: '硬件故障',
+        SYS_ERROR: '系统错误',
+        STARTING: '启动中...',
+        // 业务层状态
+        STANDBY: '待机中',
+        PRINTING: '打印中',
+        PAUSED: '已暂停',
+        COMPLETED: '已完成',
+        PRINT_ERROR: '打印出错',
+        CANCELLED: '已取消',
+        // 兼容旧状态
         operational: '待机中',
+        printing: '打印中',
         paused: '已暂停',
         error: '出错',
         offline: '离线',
@@ -442,6 +475,17 @@ function handleClick() {
 .status-unknown {
     background: var(--ep-color-gray-2);
     color: var(--ep-text-color-secondary);
+}
+
+/* 新增状态样式 */
+.status-success {
+    background: var(--ep-color-success-light-8);
+    color: var(--ep-color-success);
+}
+
+.status-warning {
+    background: var(--ep-color-warning-light-8);
+    color: var(--ep-color-warning);
 }
 
 /* 卡片主体 */

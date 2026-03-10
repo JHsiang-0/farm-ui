@@ -147,31 +147,11 @@ export class WebSocketClient {
       
       // 再次检查是否已连接（防止竞态）
       if (this.ws && this.ws.readyState === WS_STATE.OPEN) {
-        console.log('[WebSocket] 连接已存在且处于打开状态')
         resolve()
         return
       }
-      
+
       // 如果正在连接中，等待现有连接完成
-      if (this._isConnecting) {
-        console.log('[WebSocket] 连接正在进行中，等待结果...')
-        const checkInterval = setInterval(() => {
-          if (!this._isConnecting) {
-            clearInterval(checkInterval)
-            if (this.ws && this.ws.readyState === WS_STATE.OPEN) {
-              resolve()
-            } else {
-              reject(new Error('连接失败'))
-            }
-          }
-        }, 50)
-        
-        setTimeout(() => {
-          clearInterval(checkInterval)
-          reject(new Error('等待连接超时'))
-        }, this.config.connectTimeout)
-        return
-      }
       
       this._isConnecting = true
       
@@ -229,7 +209,7 @@ export class WebSocketClient {
       }
       this.ws = null
     }
-    
+
     console.log('[WebSocket] 连接已手动关闭')
   }
 
@@ -255,7 +235,7 @@ export class WebSocketClient {
       console.warn('[WebSocket] 连接未打开，无法发送消息')
       return false
     }
-    
+
     try {
       let message = data
       if (typeof data === 'object' && !(data instanceof Blob) && !(data instanceof ArrayBuffer)) {
@@ -403,13 +383,13 @@ export class WebSocketClient {
    */
   _handlePong() {
     this._lastPongTime = Date.now()
-    
+
     // 清除心跳超时定时器
     if (this.heartbeatTimeoutTimer) {
       clearTimeout(this.heartbeatTimeoutTimer)
       this.heartbeatTimeoutTimer = null
     }
-    
+
     console.log('[WebSocket] 收到心跳响应')
   }
 
@@ -421,7 +401,7 @@ export class WebSocketClient {
     console.log(`[WebSocket] 连接关闭: code=${event.code}, reason=${event.reason}`)
     this._clearTimers()
     this._emit('close', event)
-    
+
     // 非手动关闭时触发重连
     if (!this.isManualClose && !this.isDestroyed) {
       this._scheduleReconnect()
@@ -483,18 +463,18 @@ export class WebSocketClient {
     if (this.isDestroyed || this.isManualClose) return
     
     // 检查最大重连次数
-    if (this.config.maxReconnectAttempts !== null && 
+    if (this.config.maxReconnectAttempts !== null &&
         this.reconnectAttempts >= this.config.maxReconnectAttempts) {
       console.log(`[WebSocket] 已达到最大重连次数 (${this.config.maxReconnectAttempts})，停止重连`)
       this._emit('maxReconnectReached', this.reconnectAttempts)
       return
     }
-    
+
     this.reconnectAttempts++
     const delay = this._calculateReconnectDelay()
-    
+
     console.log(`[WebSocket] ${delay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`)
-    
+
     this.reconnectTimer = setTimeout(() => {
       if (!this.isDestroyed && !this.isManualClose) {
         this.connect().catch(() => {
