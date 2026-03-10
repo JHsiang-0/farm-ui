@@ -1,4 +1,4 @@
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, readonly } from 'vue'
 import { defineStore } from 'pinia'
 import { WebSocketClient } from '@/utils/websocket'
 import { getPrinterList, batchUpdatePositions, updatePrinter } from '@/api/printer'
@@ -7,6 +7,7 @@ import { PRINTER_STATE, GRID_CONFIG } from '@/utils/constants'
 /**
  * 打印机状态管理 Store
  * @description 管理打印机列表、网格布局和 WebSocket 实时状态
+ * 优化：使用 RAF 批量更新、缓存 deviceMatrix、自动清理事件监听器
  */
 export const usePrinterStore = defineStore('printer', () => {
   // ============================================
@@ -27,6 +28,32 @@ export const usePrinterStore = defineStore('printer', () => {
 
   /** WebSocket 客户端实例 */
   let wsClient = null
+  
+  // ============================================
+  // RAF 批量更新机制
+  // ============================================
+  
+  /** 待处理的 WebSocket 消息队列 */
+  const pendingUpdates = new Map()
+  
+  /** RAF 帧 ID */
+  let rafId = null
+  
+  /** 是否正在等待下一帧 */
+  let isScheduled = false
+  
+  // ============================================
+  // deviceMatrix 缓存
+  // ============================================
+  
+  /** 缓存的 deviceMatrix */
+  let cachedMatrix = null
+  
+  /** 缓存版本号，用于判断是否需要重新计算 */
+  let matrixCacheVersion = 0
+  
+  /** 原始数据版本号 */
+  let rawDataVersion = 0
 
   // ============================================
   // Constants
@@ -45,11 +72,23 @@ export const usePrinterStore = defineStore('printer', () => {
 
   /**
    * 将扁平设备数组转换为4行13列的二维矩阵（包含过道列）
+   * 优化：使用版本号缓存机制，避免重复计算
    * @returns {Array<Array<Object|null|string>>} 4x13的设备矩阵
    */
   const deviceMatrix = computed(() => {
+    // 如果数据版本未变化，返回缓存
+    if (cachedMatrix && rawDataVersion === matrixCacheVersion) {
+      return cachedMatrix
+    }
+    
+    // 使用 Map 优化查找性能 O(n) -> O(1)
+    const deviceMap = new Map()
+    rawDeviceList.value.forEach(device => {
+      const key = `${device.gridRow},${device.gridCol}`
+      deviceMap.set(key, device)
+    })
+    
     const matrix = []
-
     for (let row = 1; row <= GRID_CONFIG.ROWS; row++) {
       const rowData = []
       for (let col = 1; col <= GRID_CONFIG.TOTAL_COLS; col++) {
@@ -62,14 +101,17 @@ export const usePrinterStore = defineStore('printer', () => {
         // 计算物理列号（排除过道）
         const physicalCol = getPhysicalCol(col)
 
-        // 在原始数据中查找对应坐标的设备
-        const device = rawDeviceList.value.find(
-          d => d.gridRow === row && d.gridCol === physicalCol
-        )
+        // 使用 Map 查找设备 O(1)
+        const key = `${row},${physicalCol}`
+        const device = deviceMap.get(key)
         rowData.push(device || null)
       }
       matrix.push(rowData)
     }
+    
+    // 更新缓存
+    cachedMatrix = matrix
+    matrixCacheVersion = rawDataVersion
 
     return matrix
   })
@@ -168,6 +210,9 @@ export const usePrinterStore = defineStore('printer', () => {
         const hasValidCol = typeof d.gridCol === 'number' && d.gridCol > 0
         return hasValidRow && hasValidCol
       })
+      
+      // 增加数据版本号，触发 deviceMatrix 重新计算
+      rawDataVersion++
 
       // 初始化占位数据，防止 FOUC
       initializePlaceholderData()
@@ -175,6 +220,7 @@ export const usePrinterStore = defineStore('printer', () => {
       console.error('获取设备数据失败:', error)
       // 降级使用模拟数据
       rawDeviceList.value = generateMockData()
+      rawDataVersion++
       initializePlaceholderData()
       throw error
     } finally {
@@ -219,10 +265,18 @@ export const usePrinterStore = defineStore('printer', () => {
    * 断开 WebSocket 连接
    */
   function disconnectWs() {
+    // 取消待处理的 RAF 更新
+    cancelPendingUpdate()
+    
+    // 清空待处理队列
+    pendingUpdates.clear()
+    
     if (wsClient) {
+      // 清理所有事件监听器
       wsClient.destroy()
       wsClient = null
     }
+    
     // 清空实时状态数据
     Object.keys(realTimeStatus).forEach(key => {
       delete realTimeStatus[key]
@@ -230,7 +284,7 @@ export const usePrinterStore = defineStore('printer', () => {
   }
 
   /**
-   * 处理 WebSocket 消息
+   * 处理 WebSocket 消息（使用 RAF 批量更新）
    * @param {Object} message - WebSocket 消息对象
    */
   function handleWebSocketMessage(message) {
@@ -241,23 +295,67 @@ export const usePrinterStore = defineStore('printer', () => {
       return
     }
 
-    // 将 printerId 统一转换为字符串作为 key
+    // 将消息加入待处理队列
     const idKey = String(printerId)
-
-    // 更新实时状态数据（使用 reactive 直接修改）
-    // 优先使用 unifiedState，后端已统一处理状态优先级
-    realTimeStatus[idKey] = {
-      state: data.unifiedState || data.state || PRINTER_STATE.STANDBY,
-      progress: data.progress ?? 0,
-      toolTemperature: data.toolTemperature ?? 0,
-      bedTemperature: data.bedTemperature ?? 0,
-      printDuration: data.printDuration ?? 0,
-      filamentUsed: data.filamentUsed ?? 0,
-      systemMessage: data.systemMessage || '',
-      lastUpdate: timestamp
+    pendingUpdates.set(idKey, { data, timestamp })
+    
+    // 调度批量更新
+    scheduleBatchUpdate()
+  }
+  
+  /**
+   * 调度批量更新（使用 RAF）
+   * @private
+   */
+  function scheduleBatchUpdate() {
+    if (isScheduled || pendingUpdates.size === 0) return
+    
+    isScheduled = true
+    rafId = requestAnimationFrame(() => {
+      flushPendingUpdates()
+      isScheduled = false
+      rafId = null
+    })
+  }
+  
+  /**
+   * 执行批量更新
+   * @private
+   */
+  function flushPendingUpdates() {
+    if (pendingUpdates.size === 0) return
+    
+    // 批量应用更新
+    pendingUpdates.forEach((update, idKey) => {
+      const { data, timestamp } = update
+      
+      // 优先使用 unifiedState，后端已统一处理状态优先级
+      realTimeStatus[idKey] = {
+        state: data.unifiedState || data.state || PRINTER_STATE.STANDBY,
+        progress: data.progress ?? 0,
+        toolTemperature: data.toolTemperature ?? 0,
+        bedTemperature: data.bedTemperature ?? 0,
+        printDuration: data.printDuration ?? 0,
+        filamentUsed: data.filamentUsed ?? 0,
+        systemMessage: data.systemMessage || '',
+        lastUpdate: timestamp
+      }
+    })
+    
+    // 清空队列
+    pendingUpdates.clear()
+  }
+  
+  /**
+   * 取消待处理的 RAF 更新
+   * @private
+   */
+  function cancelPendingUpdate() {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+      isScheduled = false
     }
-
-    console.log('[PrinterStore] 更新实时状态:', idKey, realTimeStatus[idKey])
   }
 
   /**
@@ -266,6 +364,8 @@ export const usePrinterStore = defineStore('printer', () => {
    */
   async function updateDevicePositions(payload) {
     await batchUpdatePositions(payload)
+    // 增加版本号，触发 deviceMatrix 重新计算
+    rawDataVersion++
     await fetchDeviceData()
   }
 
@@ -275,6 +375,8 @@ export const usePrinterStore = defineStore('printer', () => {
    */
   async function updateDevice(data) {
     await updatePrinter(data)
+    // 增加版本号，触发 deviceMatrix 重新计算
+    rawDataVersion++
     await fetchDeviceData()
   }
 
@@ -383,6 +485,9 @@ export const usePrinterStore = defineStore('printer', () => {
    * 清空实时状态数据
    */
   function clearRealTimeStatus() {
+    // 取消待处理的 RAF 更新
+    cancelPendingUpdate()
+    
     Object.keys(realTimeStatus).forEach(key => {
       delete realTimeStatus[key]
     })

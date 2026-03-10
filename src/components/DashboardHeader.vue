@@ -328,7 +328,7 @@ function handleRefresh() {
 
 .title-icon {
   color: var(--ep-color-primary);
-  background: linear-gradient(135deg, var(--ep-color-primary-light-8) 0%, var(--ep-color-primary-light-9) 100%);
+  background: linear-gradient(135deg, var(--ep-color-primary-light-5) 0%, var(--ep-color-primary-light-6) 100%);
   padding: 8px;
   border-radius: 12px;
 }
@@ -375,28 +375,30 @@ function handleRefresh() {
 .stats-bar {
   display: flex;
   align-items: center;
-  gap: var(--ep-space-1);
-  flex-wrap: wrap;
+  gap: 4px;
+  flex-wrap: nowrap;
   justify-content: center;
 }
 
 .stat-divider {
   width: 1px;
-  height: 24px;
+  height: 20px;
   background: var(--ep-border-color-light);
-  margin: 0 var(--ep-space-1);
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 4px 10px;
   border-radius: 20px;
   background: var(--ep-fill-color-light);
   transition: all 0.2s ease;
   cursor: default;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .stat-item:hover {
@@ -454,7 +456,7 @@ function handleRefresh() {
 }
 
 .stat-item.printing {
-  background: linear-gradient(135deg, var(--ep-color-primary-light-9) 0%, var(--ep-color-primary-light-8) 100%);
+  background: linear-gradient(135deg, var(--ep-color-primary-light-6) 0%, var(--ep-color-primary-light-5) 100%);
 }
 
 .stat-item.printing .stat-icon-wrapper {
@@ -477,7 +479,7 @@ function handleRefresh() {
 }
 
 .stat-item.completed {
-  background: linear-gradient(135deg, var(--ep-color-success-light-9) 0%, var(--ep-color-success-light-8) 100%);
+  background: linear-gradient(135deg, var(--ep-color-success-light-5) 0%, var(--ep-color-success-light-4) 100%);
 }
 
 .stat-item.completed .stat-icon-wrapper {
@@ -486,7 +488,7 @@ function handleRefresh() {
 }
 
 .stat-item.paused {
-  background: linear-gradient(135deg, var(--ep-color-warning-light-9) 0%, var(--ep-color-warning-light-8) 100%);
+  background: linear-gradient(135deg, var(--ep-color-warning-light-5) 0%, var(--ep-color-warning-light-4) 100%);
 }
 
 .stat-item.paused .stat-icon-wrapper {
@@ -499,7 +501,7 @@ function handleRefresh() {
 }
 
 .stat-item.fatal {
-  background: linear-gradient(135deg, var(--ep-color-danger-light-9) 0%, var(--ep-color-danger-light-8) 100%);
+  background: linear-gradient(135deg, var(--ep-color-danger-light-5) 0%, var(--ep-color-danger-light-4) 100%);
 }
 
 .stat-item.fatal .stat-icon-wrapper {
@@ -615,7 +617,7 @@ function handleRefresh() {
 .action-btn {
   height: 36px;
   padding: 0 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   font-size: 13px;
   font-weight: var(--ep-font-weight-medium);
   display: inline-flex;
@@ -636,20 +638,23 @@ function handleRefresh() {
 /* 刷新按钮样式 */
 .refresh-btn {
   background: var(--ep-color-white);
-  border: 2px solid var(--ep-border-color);
+  border: 2px solid var(--ep-text-color-primary);
   color: var(--ep-text-color-regular);
+  box-shadow: 2px 2px 0px var(--ep-text-color-primary);
 }
 
 .refresh-btn:hover {
   border-color: var(--ep-color-primary);
   color: var(--ep-color-primary);
-  background: var(--ep-color-primary-light-9);
+  background: var(--ep-color-primary-light-6);
+  box-shadow: 2px 2px 0px var(--ep-color-primary);
 }
 
 .refresh-btn.refreshing {
-  border-color: var(--ep-color-primary-light-3);
+  border-color: var(--ep-color-primary);
   color: var(--ep-color-primary);
-  background: var(--ep-color-primary-light-9);
+  background: var(--ep-color-primary-light-6);
+  box-shadow: 2px 2px 0px var(--ep-color-primary);
 }
 
 .refresh-btn .el-icon {

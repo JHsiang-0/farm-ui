@@ -22,10 +22,14 @@ const WS_STATE = {
  * @constant {Object}
  */
 const DEFAULT_CONFIG = {
-  /** 重连延迟时间（毫秒） */
-  reconnectDelay: 3000,
+  /** 基础重连延迟时间（毫秒） */
+  reconnectDelay: 1000,
   /** 最大重连次数，null 表示无限重连 */
   maxReconnectAttempts: null,
+  /** 最大重连延迟（毫秒） */
+  maxReconnectDelay: 60000,
+  /** 重连退避倍数 */
+  reconnectBackoffMultiplier: 2,
   /** 心跳间隔（毫秒），null 表示不发送心跳 */
   heartbeatInterval: null,
   /** 心跳消息内容 */
@@ -33,7 +37,9 @@ const DEFAULT_CONFIG = {
   /** 是否自动连接 */
   autoConnect: true,
   /** 连接超时时间（毫秒） */
-  connectTimeout: 10000
+  connectTimeout: 10000,
+  /** 心跳超时时间（毫秒），为心跳间隔的2倍 */
+  heartbeatTimeout: null
 }
 
 /**
@@ -51,6 +57,10 @@ export class WebSocketClient {
     this.url = url
     /** @private */
     this.config = { ...DEFAULT_CONFIG, ...options }
+    // 设置心跳超时默认为心跳间隔的2倍
+    if (this.config.heartbeatInterval && !this.config.heartbeatTimeout) {
+      this.config.heartbeatTimeout = this.config.heartbeatInterval * 2
+    }
     
     /** @private @type {WebSocket|null} */
     this.ws = null
@@ -58,6 +68,8 @@ export class WebSocketClient {
     this.reconnectTimer = null
     /** @private @type {number|null} */
     this.heartbeatTimer = null
+    /** @private @type {number|null} */
+    this.heartbeatTimeoutTimer = null
     /** @private @type {number|null} */
     this.connectTimeoutTimer = null
     
@@ -67,6 +79,16 @@ export class WebSocketClient {
     this.isManualClose = false
     /** @private @type {boolean} */
     this.isDestroyed = false
+    
+    // 连接锁 - 防止并发连接
+    /** @private @type {boolean} */
+    this._isConnecting = false
+    /** @private @type {Promise<void>|null} */
+    this._connectPromise = null
+    
+    // 心跳状态
+    /** @private @type {number} */
+    this._lastPongTime = Date.now()
     
     // 事件处理器存储
     /** @private @type {Map<string, Set<Function>>} */
@@ -89,39 +111,69 @@ export class WebSocketClient {
    * @returns {Promise<void>}
    */
   connect() {
+    // 如果连接正在进行中，返回相同的 Promise
+    if (this._connectPromise) {
+      return this._connectPromise
+    }
+    
+    // 如果已连接，立即 resolve
+    if (this.ws && this.ws.readyState === WS_STATE.OPEN) {
+      return Promise.resolve()
+    }
+    
+    // 创建新的连接 Promise
+    this._connectPromise = this._doConnect()
+    
+    // 清理引用
+    this._connectPromise.finally(() => {
+      this._connectPromise = null
+      this._isConnecting = false
+    })
+    
+    return this._connectPromise
+  }
+  
+  /**
+   * 实际执行连接逻辑
+   * @private
+   * @returns {Promise<void>}
+   */
+  _doConnect() {
     return new Promise((resolve, reject) => {
       if (this.isDestroyed) {
         reject(new Error('WebSocket 实例已被销毁'))
         return
       }
       
+      // 再次检查是否已连接（防止竞态）
       if (this.ws && this.ws.readyState === WS_STATE.OPEN) {
         console.log('[WebSocket] 连接已存在且处于打开状态')
         resolve()
         return
       }
       
-      if (this.ws && this.ws.readyState === WS_STATE.CONNECTING) {
-        console.log('[WebSocket] 连接正在建立中...')
-        // 等待连接结果
-        const checkState = setInterval(() => {
-          if (!this.ws || this.ws.readyState !== WS_STATE.CONNECTING) {
-            clearInterval(checkState)
+      // 如果正在连接中，等待现有连接完成
+      if (this._isConnecting) {
+        console.log('[WebSocket] 连接正在进行中，等待结果...')
+        const checkInterval = setInterval(() => {
+          if (!this._isConnecting) {
+            clearInterval(checkInterval)
             if (this.ws && this.ws.readyState === WS_STATE.OPEN) {
               resolve()
             } else {
               reject(new Error('连接失败'))
             }
           }
-        }, 100)
+        }, 50)
         
-        // 设置连接超时
         setTimeout(() => {
-          clearInterval(checkState)
-          reject(new Error('连接超时'))
+          clearInterval(checkInterval)
+          reject(new Error('等待连接超时'))
         }, this.config.connectTimeout)
         return
       }
+      
+      this._isConnecting = true
       
       try {
         console.log(`[WebSocket] 正在连接到: ${this.url}`)
@@ -131,6 +183,7 @@ export class WebSocketClient {
         this.connectTimeoutTimer = setTimeout(() => {
           if (this.ws && this.ws.readyState === WS_STATE.CONNECTING) {
             console.error('[WebSocket] 连接超时')
+            this._isConnecting = false
             this.ws.close()
             reject(new Error('连接超时'))
           }
@@ -140,6 +193,7 @@ export class WebSocketClient {
         const onOpenOnce = () => {
           clearTimeout(this.connectTimeoutTimer)
           this.connectTimeoutTimer = null
+          this._isConnecting = false
           this.ws.removeEventListener('open', onOpenOnce)
           resolve()
         }
@@ -149,6 +203,7 @@ export class WebSocketClient {
         
       } catch (error) {
         console.error('[WebSocket] 创建连接失败:', error)
+        this._isConnecting = false
         this._scheduleReconnect()
         reject(error)
       }
@@ -163,6 +218,10 @@ export class WebSocketClient {
   close(code = 1000, reason = '') {
     this.isManualClose = true
     this._clearTimers()
+    
+    // 重置连接状态
+    this._isConnecting = false
+    this._connectPromise = null
     
     if (this.ws) {
       if (this.ws.readyState === WS_STATE.OPEN || this.ws.readyState === WS_STATE.CONNECTING) {
@@ -179,6 +238,8 @@ export class WebSocketClient {
    */
   destroy() {
     this.isDestroyed = true
+    this._isConnecting = false
+    this._connectPromise = null
     this.close()
     this.eventHandlers.clear()
     console.log('[WebSocket] 实例已销毁')
@@ -306,6 +367,8 @@ export class WebSocketClient {
     console.log('[WebSocket] 连接成功')
     this.reconnectAttempts = 0
     this.isManualClose = false
+    this._isConnecting = false
+    this._lastPongTime = Date.now()
     this._startHeartbeat()
     this._emit('open', event)
   }
@@ -316,20 +379,38 @@ export class WebSocketClient {
    */
   _handleMessage(event) {
     // 处理心跳响应
-    if (event.data === 'pong' || event.data === '"pong"') {
-      console.log('[WebSocket] 收到心跳响应')
+    if (typeof event.data === 'string' && (event.data === 'pong' || event.data === '"pong"')) {
+      this._handlePong()
       return
     }
     
     let data = event.data
-    try {
-      // 尝试解析 JSON
-      data = JSON.parse(event.data)
-    } catch {
-      // 保持原始字符串
+    // 只对字符串类型尝试 JSON 解析
+    if (typeof event.data === 'string') {
+      try {
+        data = JSON.parse(event.data)
+      } catch {
+        // 保持原始字符串
+      }
     }
     
     this._emit('message', data, event)
+  }
+  
+  /**
+   * 处理心跳响应
+   * @private
+   */
+  _handlePong() {
+    this._lastPongTime = Date.now()
+    
+    // 清除心跳超时定时器
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = null
+    }
+    
+    console.log('[WebSocket] 收到心跳响应')
   }
 
   /**
@@ -374,6 +455,27 @@ export class WebSocketClient {
   }
 
   /**
+   * 计算重连延迟（指数退避 + 随机抖动）
+   * @private
+   * @returns {number} 重连延迟时间（毫秒）
+   */
+  _calculateReconnectDelay() {
+    // 指数退避: delay * 2^(n-1)，但不超过最大值
+    const baseDelay = this.config.reconnectDelay
+    const multiplier = Math.pow(this.config.reconnectBackoffMultiplier, this.reconnectAttempts)
+    const exponentialDelay = Math.min(
+      baseDelay * multiplier,
+      this.config.maxReconnectDelay
+    )
+    
+    // 添加随机抖动 (±25%)，避免惊群效应
+    const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1)
+    const finalDelay = Math.floor(exponentialDelay + jitter)
+    
+    return Math.max(finalDelay, 100) // 最小 100ms
+  }
+  
+  /**
    * 安排重新连接
    * @private
    */
@@ -389,8 +491,9 @@ export class WebSocketClient {
     }
     
     this.reconnectAttempts++
+    const delay = this._calculateReconnectDelay()
     
-    console.log(`[WebSocket] ${this.config.reconnectDelay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`)
+    console.log(`[WebSocket] ${delay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`)
     
     this.reconnectTimer = setTimeout(() => {
       if (!this.isDestroyed && !this.isManualClose) {
@@ -398,7 +501,7 @@ export class WebSocketClient {
           // 连接失败会在 _handleClose 中再次触发重连
         })
       }
-    }, this.config.reconnectDelay)
+    }, delay)
   }
 
   /**
@@ -408,9 +511,26 @@ export class WebSocketClient {
   _startHeartbeat() {
     if (!this.config.heartbeatInterval || this.heartbeatTimer) return
     
+    // 初始化上次心跳响应时间
+    this._lastPongTime = Date.now()
+    
     this.heartbeatTimer = setInterval(() => {
       if (this.isConnected()) {
         this.send(this.config.heartbeatMessage)
+        
+        // 设置心跳超时检测
+        if (this.config.heartbeatTimeout) {
+          this.heartbeatTimeoutTimer = setTimeout(() => {
+            const timeSinceLastPong = Date.now() - this._lastPongTime
+            if (timeSinceLastPong >= this.config.heartbeatTimeout) {
+              console.warn('[WebSocket] 心跳超时，强制重连')
+              // 触发超时事件
+              this._emit('heartbeatTimeout', { lastPongTime: this._lastPongTime, timeout: this.config.heartbeatTimeout })
+              // 强制关闭连接，触发重连
+              this.close(4001, 'Heartbeat timeout')
+            }
+          }, this.config.heartbeatTimeout)
+        }
       }
     }, this.config.heartbeatInterval)
   }
@@ -428,6 +548,11 @@ export class WebSocketClient {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    }
+    
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = null
     }
     
     if (this.connectTimeoutTimer) {

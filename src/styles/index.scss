@@ -252,7 +252,7 @@ body {
 /* Button - 按钮卡通扁平风改造 */
 .el-button {
   font-weight: var(--ep-font-weight-semibold);
-  border-radius: var(--ep-border-radius-base);
+  border-radius: 12px;
   border-width: 3px;
   border-style: solid;
   transition: all var(--ep-transition-duration) var(--ep-transition-timing);
