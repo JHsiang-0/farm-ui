@@ -36,14 +36,17 @@ export const BUSINESS_CODE = {
 }
 
 // ============================================
-// 打印机状态 - 9个高层聚合标准状态（纯大写）
+// 打印机状态 - 10个高层聚合标准状态（纯大写）
 // ============================================
 
 /**
  * 打印机设备状态常量 - 后端 WebSocket 推送的标准状态
  * @constant {Object}
  */
-export const PRINTER_STATE = {
+export const PRINTER_STATE = Object.freeze({
+  // ⚪ 未知/离线状态 (Unknown)
+  UNKNOWN: 'UNKNOWN',       // 初始状态/离线断连状态
+
   // 🔴 致命级 (Danger)
   FAULT: 'FAULT',           // 设备故障 - 底层硬件/热失控急停
   SYS_ERROR: 'SYS_ERROR',   // 系统错误 - 配置或通讯崩溃
@@ -58,29 +61,32 @@ export const PRINTER_STATE = {
   COMPLETED: 'COMPLETED',   // 已完成
   STANDBY: 'STANDBY',       // 待机
   CANCELLED: 'CANCELLED'    // 已取消
-}
+})
 
 /**
  * 打印机状态映射配置 - UX 故障分级优化
  * 严格按照工业级 UX 标准映射 Element Plus 的 type 颜色和中文文本
  * @constant {Object}
  */
-export const PRINTER_STATE_MAP = {
+export const PRINTER_STATE_MAP = Object.freeze({
+  // ⚪ 未知/离线状态
+  [PRINTER_STATE.UNKNOWN]: { label: '离线', type: 'info', level: 'unknown', icon: 'QuestionFilled' },
+
   // 🔴 致命级 (Danger)
-  [PRINTER_STATE.FAULT]: { label: '设备故障', type: 'danger', level: 'fatal' },
-  [PRINTER_STATE.SYS_ERROR]: { label: '系统错误', type: 'danger', level: 'fatal' },
+  [PRINTER_STATE.FAULT]: { label: '硬件故障', type: 'danger', level: 'fatal', icon: 'CircleCloseFilled' },
+  [PRINTER_STATE.SYS_ERROR]: { label: '系统错误', type: 'danger', level: 'fatal', icon: 'WarningFilled' },
 
   // 🟡 警告/关注级 (Warning)
-  [PRINTER_STATE.PRINT_ERROR]: { label: '打印中断', type: 'warning', level: 'warning' },
-  [PRINTER_STATE.STARTING]: { label: '启动中', type: 'warning', level: 'warning' },
-  [PRINTER_STATE.PAUSED]: { label: '已暂停', type: 'warning', level: 'warning' },
+  [PRINTER_STATE.PRINT_ERROR]: { label: '打印错误', type: 'warning', level: 'warning', icon: 'WarnTriangleFilled' },
+  [PRINTER_STATE.STARTING]: { label: '启动中', type: 'warning', level: 'warning', icon: 'Loading' },
+  [PRINTER_STATE.PAUSED]: { label: '已暂停', type: 'warning', level: 'warning', icon: 'VideoPause' },
 
   // 🔵 正常业务级
-  [PRINTER_STATE.PRINTING]: { label: '打印中', type: 'primary', level: 'normal' },
-  [PRINTER_STATE.COMPLETED]: { label: '已完成', type: 'success', level: 'normal' },
-  [PRINTER_STATE.STANDBY]: { label: '待机', type: 'info', level: 'normal' },
-  [PRINTER_STATE.CANCELLED]: { label: '已取消', type: 'info', level: 'normal' }
-}
+  [PRINTER_STATE.PRINTING]: { label: '打印中', type: 'primary', level: 'normal', icon: 'VideoPlay' },
+  [PRINTER_STATE.COMPLETED]: { label: '已完成', type: 'success', level: 'normal', icon: 'SuccessFilled' },
+  [PRINTER_STATE.STANDBY]: { label: '待机', type: 'info', level: 'normal', icon: 'Coffee' },
+  [PRINTER_STATE.CANCELLED]: { label: '已取消', type: 'info', level: 'normal', icon: 'RemoveFilled' }
+})
 
 /**
  * 需要显示错误警报的状态列表

@@ -26,6 +26,7 @@ export const useGridStore = defineStore('grid', () => {
    */
   const statusCounts = computed(() => {
     const counts = {
+      [PRINTER_STATE.UNKNOWN]: 0,
       [PRINTER_STATE.PRINTING]: 0,
       [PRINTER_STATE.STANDBY]: 0,
       [PRINTER_STATE.PAUSED]: 0,
@@ -37,12 +38,16 @@ export const useGridStore = defineStore('grid', () => {
       [PRINTER_STATE.CANCELLED]: 0
     }
 
-    // 从 statusMap 统计状态
+    // 从 statusMap 统计状态 - 使用 unifiedState 字段
     const statusMap = realtimeStore.statusMap
     statusMap.forEach((status) => {
-      const state = status.state
-      if (state && Object.prototype.hasOwnProperty.call(counts, state)) {
+      // 优先使用 unifiedState，如果没有则使用 state
+      const state = status.unifiedState || status.state || PRINTER_STATE.UNKNOWN
+      if (Object.prototype.hasOwnProperty.call(counts, state)) {
         counts[state]++
+      } else {
+        // 未知状态计入 UNKNOWN
+        counts[PRINTER_STATE.UNKNOWN]++
       }
     })
 

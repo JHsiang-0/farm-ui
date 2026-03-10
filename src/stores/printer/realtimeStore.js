@@ -139,8 +139,8 @@ export const useRealtimeStore = defineStore('realtime', () => {
       // 将后端数据格式转换为前端组件期望的格式
       newMap.set(idKey, {
         // 优先使用 unifiedState，这是后端融合后的最终状态
-        unifiedState: data.unifiedState,
-        state: data.unifiedState || data.state || PRINTER_STATE.STANDBY,
+        unifiedState: data.unifiedState || PRINTER_STATE.UNKNOWN,
+        state: data.unifiedState || data.state || PRINTER_STATE.UNKNOWN,
         progress: (data.progress ?? 0) / 100, // 后端是 0-100，前端需要 0-1
         // 温度数据 - 兼容 extruder/heaterBed 嵌套格式
         extruder: {

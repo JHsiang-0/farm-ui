@@ -16,19 +16,22 @@
         </div>
     </div>
 
-    <!-- 设备卡片 -->
-    <div v-else class="printer-card" :class="{ 'is-dragging': isDragging, 'is-edit-mode': isEditMode }" draggable="true"
+    <!-- 设备卡片 - Neo-Brutalism 风格 -->
+    <div v-else class="printer-card" :class="[statusClass, { 'is-dragging': isDragging, 'is-edit-mode': isEditMode }]" draggable="true"
         @dragstart="handleDragStart" @dragend="handleDragEnd" @dragenter="handleDragEnter" @dragleave="handleDragLeave"
         @drop="handleDrop" @click="handleClick">
-        <!-- 卡片头部：设备编号和状态 -->
+        <!-- 卡片头部：设备编号 -->
         <div class="card-header">
             <div class="printer-id">{{ device.machineNumber }}</div>
-            <div class="status-badge" :class="statusClass">
-                {{ statusText }}
-            </div>
         </div>
 
-        <!-- 卡片主体：温度信息 -->
+        <!-- 错误提示（截断显示） -->
+        <div v-if="(hasSystemError || hasPrintError) && realTimeData?.systemMessage" class="error-alert">
+            <el-icon><WarningFilled /></el-icon>
+            <span class="error-text" :title="realTimeData.systemMessage">{{ truncateText(realTimeData.systemMessage, 20) }}</span>
+        </div>
+
+        <!-- 卡片主体：温度信息（小字体） -->
         <div class="card-body">
             <!-- 喷头温度 -->
             <div class="temp-row">
@@ -39,7 +42,6 @@
                     <span class="temp-current">{{ nozzleTemp }}</span>
                     <span class="temp-divider">/</span>
                     <span class="temp-target">{{ nozzleTarget }}</span>
-                    <span class="temp-unit">°C</span>
                 </div>
             </div>
 
@@ -52,28 +54,19 @@
                     <span class="temp-current">{{ bedTemp }}</span>
                     <span class="temp-divider">/</span>
                     <span class="temp-target">{{ bedTarget }}</span>
-                    <span class="temp-unit">°C</span>
                 </div>
             </div>
         </div>
 
-        <!-- 卡片底部：进度条和打印信息 -->
+        <!-- 卡片底部：状态或进度 -->
         <div class="card-footer">
-            <div class="progress-section">
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }" />
-                </div>
-                <div class="progress-text">{{ progressPercent }}%</div>
+            <!-- 打印中显示大百分比 -->
+            <div v-if="isPrinting" class="printing-percent">
+                {{ progressPercent }}%
             </div>
-            <div v-if="isPrinting" class="print-info">
-                <div class="filament-info">
-                    <IconSpool class="filament-icon" />
-                    <span class="filament-name">{{ filamentName }}</span>
-                </div>
-                <div class="time-remaining">{{ timeRemaining }}</div>
-            </div>
-            <div v-else class="print-info idle-info">
-                <span>{{ idleText }}</span>
+            <!-- 其他状态显示状态文本 -->
+            <div v-else class="status-text">
+                {{ statusText }}
             </div>
         </div>
     </div>
@@ -81,10 +74,10 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, WarningFilled } from '@element-plus/icons-vue'
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconBed from '../icons/IconBed.vue'
-import IconSpool from '../icons/IconSpool.vue'
+import { PRINTER_STATE, PRINTER_STATE_MAP } from '@/utils/constants'
 
 defineOptions({ name: 'GridCell' })
 
@@ -157,74 +150,47 @@ const emit = defineEmits([
 // Computed - 状态相关
 // ============================================
 
-/** 状态映射 - 基于后端 unifiedState 字段 */
-const STATUS_MAP = {
-    // 第一层：系统最高优先级拦截
-    FAULT: { text: '故障', class: 'status-error', priority: 'critical' },      // 🔴 硬件物理故障
-    SYS_ERROR: { text: '错误', class: 'status-error', priority: 'critical' }, // 🟠 系统软件错误
-    STARTING: { text: '启动中', class: 'status-warning', priority: 'warning' },  // 🟡 启动中
-
-    // 第二层：业务状态判断（systemState = ready 时）
-    STANDBY: { text: '待机', class: 'status-ready', priority: 'normal' },      // 🟢 待机就绪
-    PRINTING: { text: '打印中', class: 'status-printing', priority: 'normal' }, // 🔵 打印中
-    PAUSED: { text: '已暂停', class: 'status-paused', priority: 'warning' },   // ⏸️ 已暂停
-    COMPLETED: { text: '已完成', class: 'status-success', priority: 'normal' }, // ✅ 已完成
-    PRINT_ERROR: { text: '打印错误', class: 'status-error', priority: 'error' }, // ❌ 打印错误
-    CANCELLED: { text: '已取消', class: 'status-warning', priority: 'warning' }, // 🚫 已取消
-
-    // 兼容旧状态（保留以防万一）
-    operational: { text: '就绪', class: 'status-ready', priority: 'normal' },
-    printing: { text: '打印中', class: 'status-printing', priority: 'normal' },
-    paused: { text: '暂停', class: 'status-paused', priority: 'warning' },
-    error: { text: '错误', class: 'status-error', priority: 'error' },
-    offline: { text: '离线', class: 'status-offline', priority: 'offline' },
-    unknown: { text: '未知', class: 'status-unknown', priority: 'unknown' }
-}
-
-/** 当前状态 - 优先使用 unifiedState */
+/** 当前状态 - 严格使用 unifiedState 字段 */
 const status = computed(() => {
-    if (!props.realTimeData) return 'unknown'
-    // 优先使用 unifiedState，如果没有则回退到 state
-    return props.realTimeData.unifiedState || props.realTimeData.state || 'unknown'
+    if (!props.realTimeData) return PRINTER_STATE.UNKNOWN
+    return props.realTimeData.unifiedState || PRINTER_STATE.UNKNOWN
 })
 
-/** 状态文本 */
-const statusText = computed(() => STATUS_MAP[status.value]?.text || '未知')
+/** 状态文本 - 使用 PRINTER_STATE_MAP */
+const statusText = computed(() => {
+    return PRINTER_STATE_MAP[status.value]?.label || '未知'
+})
 
-/** 状态样式类 */
-const statusClass = computed(() => STATUS_MAP[status.value]?.class || 'status-unknown')
+/** 状态样式类 - 使用 PRINTER_STATE_MAP */
+const statusClass = computed(() => {
+    const state = status.value
+    // 直接返回状态对应的样式类
+    const stateClassMap = {
+        [PRINTER_STATE.UNKNOWN]: 'status-unknown',
+        [PRINTER_STATE.FAULT]: 'status-fault',
+        [PRINTER_STATE.SYS_ERROR]: 'status-sys-error',
+        [PRINTER_STATE.STARTING]: 'status-starting',
+        [PRINTER_STATE.STANDBY]: 'status-standby',
+        [PRINTER_STATE.PRINTING]: 'status-printing',
+        [PRINTER_STATE.PAUSED]: 'status-paused',
+        [PRINTER_STATE.COMPLETED]: 'status-completed',
+        [PRINTER_STATE.PRINT_ERROR]: 'status-print-error',
+        [PRINTER_STATE.CANCELLED]: 'status-cancelled'
+    }
+    return stateClassMap[state] || 'status-unknown'
+})
 
 /** 是否正在打印中 */
-const isPrinting = computed(() => status.value === 'PRINTING' || status.value === 'printing')
+const isPrinting = computed(() => status.value === PRINTER_STATE.PRINTING)
 
-/** 是否显示系统错误信息 */
+/** 是否显示系统错误信息（硬件故障或系统错误） */
 const hasSystemError = computed(() => {
-    return status.value === 'FAULT' || status.value === 'SYS_ERROR'
+    return status.value === PRINTER_STATE.FAULT || status.value === PRINTER_STATE.SYS_ERROR
 })
 
-/** 空闲文本 */
-const idleText = computed(() => {
-    const map = {
-        // 系统层状态
-        FAULT: '硬件故障',
-        SYS_ERROR: '系统错误',
-        STARTING: '启动中...',
-        // 业务层状态
-        STANDBY: '待机中',
-        PRINTING: '打印中',
-        PAUSED: '已暂停',
-        COMPLETED: '已完成',
-        PRINT_ERROR: '打印出错',
-        CANCELLED: '已取消',
-        // 兼容旧状态
-        operational: '待机中',
-        printing: '打印中',
-        paused: '已暂停',
-        error: '出错',
-        offline: '离线',
-        unknown: '未知状态'
-    }
-    return map[status.value] || '待机中'
+/** 是否显示打印错误 */
+const hasPrintError = computed(() => {
+    return status.value === PRINTER_STATE.PRINT_ERROR
 })
 
 // ============================================
@@ -265,23 +231,16 @@ const progressPercent = computed(() => {
     return Math.round(props.realTimeData.progress * 100)
 })
 
-/** 耗材名称 */
-const filamentName = computed(() => {
-    if (!props.realTimeData?.filament) return '未知耗材'
-    return props.realTimeData.filament
-})
+// ============================================
+// Methods
+// ============================================
 
-/** 剩余时间 */
-const timeRemaining = computed(() => {
-    if (!props.realTimeData?.timeRemaining) return '--:--'
-    const minutes = Math.ceil(props.realTimeData.timeRemaining / 60)
-    if (minutes < 60) {
-        return `${minutes}分钟`
-    }
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours}小时${mins > 0 ? mins + '分钟' : ''}`
-})
+/** 截断文本 */
+function truncateText(text, maxLength) {
+    if (!text) return ''
+    if (text.length <= maxLength) return text
+    return text.slice(0, maxLength) + '...'
+}
 
 // ============================================
 // Event Handlers
@@ -390,229 +349,219 @@ function handleClick() {
 }
 
 /* ============================================
-   打印机卡片 - 原始 PrinterCard 样式
+   打印机卡片 - Neo-Brutalism 新粗野主义风格
    ============================================ */
 .printer-card {
     display: flex;
     flex-direction: column;
-    background: var(--ep-bg-color);
-    border: 1px solid var(--ep-border-color-lighter);
-    border-radius: var(--ep-border-radius-base);
-    padding: var(--ep-space-2);
+    height: 100%;
+    min-height: 140px;
+    padding: 8px 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease;
     position: relative;
     overflow: hidden;
+    /* 硬阴影边框效果 */
+    border: 3px solid;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
 
 .printer-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
 }
 
 .printer-card.is-dragging {
-    opacity: 0.5;
+    opacity: 0.7;
     cursor: grabbing;
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
 }
 
 .printer-card.is-edit-mode {
-    border: 2px dashed var(--ep-color-primary);
-    cursor: grab;
+    border-style: dashed;
 }
 
-.printer-card.is-edit-mode:hover {
-    border-style: solid;
-    background: var(--ep-color-primary-light-9);
+/* 9种状态颜色配置 - 背景色遮罩 + 深色边框 */
+/* UNKNOWN - 灰色 */
+.printer-card.status-unknown {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    border-color: #9ca3af;
+}
+
+/* FAULT - 深红色 */
+.printer-card.status-fault {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: #dc2626;
+}
+
+/* SYS_ERROR - 橙红色 */
+.printer-card.status-sys-error {
+    background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+    border-color: #ea580c;
+}
+
+/* STARTING - 黄色 */
+.printer-card.status-starting {
+    background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+    border-color: #ca8a04;
+}
+
+/* STANDBY - 青色 */
+.printer-card.status-standby {
+    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+    border-color: #0891b2;
+}
+
+/* PRINTING - 蓝色 */
+.printer-card.status-printing {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: #2563eb;
+}
+
+/* PAUSED - 琥珀色 */
+.printer-card.status-paused {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+}
+
+/* COMPLETED - 绿色 */
+.printer-card.status-completed {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+}
+
+/* PRINT_ERROR - 紫色 */
+.printer-card.status-print-error {
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    border-color: #9333ea;
+}
+
+/* CANCELLED - 灰色 */
+.printer-card.status-cancelled {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-color: #6b7280;
 }
 
 /* 卡片头部 */
 .card-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    margin-bottom: var(--ep-space-2);
+    margin-bottom: 4px;
 }
 
 .printer-id {
-    font-size: var(--ep-font-size-small);
-    font-weight: var(--ep-font-weight-semibold);
-    color: var(--ep-text-color-primary);
+    font-size: 14px;
+    font-weight: 800;
+    color: #1f2937;
+    text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
 }
 
-.status-badge {
-    padding: 2px 8px;
-    border-radius: var(--ep-border-radius-small);
-    font-size: var(--ep-font-size-extra-small);
-    font-weight: var(--ep-font-weight-medium);
+/* 错误提示 - 截断显示 */
+.error-alert {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    background: rgba(220, 38, 38, 0.15);
+    border: 2px solid #dc2626;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #991b1b;
 }
 
-.status-ready {
-    background: var(--ep-color-success-light-8);
-    color: var(--ep-color-success);
+.error-alert .el-icon {
+    font-size: 12px;
+    flex-shrink: 0;
 }
 
-.status-printing {
-    background: var(--ep-color-primary-light-8);
-    color: var(--ep-color-primary);
+.error-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
-.status-paused {
-    background: var(--ep-color-warning-light-8);
-    color: var(--ep-color-warning);
-}
-
-.status-error {
-    background: var(--ep-color-danger-light-8);
-    color: var(--ep-color-danger);
-}
-
-.status-offline {
-    background: var(--ep-color-gray-3);
-    color: var(--ep-text-color-placeholder);
-}
-
-.status-unknown {
-    background: var(--ep-color-gray-2);
-    color: var(--ep-text-color-secondary);
-}
-
-/* 新增状态样式 */
-.status-success {
-    background: var(--ep-color-success-light-8);
-    color: var(--ep-color-success);
-}
-
-.status-warning {
-    background: var(--ep-color-warning-light-8);
-    color: var(--ep-color-warning);
-}
-
-/* 卡片主体 */
+/* 卡片主体 - 小字体温度 */
 .card-body {
     display: flex;
     flex-direction: column;
-    gap: var(--ep-space-1);
-    margin-bottom: var(--ep-space-2);
+    gap: 2px;
+    margin-bottom: 4px;
+    flex: 1;
 }
 
 .temp-row {
     display: flex;
     align-items: center;
-    gap: var(--ep-space-2);
+    gap: 6px;
 }
 
 .temp-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--ep-text-color-secondary);
+    color: #4b5563;
+    flex-shrink: 0;
 }
 
 .temp-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
 }
 
 .temp-values {
     display: flex;
     align-items: baseline;
     gap: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #374151;
 }
 
 .temp-current {
-    font-size: var(--ep-font-size-medium);
-    font-weight: var(--ep-font-weight-semibold);
-    color: var(--ep-text-color-primary);
+    color: #111827;
 }
 
 .temp-divider {
-    font-size: var(--ep-font-size-small);
-    color: var(--ep-text-color-secondary);
+    color: #9ca3af;
 }
 
 .temp-target {
-    font-size: var(--ep-font-size-small);
-    color: var(--ep-text-color-secondary);
+    color: #6b7280;
+    font-size: 10px;
 }
 
-.temp-unit {
-    font-size: var(--ep-font-size-extra-small);
-    color: var(--ep-text-color-placeholder);
-    margin-left: 2px;
-}
-
-/* 卡片底部 */
+/* 卡片底部 - 居中状态/百分比 */
 .card-footer {
     margin-top: auto;
-    padding-top: var(--ep-space-2);
-    border-top: 1px solid var(--ep-border-color-lighter);
-}
-
-.progress-section {
     display: flex;
-    align-items: center;
-    gap: var(--ep-space-2);
-    margin-bottom: var(--ep-space-1);
-}
-
-.progress-bar-bg {
-    flex: 1;
-    height: 6px;
-    background: var(--ep-fill-color);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--ep-color-primary), var(--ep-color-primary-light-3));
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-
-.progress-text {
-    font-size: var(--ep-font-size-extra-small);
-    font-weight: var(--ep-font-weight-medium);
-    color: var(--ep-text-color-secondary);
-    min-width: 32px;
-    text-align: right;
-}
-
-.print-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: var(--ep-font-size-extra-small);
-}
-
-.filament-info {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--ep-text-color-secondary);
-}
-
-.filament-icon {
-    width: 14px;
-    height: 14px;
-}
-
-.filament-name {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.time-remaining {
-    color: var(--ep-text-color-placeholder);
-}
-
-.idle-info {
-    color: var(--ep-text-color-placeholder);
     justify-content: center;
+    align-items: center;
+    padding-top: 4px;
+    border-top: 2px dashed rgba(0, 0, 0, 0.1);
+}
+
+/* 状态文本 - 居中显示 */
+.status-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1f2937;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* 打印百分比 - 大字体居中 */
+.printing-percent {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2563eb;
+    text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);
+    line-height: 1;
 }
 </style>

@@ -176,7 +176,8 @@ const labels = {
   printError: '打印中断',
   refresh: '刷新状态',
   refreshing: '更新中...',
-  updatedAt: '更新于'
+  updatedAt: '更新于',
+  unknown: '离线/未知'
 }
 
 // ============================================
@@ -184,11 +185,12 @@ const labels = {
 // ============================================
 
 const props = defineProps({
-  /** 状态计数对象 - 9个标准状态 */
+  /** 状态计数对象 - 10个标准状态（包含 UNKNOWN） */
   statusCounts: {
     type: Object,
     required: true,
     default: () => ({
+      [PRINTER_STATE.UNKNOWN]: 0,
       [PRINTER_STATE.PRINTING]: 0,
       [PRINTER_STATE.STANDBY]: 0,
       [PRINTER_STATE.COMPLETED]: 0,
