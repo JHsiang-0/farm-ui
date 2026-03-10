@@ -269,12 +269,17 @@ async function swapDevicesPosition(device1, pos1, device2, pos2) {
  * @param {number} colIndex - 列索引（0-based）
  */
 function handleCellClick(device, rowIndex, colIndex) {
+  // 锁定布局时禁止点击空槽位绑定设备
+  if (!device && !isEditMode.value) {
+    return
+  }
+
   if (device) {
     // 点击设备 - 打开详情抽屉
     activeDevice.value = device
     drawerVisible.value = true
   } else {
-    // 点击空槽位 - 打开绑定弹窗
+    // 点击空槽位 - 打开绑定弹窗（仅在编辑模式下）
     targetSlot.value = {
       row: rowIndex + 1,
       col: store.getPhysicalColByIndex(colIndex)
@@ -451,7 +456,8 @@ onUnmounted(() => {
   height: 100%;
   gap: var(--ep-space-4);
   padding: var(--ep-space-4);
-  background-color: var(--ep-fill-color-light);
+  /* 更和谐的背景色：暖灰色 */
+  background-color: #f0ede8;
 }
 
 /* ============================================
@@ -460,20 +466,24 @@ onUnmounted(() => {
 .workshop-canvas-wrapper {
   position: relative;
   width: 100%;
-  height: calc(100vh - 180px);
-  /* 扣除 Header(60px) + DashboardHeader(~60px) + padding */
-  padding: 24px;
-  background: linear-gradient(145deg, #f5f7fa 0%, #e8ecf1 50%, #eef1f5 100%);
-  border-radius: 12px;
+  height: calc(100vh - 200px);
+  /* 扣除 Header(60px) + DashboardHeader(~80px) + padding + gaps */
+  padding: 20px;
+  /* Neo-Brutalism 风格：米色背景 */
+  background: #f8f5f0;
+  border: 3px solid #2c3e50;
+  border-radius: 16px;
   box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.8),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.05),
-    0 8px 32px rgba(0, 21, 41, 0.12),
-    0 2px 8px rgba(0, 21, 41, 0.08);
+    6px 6px 0px rgba(44, 62, 80, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: auto;
   /* 美化滚动条 */
   scrollbar-width: thin;
   scrollbar-color: var(--ep-color-gray-4) transparent;
+  /* 确保内容不撑开 */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 /* Webkit 浏览器滚动条样式 */
@@ -503,55 +513,52 @@ onUnmounted(() => {
 }
 
 /* ============================================
-   Factory Grid Layout
+   Factory Grid Layout - 固定尺寸
    ============================================ */
 .factory-grid {
   display: flex;
-  flex: 1;
+  flex: 0 0 auto;
   gap: var(--ep-space-2);
-  min-width: 1400px;
-  /* 确保网格不会被压缩 */
+  min-width: auto;
+  /* 总宽度 = 13列*100px + 12个gap*12px + 行标签40px + 行标签gap*8px */
+  width: 1452px;
 }
 
 /* ============================================
    Responsive Design - 物理空间响应式方案
    ============================================ */
 
-/* 小屏幕适配：保持网格定宽，通过外层滚动查看 */
+/* 小屏幕适配 */
 @media (max-width: 1400px) {
   .workshop-canvas-wrapper {
-    height: calc(100vh - 160px);
+    height: calc(100vh - 190px);
   }
 
-  /* 保持网格定宽，不压缩 */
   .factory-grid {
-    min-width: 1400px;
+    width: 1452px;
   }
 }
 
 @media (max-width: 1200px) {
   .workshop-canvas-wrapper {
-    height: calc(100vh - 140px);
+    height: calc(100vh - 180px);
     padding: 16px;
   }
 
   .factory-grid {
-    min-width: 1400px;
-    flex-direction: row;
-    /* 保持横向布局 */
+    width: 1452px;
   }
 }
 
 @media (max-width: 768px) {
   .workshop-canvas-wrapper {
-    height: calc(100vh - 120px);
+    height: calc(100vh - 160px);
     padding: 12px;
-    border-radius: 8px;
+    border-radius: 12px;
   }
 
   .factory-grid {
-    min-width: 1200px;
-    /* 移动端稍微减小最小宽度 */
+    width: 1200px;
   }
 }
 
@@ -585,13 +592,14 @@ onUnmounted(() => {
 }
 
 .is-edit-mode :deep(.col-header.aisle-header) {
-  background: var(--ep-color-gray-4);
-  color: var(--ep-text-color-regular);
+  background: #e8e0d0;
+  color: #7a6545;
 }
 
-/* 编辑模式：过道区域淡化 */
+/* 编辑模式：过道区域淡化 - 米黄色系 */
 .is-edit-mode :deep(.aisle-cell) {
-  background: var(--ep-color-gray-4);
-  opacity: 0.6;
+  background: #e8e0d0;
+  border: 2px dashed #c4b8a0;
+  opacity: 0.8;
 }
 </style>

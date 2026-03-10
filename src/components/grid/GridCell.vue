@@ -8,7 +8,10 @@
     <div v-else-if="cellType === 'empty'" class="empty-slot"
         :class="{ 'is-drag-over': isDragOver, 'is-edit-mode': isEditMode }" @click="handleClick">
         <div class="slot-label">{{ slotLabel }}</div>
-        <div class="add-hint">
+        <div class="empty-hint">
+            <span>空</span>
+        </div>
+        <div class="add-hint-edit">
             <el-icon>
                 <Plus />
             </el-icon>
@@ -17,9 +20,9 @@
     </div>
 
     <!-- 设备卡片 - Neo-Brutalism 风格 -->
-    <div v-else class="printer-card" :class="[statusClass, { 'is-dragging': isDragging, 'is-edit-mode': isEditMode }]" draggable="true"
-        @dragstart="handleDragStart" @dragend="handleDragEnd" @dragenter="handleDragEnter" @dragleave="handleDragLeave"
-        @drop="handleDrop" @click="handleClick">
+    <div v-else class="printer-card" :class="[statusClass, { 'is-dragging': isDragging, 'is-edit-mode': isEditMode }]"
+        draggable="true" @dragstart="handleDragStart" @dragend="handleDragEnd" @dragenter="handleDragEnter"
+        @dragleave="handleDragLeave" @drop="handleDrop" @click="handleClick">
         <!-- 卡片头部：设备编号 -->
         <div class="card-header">
             <div class="printer-id">{{ device.machineNumber }}</div>
@@ -28,7 +31,9 @@
         <!-- 错误提示（扩展显示，隐藏温度） -->
         <div v-if="(hasSystemError || hasPrintError) && realTimeData?.systemMessage" class="error-section">
             <div class="error-alert" :title="realTimeData.systemMessage">
-                <el-icon><WarningFilled /></el-icon>
+                <el-icon>
+                    <WarningFilled />
+                </el-icon>
                 <span class="error-text">{{ truncateText(realTimeData.systemMessage, 80) }}</span>
             </div>
         </div>
@@ -275,14 +280,15 @@ function handleClick() {
 
 <style scoped>
 /* ============================================
-   过道单元格
+   过道单元格 - 米黄色背景
    ============================================ */
 .aisle-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--ep-color-gray-3);
+    background: #f5f0e1;
     border-radius: var(--ep-border-radius-base);
+    border: 2px dashed #d4c9b0;
 }
 
 .aisle-indicator {
@@ -297,21 +303,27 @@ function handleClick() {
 }
 
 /* ============================================
-   空槽位
+   空槽位 - 米黄色虚线边框
    ============================================ */
 .empty-slot {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--ep-fill-color-lighter);
-    border: 2px dashed var(--ep-border-color);
+    background: #faf8f3;
+    border: 2px dashed #d4c9b0;
     border-radius: var(--ep-border-radius-base);
-    cursor: pointer;
+    cursor: default;
     transition: all 0.2s ease;
 }
 
-.empty-slot:hover {
+.empty-slot.is-edit-mode {
+    cursor: pointer;
+    background: #f5f0e1;
+    border-color: #c4b8a0;
+}
+
+.empty-slot.is-edit-mode:hover {
     border-color: var(--ep-color-primary);
     background: var(--ep-color-primary-light-9);
 }
@@ -321,33 +333,31 @@ function handleClick() {
     background: var(--ep-color-success-light-9);
 }
 
-.empty-slot.is-edit-mode {
-    border-style: solid;
-    border-color: var(--ep-color-primary);
-    background: var(--ep-color-primary-light-8);
-}
-
-.slot-label {
-    font-size: var(--ep-font-size-small);
-    color: var(--ep-text-color-secondary);
-    margin-bottom: var(--ep-space-1);
-}
-
-.add-hint {
+.empty-hint {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b8a890;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.empty-slot.is-edit-mode .empty-hint {
+    display: none;
+}
+
+/* 编辑模式下显示添加提示 */
+.empty-slot .add-hint-edit {
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: var(--ep-space-1);
-    color: var(--ep-text-color-placeholder);
+    color: var(--ep-color-primary);
     font-size: var(--ep-font-size-extra-small);
 }
 
-.add-hint .el-icon {
-    font-size: 20px;
-}
-
-.empty-slot:hover .add-hint {
-    color: var(--ep-color-primary);
+.empty-slot.is-edit-mode .add-hint-edit {
+    display: flex;
 }
 
 /* ============================================
@@ -356,9 +366,8 @@ function handleClick() {
 .printer-card {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 140px;
-    padding: 8px 10px;
+    height: 120px;
+    padding: 6px 8px;
     cursor: pointer;
     transition: all 0.15s ease;
     position: relative;
@@ -445,10 +454,10 @@ function handleClick() {
     border-color: #6b7280;
 }
 
-/* 卡片头部 */
+/* 卡片头部 - 左对齐 */
 .card-header {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 4px;
 }
@@ -465,9 +474,9 @@ function handleClick() {
     flex: 1;
     display: flex;
     flex-direction: column;
-    margin-bottom: 4px;
-    min-height: 40px;
-    max-height: 40px;
+    margin-bottom: 2px;
+    min-height: 32px;
+    max-height: 32px;
 }
 
 .error-alert {
@@ -504,10 +513,10 @@ function handleClick() {
 .card-body {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin-bottom: 4px;
+    gap: 4px;
+    margin-bottom: 2px;
     flex: 1;
-    min-height: 40px;
+    min-height: 32px;
 }
 
 .temp-row {
@@ -517,18 +526,18 @@ function handleClick() {
 }
 
 .temp-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #4b5563;
+    color: rgba(75, 85, 99, 0.6);
     flex-shrink: 0;
 }
 
 .temp-icon svg {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 }
 
 .temp-values {
@@ -537,19 +546,19 @@ function handleClick() {
     gap: 2px;
     font-size: 11px;
     font-weight: 600;
-    color: #374151;
+    color: rgba(55, 65, 81, 0.7);
 }
 
 .temp-current {
-    color: #111827;
+    color: rgba(17, 24, 39, 0.75);
 }
 
 .temp-divider {
-    color: #9ca3af;
+    color: rgba(156, 163, 175, 0.6);
 }
 
 .temp-target {
-    color: #6b7280;
+    color: rgba(107, 114, 128, 0.6);
     font-size: 10px;
 }
 
@@ -558,16 +567,16 @@ function handleClick() {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding-top: 4px;
+    padding-top: 2px;
     border-top: 2px dashed rgba(0, 0, 0, 0.1);
     margin-top: auto;
     flex-shrink: 0;
-    height: 28px;
+    height: 22px;
 }
 
 /* 状态文本 - 居中显示 */
 .status-text {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #1f2937;
     text-transform: uppercase;
@@ -576,7 +585,7 @@ function handleClick() {
 
 /* 打印百分比 - 大字体居中 */
 .printing-percent {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     color: #2563eb;
     text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);

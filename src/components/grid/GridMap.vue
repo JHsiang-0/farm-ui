@@ -205,20 +205,21 @@ function handleCellClick(device, rowIndex, colIndex) {
 <style scoped>
 .grid-map {
     display: flex;
-    flex: 1;
+    flex: 0 0 auto;
     gap: var(--ep-space-2);
-    min-width: 1400px;
+    min-width: auto;
 }
 
-/* 行标签 */
+/* 行标签 - 固定尺寸 */
 .row-labels {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     gap: var(--ep-space-3);
-    padding-top: 32px;
-    /* 列标题高度 */
-    height: 100%;
+    padding-top: 34px;
+    /* 列标题高度 + margin */
+    height: auto;
+    flex: 0 0 auto;
 }
 
 .row-label {
@@ -226,36 +227,38 @@ function handleCellClick(device, rowIndex, colIndex) {
     align-items: center;
     justify-content: center;
     width: 40px;
-    height: 140px;
-    background: var(--ep-color-gray-2);
+    height: 120px;
+    background: #faf8f3;
+    border: 2px dashed #d4c9b0;
     border-radius: var(--ep-border-radius-base);
     font-size: var(--ep-font-size-small);
     font-weight: var(--ep-font-weight-medium);
-    color: var(--ep-text-color-secondary);
+    color: #8b7355;
     writing-mode: vertical-rl;
     text-orientation: mixed;
 }
 
 /* 编辑模式高亮 */
 .is-edit-mode .row-label {
-    background: var(--ep-color-primary-light-7);
+    background: #f5f0e1;
+    border-color: #c4b8a0;
     color: var(--ep-color-primary);
     font-weight: var(--ep-font-weight-bold);
 }
 
-/* 网格容器 */
+/* 网格容器 - 固定尺寸 */
 .grid-container {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     overflow: visible;
 }
 
-/* 列标题 */
+/* 列标题 - 固定宽度 */
 .col-headers {
     display: grid;
-    grid-template-columns: repeat(13, minmax(100px, 1fr));
-    gap: var(--ep-space-2);
+    grid-template-columns: repeat(13, 100px);
+    gap: var(--ep-space-3);
     margin-bottom: var(--ep-space-2);
 }
 
@@ -264,38 +267,41 @@ function handleCellClick(device, rowIndex, colIndex) {
     align-items: center;
     justify-content: center;
     height: 28px;
-    background: var(--ep-color-gray-2);
+    background: #faf8f3;
+    border: 2px dashed #d4c9b0;
     border-radius: var(--ep-border-radius-small);
     font-size: var(--ep-font-size-extra-small);
     font-weight: var(--ep-font-weight-medium);
-    color: var(--ep-text-color-secondary);
+    color: #8b7355;
 }
 
 .col-header.aisle-header {
-    background: var(--ep-color-gray-4);
-    color: var(--ep-text-color-regular);
+    background: #f0e8d8;
+    color: #8b7355;
     font-weight: var(--ep-font-weight-semibold);
+    border: 1px dashed #d4c9b0;
 }
 
 /* 编辑模式高亮 */
 .is-edit-mode .col-header {
-    background: var(--ep-color-primary-light-7);
+    background: #f5f0e1;
+    border-color: #c4b8a0;
     color: var(--ep-color-primary);
     font-weight: var(--ep-font-weight-bold);
 }
 
 .is-edit-mode .col-header.aisle-header {
-    background: var(--ep-color-gray-4);
-    color: var(--ep-text-color-regular);
+    background: #e8e0d0;
+    color: #7a6545;
 }
 
-/* 设备矩阵 */
+/* 设备矩阵 - 固定高度防止滚动 */
 .device-matrix {
     display: grid;
-    grid-template-columns: repeat(13, minmax(100px, 1fr));
-    grid-template-rows: repeat(4, 140px);
+    grid-template-columns: repeat(13, 100px);
+    grid-template-rows: repeat(4, 120px);
     gap: var(--ep-space-3);
-    flex: 1;
+    flex: 0 0 auto;
 }
 
 /* 编辑模式网格背景 */
