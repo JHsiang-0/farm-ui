@@ -25,14 +25,16 @@
             <div class="printer-id">{{ device.machineNumber }}</div>
         </div>
 
-        <!-- 错误提示（截断显示） -->
-        <div v-if="(hasSystemError || hasPrintError) && realTimeData?.systemMessage" class="error-alert">
-            <el-icon><WarningFilled /></el-icon>
-            <span class="error-text" :title="realTimeData.systemMessage">{{ truncateText(realTimeData.systemMessage, 20) }}</span>
+        <!-- 错误提示（扩展显示，隐藏温度） -->
+        <div v-if="(hasSystemError || hasPrintError) && realTimeData?.systemMessage" class="error-section">
+            <div class="error-alert" :title="realTimeData.systemMessage">
+                <el-icon><WarningFilled /></el-icon>
+                <span class="error-text">{{ truncateText(realTimeData.systemMessage, 80) }}</span>
+            </div>
         </div>
 
-        <!-- 卡片主体：温度信息（小字体） -->
-        <div class="card-body">
+        <!-- 卡片主体：温度信息（小字体）- 错误状态隐藏 -->
+        <div v-else class="card-body">
             <!-- 喷头温度 -->
             <div class="temp-row">
                 <div class="temp-icon">
@@ -458,31 +460,44 @@ function handleClick() {
     text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
 }
 
-/* 错误提示 - 截断显示 */
+/* 错误区域 - 扩展显示，与温度区域等高 */
+.error-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 4px;
+    min-height: 40px;
+    max-height: 40px;
+}
+
 .error-alert {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
-    margin-bottom: 4px;
-    background: rgba(220, 38, 38, 0.15);
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+    background: rgba(220, 38, 38, 0.1);
     border: 2px solid #dc2626;
-    border-radius: 4px;
-    font-size: 10px;
-    color: #991b1b;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #7f1d1d;
+    line-height: 1.3;
+    flex: 1;
+    overflow: hidden;
 }
 
 .error-alert .el-icon {
-    font-size: 12px;
+    font-size: 14px;
     flex-shrink: 0;
+    margin-top: 1px;
 }
 
 .error-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
     flex: 1;
-    min-width: 0;
 }
 
 /* 卡片主体 - 小字体温度 */
@@ -492,6 +507,7 @@ function handleClick() {
     gap: 2px;
     margin-bottom: 4px;
     flex: 1;
+    min-height: 40px;
 }
 
 .temp-row {
@@ -537,14 +553,16 @@ function handleClick() {
     font-size: 10px;
 }
 
-/* 卡片底部 - 居中状态/百分比 */
+/* 卡片底部 - 居中状态/百分比，固定在底部 */
 .card-footer {
-    margin-top: auto;
     display: flex;
     justify-content: center;
     align-items: center;
     padding-top: 4px;
     border-top: 2px dashed rgba(0, 0, 0, 0.1);
+    margin-top: auto;
+    flex-shrink: 0;
+    height: 28px;
 }
 
 /* 状态文本 - 居中显示 */
