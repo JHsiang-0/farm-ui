@@ -1,290 +1,383 @@
 <template>
   <div class="file-library">
-    <!-- 上传区域 -->
-    <el-card class="upload-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-title">
-            <el-icon :size="20" color="var(--el-color-primary)"><upload-filled /></el-icon>
-            <span>上传 G-Code 切片文件</span>
-          </div>
+    <!-- 顶部操作区 -->
+    <el-card class="mb-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl font-bold">📁 文件库</h1>
+          <el-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-48" @keyup.enter="handleSearch">
+            <template #prefix>
+              <el-icon>
+                <Search />
+              </el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" :icon="Search" @click="handleSearch">
+            搜索
+          </el-button>
         </div>
-      </template>
-      
-      <el-upload 
-        class="upload-demo" 
-        drag 
-        action="#" 
-        :http-request="customUpload" 
-        :show-file-list="false"
-        accept=".gcode"
-      >
-        <el-icon class="upload-icon" :size="48"><upload-filled /></el-icon>
-        <div class="upload-text">
-          将文件拖到此处，或 <em>点击上传</em>
+        <div class="flex items-center gap-2">
+          <el-button v-if="selectedIds.length > 0" type="danger" :icon="Delete" @click="handleBatchDelete">
+            批量删除 ({{ selectedIds.length }})
+          </el-button>
+          <el-button :icon="Refresh" :loading="loading" @click="fetchData">
+            刷新
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 上传区域 -->
+    <el-card class="mb-4">
+      <el-upload drag :auto-upload="false" :show-file-list="false" accept=".gcode,.bgcode" @change="handleFileChange"
+        class="upload-area">
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">
+          拖拽 G-Code 文件到此处 或 <em>点击上传</em>
         </div>
         <template #tip>
-          <div class="upload-tip">
-            <el-icon><info-filled /></el-icon>
-            只能上传 .gcode 文件，系统将自动解析耗时与材料要求
+          <div class="el-upload__tip">
+            支持 .gcode 和 .bgcode 格式文件
           </div>
         </template>
       </el-upload>
     </el-card>
 
-    <!-- 文件列表 -->
-    <el-card class="list-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-title">
-            <el-icon :size="20" color="var(--el-color-primary)"><folder /></el-icon>
-            <span>文件库</span>
-          </div>
-          <el-button type="primary" plain @click="fetchData" :loading="loading">
-            <el-icon><refresh /></el-icon>
-            刷新列表
-          </el-button>
-        </div>
+    <!-- 数据展示区 - 卡片网格 -->
+    <div v-if="fileList.length > 0" class="mb-4">
+      <el-row :gutter="16">
+        <el-col v-for="file in fileList" :key="file.id" :xs="24" :sm="12" :md="8" :lg="6" class="mb-4">
+          <el-card class="file-card" :class="{ 'is-selected': selectedIds.includes(file.id) }" shadow="hover">
+            <!-- 卡片头部 - 复选框 -->
+            <div class="card-header">
+              <el-checkbox :model-value="selectedIds.includes(file.id)" @change="() => toggleSelection(file.id)"
+                size="large" />
+            </div>
+
+            <!-- 图片区 -->
+            <div class="image-wrapper">
+              <el-image v-if="file.thumbnailUrl" :src="file.thumbnailUrl" :alt="file.originalName" fit="cover"
+                class="thumbnail-image">
+                <template #error>
+                  <div class="image-placeholder">
+                    <el-icon>
+                      <Picture />
+                    </el-icon>
+                    <span>加载失败</span>
+                  </div>
+                </template>
+              </el-image>
+              <div v-else class="image-placeholder">
+                <el-icon>
+                  <Document />
+                </el-icon>
+                <span>NO IMAGE</span>
+              </div>
+              <!-- 材料类型标签 -->
+              <el-tag type="primary" class="material-tag" effect="dark">
+                {{ file.materialType || 'PLA' }}
+              </el-tag>
+            </div>
+
+            <!-- 核心信息区 -->
+            <div class="card-content">
+              <h3 class="file-name" :title="file.originalName">
+                {{ file.originalName }}
+              </h3>
+
+              <!-- 农场业务数据 -->
+              <div class="business-data">
+                <div class="data-item">
+                  <el-icon>
+                    <ScaleToOriginal />
+                  </el-icon>
+                  <span>{{ file.filamentWeight || 0 }}g</span>
+                </div>
+                <div class="data-item">
+                  <el-icon>
+                    <FullScreen />
+                  </el-icon>
+                  <span>{{ file.filamentLength || 0 }}m</span>
+                </div>
+                <div class="data-item">
+                  <el-icon>
+                    <Clock />
+                  </el-icon>
+                  <span>{{ formatTime(file.estTime) }}</span>
+                </div>
+              </div>
+
+              <!-- 打印状态预警 -->
+              <div class="stats-box" :class="getStatsClass(file.successRate)">
+                <div class="stats-item">
+                  <div class="stats-label">打印次数</div>
+                  <div class="stats-value">{{ file.printCount || 0 }}</div>
+                </div>
+                <el-divider direction="vertical" />
+                <div class="stats-item">
+                  <div class="stats-label">成功率</div>
+                  <div class="stats-value">{{ file.successRate || 0 }}%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 操作区 -->
+            <div class="card-actions">
+              <el-button type="primary" :icon="Download" @click="handleDownload(file)">
+                下载
+              </el-button>
+              <el-button type="danger" :icon="Delete" @click="handleDelete(file.id)">
+                删除
+              </el-button>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- 空状态 -->
+    <el-empty v-else-if="!loading" description="暂无文件，请上传 G-Code 文件" :image-size="200">
+      <template #image>
+        <el-icon :size="80" class="text-gray-400">
+          <FolderOpened />
+        </el-icon>
       </template>
+    </el-empty>
 
-      <el-table 
-        :data="tableData" 
-        v-loading="loading" 
-        style="width: 100%" 
-        class="custom-table"
-        :header-cell-style="{ background: 'var(--ep-color-gray-1)' }"
-      >
-        <el-table-column prop="id" label="ID" width="80" align="center" />
-        
-        <el-table-column prop="originalName" label="文件名" min-width="200" show-overflow-tooltip />
+    <!-- 加载状态 -->
+    <div v-if="loading" class="flex justify-center py-20">
+      <el-icon class="is-loading" style="font-size: 48px; color: var(--ep-color-primary);">
+        <Refresh />
+      </el-icon>
+    </div>
 
-        <el-table-column label="文件大小" width="120" align="center">
-          <template #default="scope">
-            <el-tag size="small" effect="plain">{{ formatFileSize(scope.row.fileSize) }}</el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="预计耗时" width="120" align="center">
-          <template #default="scope">
-            <el-tag size="small" type="info" effect="plain">{{ formatTime(scope.row.estTime) }}</el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="materialType" label="指定耗材" width="100" align="center">
-          <template #default="scope">
-            <el-tag size="small" type="warning" effect="light">{{ scope.row.materialType || '-' }}</el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="nozzleSize" label="喷嘴(mm)" width="100" align="center">
-          <template #default="scope">
-            <span class="nozzle-size">{{ scope.row.nozzleSize || '-' }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="操作" width="220" align="center" fixed="right">
-          <template #default="scope">
-            <el-button size="small" type="success" @click="openJobDialog(scope.row)">
-              <el-icon><video-play /></el-icon>
-              一键排产
-            </el-button>
-            <el-popconfirm 
-              title="确定要删除这个文件吗？" 
-              confirm-button-type="danger"
-              @confirm="handleDelete(scope.row.id)"
-            >
-              <template #reference>
-                <el-button size="small" type="danger" plain>
-                  <el-icon><delete /></el-icon>
-                </el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
-      
-      <el-empty v-if="tableData.length === 0 && !loading" description="暂无文件，请上传 G-Code 文件" />
-    </el-card>
-
-    <!-- 配置生产任务弹窗 -->
-    <el-dialog 
-      v-model="jobDialogVisible" 
-      title="配置生产任务" 
-      width="480px"
-      class="task-dialog"
-      destroy-on-close
-    >
-      <el-form :model="jobForm" label-width="100px" class="task-form">
-        <el-form-item label="目标文件">
-          <el-input :value="currentFile?.originalName" disabled>
-            <template #prefix>
-              <el-icon><document /></el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
-        
-        <el-form-item label="要求耗材">
-          <el-select v-model="jobForm.materialType" placeholder="选择耗材类型" style="width: 100%">
-            <el-option label="PLA" value="PLA" />
-            <el-option label="PETG" value="PETG" />
-            <el-option label="ABS" value="ABS" />
-            <el-option label="TPU" value="TPU" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="喷嘴尺寸">
-          <el-input-number 
-            v-model="jobForm.nozzleSize" 
-            :precision="2" 
-            :step="0.1" 
-            :min="0.2" 
-            :max="1.2"
-            style="width: 150px"
-          />
-          <span class="form-unit">mm</span>
-        </el-form-item>
-        
-        <el-form-item label="任务优先级">
-          <el-slider v-model="jobForm.priority" :max="100" show-stops :step="10" />
-        </el-form-item>
-
-        <el-form-item label="分配模式">
-          <el-radio-group v-model="jobForm.autoAssign">
-            <el-radio :label="false">稍后手动派单</el-radio>
-            <el-radio :label="true">全自动匹配</el-radio>
-          </el-radio-group>
-          <div class="form-tip" :class="{ 'is-auto': jobForm.autoAssign }">
-            <el-icon><info-filled /></el-icon>
-            {{ jobForm.autoAssign ? '系统会自动寻找匹配的空闲机器并开始打印' : '任务将进入调度大厅等待手动指派' }}
-          </div>
-        </el-form-item>
-      </el-form>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="jobDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitJob" :loading="jobLoading">
-            <el-icon><check /></el-icon>
-            确认下发
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <!-- 分页区 -->
+    <div v-if="fileList.length > 0" class="pagination-wrapper">
+      <el-pagination v-model:current-page="pagination.pageNum" v-model:page-size="pagination.pageSize"
+        :total="pagination.total" :page-sizes="[12, 24, 36, 48]" layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange" @current-change="handlePageChange" />
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { 
-  UploadFilled, 
-  Folder, 
-  Refresh, 
-  VideoPlay, 
-  Delete, 
-  InfoFilled,
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  Search,
+  Refresh,
+  Delete,
+  Download,
+  UploadFilled,
+  Picture,
   Document,
-  Check
+  ScaleToOriginal,
+  FullScreen,
+  Clock,
+  FolderOpened
 } from '@element-plus/icons-vue'
-import { ElMessage, ElLoading } from 'element-plus'
-import { uploadPrintFile, getFileList, deletePrintFile, createPrintJob } from '@/api/file'
+import {
+  getFileList,
+  uploadFile as uploadPrintFile,
+  deleteFile,
+  deleteBatchFiles,
+  downloadFile
+} from '@/api/printFile'
 
 defineOptions({ name: 'FileLibrary' })
 
+// ============ 状态定义 ============
 const loading = ref(false)
-const tableData = ref([])
+const fileList = ref([])
+const selectedIds = ref([])
+const searchKeyword = ref('')
 
-// 任务弹窗状态
-const jobDialogVisible = ref(false)
-const jobLoading = ref(false)
-const currentFile = ref(null)
-
-const jobForm = reactive({
-  fileId: null,
-  materialType: '',
-  nozzleSize: 0.4,
-  priority: 0,
-  autoAssign: false
+// 分页状态
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 12,
+  total: 0
 })
 
-const openJobDialog = (file) => {
-  currentFile.value = file
-  jobForm.fileId = file.id
-  jobForm.materialType = file.materialType || 'PLA'
-  jobForm.nozzleSize = file.nozzleSize || 0.4
-  jobForm.priority = 0
-  jobForm.autoAssign = false
-  jobDialogVisible.value = true
-}
+// ============ 方法定义 ============
 
+/**
+ * 获取文件列表
+ */
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getFileList({ pageNum: 1, pageSize: 50 })
-    tableData.value = res.data.records || []
-  } catch {
-    // 忽略
+    const params = {
+      pageNum: pagination.pageNum,
+      pageSize: pagination.pageSize,
+      keyword: searchKeyword.value || undefined
+    }
+    const res = await getFileList(params)
+    fileList.value = res.data?.records || []
+    pagination.total = res.data?.total || 0
+
+    // 清空选中状态（如果当前页数据变化）
+    selectedIds.value = []
+  } catch (error) {
+    console.error('获取文件列表失败:', error)
+    ElMessage.error('获取文件列表失败')
   } finally {
     loading.value = false
   }
 }
 
-const customUpload = async (options) => {
-  const loadingInstance = ElLoading.service({ 
-    text: '文件上传解析中...', 
-    background: 'rgba(255, 255, 255, 0.9)' 
-  })
-  try {
-    const formData = new FormData()
-    formData.append('file', options.file)
+/**
+ * 搜索处理
+ */
+const handleSearch = () => {
+  pagination.pageNum = 1
+  fetchData()
+}
 
+/**
+ * 分页大小变化
+ */
+const handleSizeChange = (size) => {
+  pagination.pageSize = size
+  pagination.pageNum = 1
+  fetchData()
+}
+
+/**
+ * 页码变化
+ */
+const handlePageChange = (page) => {
+  pagination.pageNum = page
+  fetchData()
+}
+
+/**
+ * 切换选中状态
+ */
+const toggleSelection = (id) => {
+  const index = selectedIds.value.indexOf(id)
+  if (index > -1) {
+    selectedIds.value.splice(index, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+}
+
+/**
+ * 文件上传处理
+ */
+const handleFileChange = async (uploadFile) => {
+  const file = uploadFile.raw
+  if (!file) return
+
+  // 验证文件类型
+  if (!file.name.endsWith('.gcode') && !file.name.endsWith('.bgcode')) {
+    ElMessage.warning('请上传 .gcode 或 .bgcode 文件')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
     await uploadPrintFile(formData)
-    ElMessage.success('解析并入库成功！')
+    ElMessage.success('文件上传成功')
     fetchData()
-  } catch (err) {
-    options.onError(err)
-  } finally {
-    loadingInstance.close()
+  } catch (error) {
+    console.error('上传失败:', error)
+    ElMessage.error('上传失败')
   }
 }
 
-const submitJob = async () => {
-  jobLoading.value = true
-  try {
-    await createPrintJob(jobForm)
-    ElMessage.success('新生产任务已下达队列！')
-    jobDialogVisible.value = false
-  } catch {
-    // 拦截器处理
-  } finally {
-    jobLoading.value = false
-  }
-}
-
+/**
+ * 删除单个文件
+ */
 const handleDelete = async (id) => {
   try {
-    await deletePrintFile(id)
+    await ElMessageBox.confirm('确定要删除这个文件吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    await deleteFile(id)
     ElMessage.success('删除成功')
+
+    // 从选中列表中移除
+    const index = selectedIds.value.indexOf(id)
+    if (index > -1) {
+      selectedIds.value.splice(index, 1)
+    }
+
     fetchData()
-  } catch {
-    // 拦截器处理
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
   }
 }
 
-const formatFileSize = (bytes) => {
-  if (!bytes) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+/**
+ * 批量删除
+ */
+const handleBatchDelete = async () => {
+  if (selectedIds.value.length === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedIds.value.length} 个文件吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await deleteBatchFiles(selectedIds.value)
+    ElMessage.success('批量删除成功')
+    selectedIds.value = []
+    fetchData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
 }
 
+/**
+ * 下载文件
+ */
+const handleDownload = (file) => {
+  downloadFile(file.id, file.originalName)
+}
+
+/**
+ * 格式化时间
+ */
 const formatTime = (seconds) => {
   if (!seconds) return '未知'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
-  return `${h}h ${m}m`
+  if (h > 0) {
+    return `${h}h ${m}m`
+  }
+  return `${m}m`
 }
 
+/**
+ * 获取统计区域样式类
+ * 成功率低于70%时添加警告样式
+ */
+const getStatsClass = (successRate) => {
+  if (!successRate || successRate === 0) return ''
+  if (successRate < 70) return 'warning-status'
+  return ''
+}
+
+// ============ 生命周期 ============
 onMounted(() => {
   fetchData()
 })
@@ -292,154 +385,178 @@ onMounted(() => {
 
 <style scoped>
 .file-library {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ep-space-6);
+  padding: 16px;
 }
 
-/* Card Styles */
-.upload-card,
-.list-card {
-  border-radius: var(--ep-border-radius-large);
-  box-shadow: var(--ep-box-shadow-base);
-  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* 卡片选中状态 */
+.file-card.is-selected {
+  border-color: var(--ep-color-primary);
+  box-shadow: 0 0 0 3px var(--ep-color-primary-light-3);
 }
 
-.upload-card:hover,
-.list-card:hover {
-  box-shadow: var(--ep-box-shadow-medium);
-}
-
+/* 卡片头部 - 复选框定位 */
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
 }
 
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-3);
-  font-size: var(--el-font-size-large);
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+/* 图片区域 */
+.image-wrapper {
+  position: relative;
+  height: 140px;
+  margin-bottom: 12px;
+  border-radius: var(--ep-border-radius-base);
+  overflow: hidden;
+  background-color: var(--ep-color-gray-2);
 }
 
-/* Upload Styles */
-:deep(.el-upload-dragger) {
+.thumbnail-image {
   width: 100%;
-  height: 200px;
+  height: 100%;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: var(--ep-color-gray-1);
-  border: 2px dashed var(--ep-color-gray-4);
-  border-radius: var(--ep-border-radius-medium);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--ep-color-gray-6);
+  gap: 6px;
 }
 
-:deep(.el-upload-dragger:hover) {
-  border-color: var(--el-color-primary);
-  background-color: var(--ep-color-primary-light-6);
+.image-placeholder .el-icon {
+  font-size: 36px;
 }
 
-.upload-icon {
-  color: var(--ep-color-gray-5);
-  margin-bottom: var(--ep-space-4);
-  transition: color 0.2s;
+/* 材料类型标签 */
+.material-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
-:deep(.el-upload-dragger:hover) .upload-icon {
-  color: var(--el-color-primary);
+/* 卡片内容区 */
+.card-content {
+  padding: 0 4px;
 }
 
-.upload-text {
-  font-size: var(--el-font-size-base);
-  color: var(--el-text-color-regular);
-}
-
-.upload-text em {
-  color: var(--el-color-primary);
-  font-style: normal;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.upload-tip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ep-space-2);
-  margin-top: var(--ep-space-4);
-  font-size: var(--el-font-size-small);
-  color: var(--el-text-color-secondary);
-}
-
-/* Table Styles */
-.custom-table {
-  border-radius: var(--ep-border-radius-medium);
+.file-name {
+  font-size: var(--ep-font-size-base);
+  font-weight: var(--ep-font-weight-bold);
+  color: var(--ep-text-color-primary);
+  margin-bottom: 10px;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.nozzle-size {
-  font-weight: 500;
-  color: var(--el-text-color-primary);
-}
-
-/* Dialog Styles */
-.task-dialog :deep(.el-dialog__header) {
-  padding: var(--ep-space-6);
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.task-dialog :deep(.el-dialog__body) {
-  padding: var(--ep-space-6);
-}
-
-.task-dialog :deep(.el-dialog__footer) {
-  padding: var(--ep-space-4) var(--ep-space-6);
-  border-top: 1px solid var(--el-border-color-light);
-}
-
-.task-form .form-unit {
-  margin-left: var(--ep-space-3);
-  color: var(--el-text-color-secondary);
-  font-size: var(--el-font-size-small);
-}
-
-.form-tip {
+/* 农场业务数据 */
+.business-data {
   display: flex;
-  align-items: center;
-  gap: var(--ep-space-2);
-  margin-top: var(--ep-space-2);
-  padding: var(--ep-space-3);
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px;
   background-color: var(--ep-color-gray-1);
   border-radius: var(--ep-border-radius-base);
-  font-size: var(--el-font-size-small);
-  color: var(--el-text-color-secondary);
-  transition: all 0.2s;
 }
 
-.form-tip.is-auto {
-  background-color: var(--ep-color-primary-light-6);
-  color: var(--ep-color-primary-dark-1);
-}
-
-.dialog-footer {
+.data-item {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--ep-space-3);
+  align-items: center;
+  gap: 5px;
+  font-size: var(--ep-font-size-extra-small);
+  color: var(--ep-text-color-regular);
 }
 
-/* Responsive */
+.data-item .el-icon {
+  color: var(--ep-color-primary);
+  font-size: 14px;
+}
+
+/* 统计区域 */
+.stats-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px;
+  background-color: var(--ep-color-gray-1);
+  border-radius: var(--ep-border-radius-base);
+  margin-bottom: 12px;
+}
+
+.stats-box.warning-status {
+  background-color: var(--ep-color-danger-light-5);
+  border: 2px solid var(--ep-color-danger);
+}
+
+.stats-item {
+  text-align: center;
+  flex: 1;
+}
+
+.stats-label {
+  font-size: 11px;
+  color: var(--ep-text-color-secondary);
+  margin-bottom: 3px;
+}
+
+.stats-value {
+  font-size: var(--ep-font-size-base);
+  font-weight: var(--ep-font-weight-bold);
+  color: var(--ep-text-color-primary);
+}
+
+.warning-status .stats-value {
+  color: var(--ep-color-danger);
+}
+
+/* 操作区 */
+.card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.card-actions .el-button {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* 分页区 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+/* 上传区域样式优化 */
+.upload-area :deep(.el-upload-dragger) {
+  padding: 30px;
+}
+
+.upload-area :deep(.el-icon--upload) {
+  font-size: 40px;
+  color: var(--ep-color-primary);
+}
+
+/* 响应式调整 */
 @media (max-width: 768px) {
   .file-library {
-    gap: var(--ep-space-4);
+    padding: 16px;
   }
-  
-  .header-title {
-    font-size: var(--el-font-size-base);
+
+  .business-data {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card-actions {
+    flex-direction: column;
   }
 }
 </style>

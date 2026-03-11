@@ -1,7 +1,14 @@
 /* ============================================
    Global Styles Entry
-   全局样式入口文件 - 纯 CSS，无 @import
+   全局样式入口文件
    ============================================ */
+
+/* ============================================
+   Tailwind CSS Directives
+   ============================================ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ============================================
    v-cloak: 防止 Vue 未加载完成时显示内容 (FOUC)
@@ -252,13 +259,15 @@ body {
 /* Button - 按钮卡通扁平风改造 */
 .el-button {
   font-weight: var(--ep-font-weight-semibold);
-  border-radius: 12px;
-  border-width: 3px;
+  border-radius: 10px;
+  border-width: 2px;
   border-style: solid;
   transition: all var(--ep-transition-duration) var(--ep-transition-timing);
   position: relative;
   top: 0;
   left: 0;
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 /* 默认按钮 - 硬阴影风格 */
@@ -299,6 +308,45 @@ body {
 .el-button--primary.is-plain:hover {
   background: var(--ep-color-primary);
   border-color: var(--ep-color-primary-dark-2);
+  color: white;
+}
+
+/* 危险按钮 - 朴素样式 */
+.el-button--danger.is-plain {
+  background: var(--ep-color-danger-light-5);
+  border-color: var(--ep-color-danger);
+  color: var(--ep-color-danger-dark-1);
+}
+
+.el-button--danger.is-plain:hover {
+  background: var(--ep-color-danger);
+  border-color: var(--ep-color-danger-dark-2);
+  color: white;
+}
+
+/* 成功按钮 - 朴素样式 */
+.el-button--success.is-plain {
+  background: #d1fae5;
+  border-color: var(--ep-color-success);
+  color: #065f46;
+}
+
+.el-button--success.is-plain:hover {
+  background: var(--ep-color-success);
+  border-color: #059669;
+  color: white;
+}
+
+/* 警告按钮 - 朴素样式 */
+.el-button--warning.is-plain {
+  background: #fef3c7;
+  border-color: var(--ep-color-warning);
+  color: #92400e;
+}
+
+.el-button--warning.is-plain:hover {
+  background: var(--ep-color-warning);
+  border-color: #d97706;
   color: white;
 }
 
