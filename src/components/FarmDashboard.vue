@@ -1,5 +1,5 @@
 <template>
-  <div v-cloak class="farm-dashboard" :class="{ 'is-edit-mode': isEditMode }">
+  <div v-cloak class="flex flex-col gap-4 p-4 bg-gray-100 min-h-screen">
     <!-- 顶部标题和统计 -->
     <dashboard-header :status-counts="store.statusCounts" :workshop-name="workshopName"
       :last-update-time="lastUpdateTime" @refresh="handleRefresh">
@@ -15,9 +15,16 @@
     </dashboard-header>
 
     <!-- 独立车间看板容器 -->
-    <div class="workshop-canvas-wrapper">
+    <div class="relative w-full h-[calc(100vh-200px)] p-5 bg-gray-100 border border-gray-200 rounded-xl shadow-sm overflow-auto flex items-start justify-center"
+      style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent;">
+      <!-- 滚动条样式（WebKit） -->
+      <div class="absolute inset-0 overflow-hidden pointer-events-none"
+        style="mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);">
+        <div class="w-full h-full"></div>
+      </div>
+
       <!-- 厂房网格布局 - 4行13列（含过道） -->
-      <div class="factory-grid workshop-canvas">
+      <div class="flex shrink-0 gap-2" style="width: 1452px;">
         <!-- 使用 GridMap 组件 -->
         <grid-map :device-matrix="store.deviceMatrix" :real-time-status="store.realTimeStatus"
           :grid-config="store.GRID_CONFIG" :is-edit-mode="isEditMode" :dragged-device="draggedDevice"
@@ -448,94 +455,75 @@ onUnmounted(() => {
 }
 
 /* ============================================
-   Layout Container
+   编辑模式视觉反馈
    ============================================ */
-.farm-dashboard {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: var(--ep-space-4);
-  padding: var(--ep-space-4);
-  /* 更和谐的背景色：暖灰色 */
-  background-color: #f0ede8;
+
+/* 编辑模式：工程网格背景 */
+.is-edit-mode :deep(.workshop-canvas) {
+  background-image:
+    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center center;
+  border-radius: 6px;
+  background-color: #f3f4f6;
 }
 
-/* ============================================
-   Workshop Canvas Wrapper - 独立车间看板容器
-   ============================================ */
-.workshop-canvas-wrapper {
-  position: relative;
-  width: 100%;
-  height: calc(100vh - 200px);
-  /* 扣除 Header(60px) + DashboardHeader(~80px) + padding + gaps */
-  padding: 20px;
-  /* Neo-Brutalism 风格：米色背景 */
-  background: #f8f5f0;
-  border: 3px solid #2c3e50;
-  border-radius: 16px;
-  box-shadow:
-    6px 6px 0px rgba(44, 62, 80, 0.3),
-    0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow: auto;
-  /* 美化滚动条 */
-  scrollbar-width: thin;
-  scrollbar-color: var(--ep-color-gray-4) transparent;
-  /* 确保内容不撑开 */
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+/* 编辑模式：行标签和列标题高亮 */
+.is-edit-mode :deep(.row-label) {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
 }
 
-/* Webkit 浏览器滚动条样式 */
-.workshop-canvas-wrapper::-webkit-scrollbar {
+.is-edit-mode :deep(.col-header) {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.is-edit-mode :deep(.col-header.aisle-header) {
+  background: #e8e0d0;
+  color: #7a6545;
+}
+
+/* 编辑模式：过道区域淡化 */
+.is-edit-mode :deep(.aisle-cell) {
+  background: #e8e0d0;
+  border: 2px dashed #c4b8a0;
+  opacity: 0.8;
+}
+
+/* 滚动条样式 */
+:deep(.workshop-canvas-wrapper::-webkit-scrollbar) {
   width: 8px;
   height: 8px;
 }
 
-.workshop-canvas-wrapper::-webkit-scrollbar-track {
+:deep(.workshop-canvas-wrapper::-webkit-scrollbar-track) {
   background: transparent;
   border-radius: 4px;
 }
 
-.workshop-canvas-wrapper::-webkit-scrollbar-thumb {
-  background: var(--ep-color-gray-4);
+:deep(.workshop-canvas-wrapper::-webkit-scrollbar-thumb) {
+  background: #d1d5db;
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
-.workshop-canvas-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--ep-color-gray-5);
+:deep(.workshop-canvas-wrapper::-webkit-scrollbar-thumb:hover) {
+  background: #9ca3af;
 }
 
-.workshop-canvas-wrapper::-webkit-scrollbar-corner {
+:deep(.workshop-canvas-wrapper::-webkit-scrollbar-corner) {
   background: transparent;
 }
 
-/* ============================================
-   Factory Grid Layout - 固定尺寸
-   ============================================ */
-.factory-grid {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--ep-space-2);
-  min-width: auto;
-  /* 总宽度 = 13列*100px + 12个gap*12px + 行标签40px + 行标签gap*8px */
-  width: 1452px;
-}
-
-/* ============================================
-   Responsive Design - 物理空间响应式方案
-   ============================================ */
-
-/* 小屏幕适配 */
+/* 响应式适配 */
 @media (max-width: 1400px) {
   .workshop-canvas-wrapper {
     height: calc(100vh - 190px);
-  }
-
-  .factory-grid {
-    width: 1452px;
   }
 }
 
@@ -543,10 +531,6 @@ onUnmounted(() => {
   .workshop-canvas-wrapper {
     height: calc(100vh - 180px);
     padding: 16px;
-  }
-
-  .factory-grid {
-    width: 1452px;
   }
 }
 
@@ -556,50 +540,5 @@ onUnmounted(() => {
     padding: 12px;
     border-radius: 12px;
   }
-
-  .factory-grid {
-    width: 1200px;
-  }
-}
-
-/* ============================================
-   Edit Mode Visual Feedback - 编辑模式视觉反馈
-   ============================================ */
-
-/* 编辑模式：工程网格背景 */
-.is-edit-mode .workshop-canvas {
-  background-image:
-    linear-gradient(to right, var(--ep-border-color-light) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--ep-border-color-light) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-position: center center;
-  border-radius: var(--ep-border-radius-base);
-  padding: var(--ep-space-3);
-  background-color: var(--ep-fill-color-lighter);
-}
-
-/* 编辑模式：行标签和列标题高亮 */
-.is-edit-mode :deep(.row-label) {
-  background: var(--ep-color-primary-light-7);
-  color: var(--ep-color-primary);
-  font-weight: var(--ep-font-weight-bold);
-}
-
-.is-edit-mode :deep(.col-header) {
-  background: var(--ep-color-primary-light-7);
-  color: var(--ep-color-primary);
-  font-weight: var(--ep-font-weight-bold);
-}
-
-.is-edit-mode :deep(.col-header.aisle-header) {
-  background: #e8e0d0;
-  color: #7a6545;
-}
-
-/* 编辑模式：过道区域淡化 - 米黄色系 */
-.is-edit-mode :deep(.aisle-cell) {
-  background: #e8e0d0;
-  border: 2px dashed #c4b8a0;
-  opacity: 0.8;
 }
 </style>

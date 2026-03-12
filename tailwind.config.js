@@ -8,27 +8,25 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#4f46e5',
-          light: '#6366f1',
-          dark: '#4338ca',
+          DEFAULT: '#262626', /* 主色：商务黑 */
+          'light-1': '#3b3b3b',
+          'light-2': '#525252',
+          'light-3': '#6b6b6b', /* 悬停色 */
+          'light-4': '#858585',
+          'light-5': '#9e9e9e', /* 禁用/次要色 */
+          'light-6': '#b8b8b8',
+          'light-7': '#d1d1d1',
+          'light-8': '#ebebeb',
+          'light-9': '#f5f5f5', /* 极浅背景色 */
+          'dark-2': '#141414', /* 按下/激活色 */
         },
-        success: '#10b981',
-        warning: '#f59e0b',
-        danger: '#ef4444',
-        info: '#64748b',
+        success: '#059669',
+        warning: '#d97706',
+        danger: '#dc2626',
+        info: '#6b7280',
       },
       fontFamily: {
         sans: ['Nunito', 'Quicksand', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-      },
-      boxShadow: {
-        'brutal': '4px 4px 0px rgba(0, 0, 0, 1)',
-        'brutal-hover': '6px 6px 0px rgba(0, 0, 0, 1)',
-        'brutal-active': '2px 2px 0px rgba(0, 0, 0, 1)',
-        'brutal-sm': '2px 2px 0px rgba(0, 0, 0, 1)',
-        'brutal-lg': '8px 8px 0px rgba(0, 0, 0, 1)',
-      },
-      borderRadius: {
-        'brutal': '0px',
       },
     },
   },

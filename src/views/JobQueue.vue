@@ -1,29 +1,29 @@
 <template>
-  <div class="job-queue">
-    <el-card class="queue-card" shadow="hover">
+  <div class="flex flex-col gap-6 p-6 bg-gray-50 min-h-screen">
+    <el-card class="shadow-sm rounded-xl min-h-[calc(100vh-180px)] hover:shadow-md transition-shadow duration-200">
       <template #header>
-        <div class="card-header">
-          <div class="header-title">
-            <el-icon :size="20" color="var(--el-color-primary)"><list /></el-icon>
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3 text-lg font-semibold text-gray-900">
+            <el-icon :size="20" class="text-gray-600"><list /></el-icon>
             <span>生产调度队列</span>
           </div>
-          <el-button type="primary" plain @click="fetchQueue" :loading="loading">
+          <el-button type="default" @click="fetchQueue" :loading="loading">
             <el-icon><refresh /></el-icon>
             刷新队列
           </el-button>
         </div>
       </template>
 
-      <el-table 
-        :data="queueData" 
-        v-loading="loading" 
-        style="width: 100%" 
-        class="custom-table"
-        :header-cell-style="{ background: 'var(--ep-color-gray-1)' }"
+      <el-table
+        :data="queueData"
+        v-loading="loading"
+        style="width: 100%"
+        class="rounded-lg overflow-hidden"
+        :header-cell-style="{ background: '#f9fafb' }"
       >
         <el-table-column prop="id" label="任务单号" width="100" align="center">
           <template #default="scope">
-            <span class="job-id">#{{ scope.row.id }}</span>
+            <span class="font-mono font-semibold text-gray-700">#{{ scope.row.id }}</span>
           </template>
         </el-table-column>
 
@@ -43,17 +43,17 @@
 
         <el-table-column label="喷嘴要求" width="100" align="center">
           <template #default="scope">
-            <span class="nozzle-req">{{ scope.row.nozzleSize ? scope.row.nozzleSize + 'mm' : '任意' }}</span>
+            <span class="font-medium text-gray-700">{{ scope.row.nozzleSize ? scope.row.nozzleSize + 'mm' : '任意' }}</span>
           </template>
         </el-table-column>
 
         <el-table-column prop="priority" label="优先级" width="100" align="center">
           <template #default="scope">
-            <el-tag 
-              :type="getPriorityType(scope.row.priority)" 
+            <el-tag
+              :type="getPriorityType(scope.row.priority)"
               effect="dark"
               size="small"
-              class="priority-tag"
+              class="min-w-10 text-center"
             >
               {{ scope.row.priority }}
             </el-tag>
@@ -62,10 +62,10 @@
 
         <el-table-column prop="status" label="状态" width="140" align="center">
           <template #default="scope">
-            <div class="status-wrapper">
-              <el-icon v-if="scope.row.status === 'QUEUED'" class="status-icon rotating"><loading /></el-icon>
-              <el-icon v-else-if="scope.row.status === 'MANUAL'" class="status-icon warning"><pointer /></el-icon>
-              <el-icon v-else-if="scope.row.status === 'PRINTING'" class="status-icon primary"><printer /></el-icon>
+            <div class="flex items-center justify-center gap-2">
+              <el-icon v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><loading /></el-icon>
+              <el-icon v-else-if="scope.row.status === 'MANUAL'" class="text-sm text-yellow-600"><pointer /></el-icon>
+              <el-icon v-else-if="scope.row.status === 'PRINTING'" class="text-sm text-gray-600"><printer /></el-icon>
               <el-tag :type="getStatusType(scope.row.status)" effect="light" size="small">
                 {{ getStatusLabel(scope.row.status) }}
               </el-tag>
@@ -75,7 +75,7 @@
 
         <el-table-column label="创建时间" min-width="160" prop="createdAt" align="center">
           <template #default="scope">
-            <div class="time-cell">
+            <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <el-icon><clock /></el-icon>
               <span>{{ formatTime(scope.row.createdAt) }}</span>
             </div>
@@ -84,17 +84,17 @@
 
         <el-table-column label="调度操作" width="220" align="center" fixed="right">
           <template #default="scope">
-            <el-button 
-              size="small" 
-              type="primary" 
+            <el-button
+              size="small"
+              type="primary"
               @click="openAssignDialog(scope.row)"
               :disabled="scope.row.status === 'PRINTING'"
             >
               <el-icon><promotion /></el-icon>
               强制派单
             </el-button>
-            <el-popconfirm 
-              title="确定要取消这个任务吗？" 
+            <el-popconfirm
+              title="确定要取消这个任务吗？"
               confirm-button-type="danger"
               @confirm="handleCancel(scope.row.id)"
             >
@@ -108,25 +108,24 @@
         </el-table-column>
       </el-table>
 
-      <el-empty 
-        v-if="queueData.length === 0 && !loading" 
+      <el-empty
+        v-if="queueData.length === 0 && !loading"
         description="当前没有排队中的任务，机器都在闲着呢！"
       >
         <template #image>
-          <el-icon :size="64" color="var(--ep-color-gray-4)"><coffee /></el-icon>
+          <el-icon :size="64" class="text-gray-400"><coffee /></el-icon>
         </template>
       </el-empty>
     </el-card>
 
     <!-- 指派打印机弹窗 -->
-    <el-dialog 
-      v-model="assignDialogVisible" 
-      title="指派打印机" 
+    <el-dialog
+      v-model="assignDialogVisible"
+      title="指派打印机"
       width="520px"
-      class="assign-dialog"
       destroy-on-close
     >
-      <div class="dialog-info">
+      <div class="mb-5">
         <el-alert
           :title="`为任务 #${currentJob?.id} 选择打印机`"
           type="info"
@@ -135,27 +134,27 @@
         />
       </div>
 
-      <el-form label-width="100px" class="assign-form">
+      <el-form label-width="100px">
         <el-form-item label="空闲打印机">
-          <el-select 
-            v-model="selectedPrinterId" 
-            placeholder="请选择可用的打印机" 
+          <el-select
+            v-model="selectedPrinterId"
+            placeholder="请选择可用的打印机"
             style="width: 100%"
             v-loading="loadingPrinters"
           >
-            <el-option 
-              v-for="printer in idlePrinters" 
+            <el-option
+              v-for="printer in idlePrinters"
               :key="printer.id"
               :label="`${printer.name} (${printer.ipAddress})`"
               :value="printer.id"
             >
-              <div class="printer-option">
-                <span class="printer-name">{{ printer.name }}</span>
-                <span class="printer-meta">IP: {{ printer.ipAddress }} | 耗材: {{ printer.currentMaterial }}</span>
+              <div class="flex flex-col py-2">
+                <span class="font-medium text-gray-900">{{ printer.name }}</span>
+                <span class="text-sm text-gray-600 mt-0.5">IP: {{ printer.ipAddress }} | 耗材: {{ printer.currentMaterial }}</span>
               </div>
             </el-option>
           </el-select>
-          
+
           <el-alert
             v-if="idlePrinters.length === 0 && !loadingPrinters"
             title="当前没有空闲的打印机，请等待其他任务完成"
@@ -168,12 +167,12 @@
       </el-form>
 
       <template #footer>
-        <div class="dialog-footer">
+        <div class="flex justify-end gap-3">
           <el-button @click="assignDialogVisible = false">取消</el-button>
-          <el-button 
-            type="success" 
-            @click="submitAssign" 
-            :disabled="!selectedPrinterId" 
+          <el-button
+            type="success"
+            @click="submitAssign"
+            :disabled="!selectedPrinterId"
             :loading="assigning"
           >
             <el-icon><check /></el-icon>
@@ -187,10 +186,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { 
-  List, 
-  Refresh, 
-  Pointer, 
+import {
+  List,
+  Refresh,
+  Pointer,
   Printer,
   Clock,
   Promotion,
@@ -319,147 +318,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.job-queue {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ep-space-6);
-}
-
-.queue-card {
-  border-radius: var(--ep-border-radius-large);
-  box-shadow: var(--ep-box-shadow-base);
-  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: calc(100vh - 180px);
-}
-
-.queue-card:hover {
-  box-shadow: var(--ep-box-shadow-medium);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-3);
-  font-size: var(--el-font-size-large);
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-/* Table Styles */
-.custom-table {
-  border-radius: var(--ep-border-radius-medium);
-  overflow: hidden;
-}
-
-.job-id {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  color: var(--el-color-primary);
-}
-
-.nozzle-req {
-  font-weight: 500;
-  color: var(--el-text-color-regular);
-}
-
-.priority-tag {
-  min-width: 40px;
-  text-align: center;
-}
-
-.status-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ep-space-2);
-}
-
-.status-icon {
-  font-size: 14px;
-}
-
-.status-icon.rotating {
-  animation: rotate 1s linear infinite;
-}
-
-.status-icon.warning {
-  color: var(--el-color-warning);
-}
-
-.status-icon.primary {
-  color: var(--el-color-primary);
-}
-
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-.time-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ep-space-2);
-  color: var(--el-text-color-secondary);
-  font-size: var(--el-font-size-small);
-}
-
-/* Dialog Styles */
-.assign-dialog :deep(.el-dialog__header) {
-  padding: var(--ep-space-6);
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.assign-dialog :deep(.el-dialog__body) {
-  padding: var(--ep-space-6);
-}
-
-.assign-dialog :deep(.el-dialog__footer) {
-  padding: var(--ep-space-4) var(--ep-space-6);
-  border-top: 1px solid var(--el-border-color-light);
-}
-
-.dialog-info {
-  margin-bottom: var(--ep-space-5);
-}
-
-.printer-option {
-  display: flex;
-  flex-direction: column;
-  padding: var(--ep-space-2) 0;
-}
-
-.printer-name {
-  font-weight: 500;
-  color: var(--el-text-color-primary);
-}
-
-.printer-meta {
-  font-size: var(--el-font-size-small);
-  color: var(--el-text-color-secondary);
-  margin-top: 2px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--ep-space-3);
-}
-
-.mt-3 {
-  margin-top: var(--ep-space-3);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .header-title {
-    font-size: var(--el-font-size-base);
-  }
+.animate-spin {
+  animation: rotate 1s linear infinite;
 }
 </style>

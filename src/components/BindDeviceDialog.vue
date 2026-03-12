@@ -8,13 +8,14 @@
     :close-on-click-modal="false"
   >
     <!-- 搜索框 -->
-    <div class="search-bar">
+    <div class="mb-4">
       <el-input
         v-model="searchKeyword"
         placeholder="请输入 IP 或机器编号搜索"
         clearable
         prefix-icon="Search"
         @input="handleSearch"
+        class="w-full"
       />
     </div>
 
@@ -203,11 +204,4 @@ function handleRowClick(row) {
 </script>
 
 <style scoped>
-.search-bar {
-  margin-bottom: var(--ep-space-4);
-}
-
-.search-bar .el-input {
-  width: 100%;
-}
 </style>

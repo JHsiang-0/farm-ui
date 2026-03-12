@@ -1,47 +1,53 @@
 <template>
     <el-drawer v-model="visible" :title="drawerTitle" size="480px" :destroy-on-close="true"
         class="printer-detail-drawer" @closed="handleClosed">
-        <div v-if="device" class="device-detail-content">
+        <div v-if="device" class="p-4 flex flex-col gap-5">
             <!-- 实时状态概览卡片 -->
-            <div class="status-overview-card" :class="`status-${currentStateClass}`">
-                <div class="status-header">
-                    <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="status-tag">
+            <div class="p-4 rounded-lg bg-gray-100 border"
+                :class="[
+                    currentStateClass === 'fault' || currentStateClass === 'sys_error' ? 'bg-red-50 border-red-300' : '',
+                    currentStateClass === 'print_error' || currentStateClass === 'starting' || currentStateClass === 'paused' ? 'bg-yellow-50 border-yellow-300' : '',
+                    currentStateClass === 'printing' ? 'bg-gray-100 border-gray-500' : '',
+                    currentStateClass === 'completed' ? 'bg-green-50 border-green-300' : ''
+                ]">
+                <div class="flex items-center justify-between gap-3">
+                    <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="text-sm font-semibold">
                         {{ currentStateConfig.label }}
                     </el-tag>
-                    <span v-if="realTimeData?.progress !== undefined && isPrintingState" class="progress-text">
+                    <span v-if="realTimeData?.progress !== undefined && isPrintingState" class="text-2xl font-bold text-gray-700">
                         {{ realTimeData.progress }}%
                     </span>
                 </div>
-                <div v-if="realTimeData?.systemMessage && isErrorState" class="error-message">
-                    <el-icon>
+                <div v-if="realTimeData?.systemMessage && isErrorState" class="mt-3 p-3 bg-red-50 border border-red-300 rounded text-xs text-red-700 leading-tight flex items-start gap-2">
+                    <el-icon class="shrink-0 mt-0.5">
                         <Warning />
                     </el-icon>
-                    <span>{{ realTimeData.systemMessage }}</span>
+                    <span class="line-clamp-3">{{ realTimeData.systemMessage }}</span>
                 </div>
             </div>
 
             <!-- 温度监控 -->
-            <div class="detail-section">
-                <div class="section-title">
-                    <IconNozzle class="section-icon icon-nozzle" />
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                    <IconNozzle class="w-4 h-4 text-red-600" />
                     温度监控
                 </div>
-                <div class="temp-grid">
-                    <div class="temp-item">
-                        <span class="temp-label">
-                            <IconNozzle class="temp-icon icon-nozzle" />
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="flex items-center text-xs text-gray-600">
+                            <IconNozzle class="w-3.5 h-3.5 mr-1 text-red-600" />
                             喷头温度
                         </span>
-                        <span class="temp-value" :class="{ 'temp-hot': nozzleTemp > 50 }">
+                        <span class="text-2xl font-bold text-gray-900" :class="{ 'text-red-600': nozzleTemp > 50 }">
                             {{ formatTemp(nozzleTemp) }}
                         </span>
                     </div>
-                    <div class="temp-item">
-                        <span class="temp-label">
-                            <IconBed class="temp-icon icon-bed" />
+                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="flex items-center text-xs text-gray-600">
+                            <IconBed class="w-3.5 h-3.5 mr-1 text-yellow-600" />
                             热床温度
                         </span>
-                        <span class="temp-value" :class="{ 'temp-hot': bedTemp > 40 }">
+                        <span class="text-2xl font-bold text-gray-900" :class="{ 'text-yellow-600': bedTemp > 40 }">
                             {{ formatTemp(bedTemp) }}
                         </span>
                     </div>
@@ -49,37 +55,37 @@
             </div>
 
             <!-- 打印任务信息 -->
-            <div v-if="isPrintingOrRelated" class="detail-section">
-                <div class="section-title">
-                    <el-icon>
+            <div v-if="isPrintingOrRelated" class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                    <el-icon class="text-gray-600">
                         <Printer />
                     </el-icon>
                     打印任务
                 </div>
-                <div class="task-info-grid">
-                    <div class="task-item">
-                        <span class="task-label">打印时长</span>
-                        <span class="task-value">{{ formatDuration(realTimeData?.printDuration) }}</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="text-xs text-gray-600">打印时长</span>
+                        <span class="text-base font-medium text-gray-900">{{ formatDuration(realTimeData?.printDuration) }}</span>
                     </div>
-                    <div class="task-item">
-                        <span class="task-label">
-                            <IconSpool class="task-icon icon-spool" />
+                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="flex items-center text-xs text-gray-600">
+                            <IconSpool class="w-3.5 h-3.5 mr-1 text-green-600" />
                             已用耗材
                         </span>
-                        <span class="task-value">{{ formatFilament(realTimeData?.filamentUsed) }}</span>
+                        <span class="text-base font-medium text-gray-900">{{ formatFilament(realTimeData?.filamentUsed) }}</span>
                     </div>
-                    <div v-if="isPrintingState" class="task-item full-width">
-                        <span class="task-label">打印进度</span>
+                    <div v-if="isPrintingState" class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1 col-span-2">
+                        <span class="text-xs text-gray-600">打印进度</span>
                         <el-progress :percentage="realTimeData?.progress || 0" :status="progressStatus"
-                            :stroke-width="10" class="task-progress" />
+                            :stroke-width="10" class="mt-2" />
                     </div>
                 </div>
             </div>
 
             <!-- 设备信息 -->
-            <div class="detail-section">
-                <div class="section-title">
-                    <el-icon>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                    <el-icon class="text-gray-600">
                         <InfoFilled />
                     </el-icon>
                     设备信息
@@ -104,42 +110,47 @@
             </div>
 
             <!-- Moonraker / Mainsail 快捷操作 -->
-            <div class="detail-section">
-                <div class="section-title">
-                    <el-icon>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                    <el-icon class="text-gray-600">
                         <Monitor />
                     </el-icon>
                     远程控制 (Moonraker / Mainsail)
                 </div>
-                <div class="quick-actions">
-                    <el-button v-if="device.ipAddress" type="primary" size="large" class="action-btn mainsail-btn"
-                        tag="a" :href="mainsailUrl" target="_blank" rel="noopener noreferrer">
+                <div class="flex flex-col gap-3">
+                    <el-button v-if="device.ipAddress" type="primary" size="large"
+                        tag="a" :href="mainsailUrl" target="_blank" rel="noopener noreferrer"
+                        class="w-full justify-center h-11 text-sm">
                         <el-icon>
                             <Monitor />
                         </el-icon>
                         打开 Mainsail 界面
                     </el-button>
 
-                    <div class="control-grid">
-                        <el-button type="warning" :disabled="!canPause" @click="handleAction('pause')">
+                    <div class="grid grid-cols-2 gap-2">
+                        <el-button type="warning" :disabled="!canPause" @click="handleAction('pause')"
+                            class="h-10">
                             <el-icon>
                                 <VideoPause />
                             </el-icon>
                             暂停打印
                         </el-button>
-                        <el-button type="success" :disabled="!canResume" @click="handleAction('resume')">
+                        <el-button type="success" :disabled="!canResume" @click="handleAction('resume')"
+                            class="h-10">
                             <el-icon>
                                 <VideoPlay />
                             </el-icon>
                             恢复打印
                         </el-button>
-                        <el-button type="danger" :disabled="!canCancel" @click="handleAction('cancel')">
+                        <el-button type="danger" :disabled="!canCancel" @click="handleAction('cancel')"
+                            class="h-10">
                             <el-icon>
                                 <CircleClose />
                             </el-icon>
                             取消任务
                         </el-button>
-                        <el-button type="info" @click="handleAction('reboot')">
+                        <el-button type="info" @click="handleAction('reboot')"
+                            class="h-10">
                             <el-icon>
                                 <Refresh />
                             </el-icon>
@@ -147,11 +158,12 @@
                         </el-button>
                     </div>
 
-                    <div v-if="isFatalError" class="emergency-actions">
+                    <div v-if="isFatalError" class="mt-3">
                         <el-divider>
                             <el-tag type="danger" effect="dark">紧急操作</el-tag>
                         </el-divider>
-                        <el-button type="danger" size="large" class="emergency-btn" @click="handleEmergencyStop">
+                        <el-button type="danger" size="large" class="w-full h-12 text-base font-bold"
+                            @click="handleEmergencyStop">
                             <el-icon>
                                 <Warning />
                             </el-icon>
@@ -164,7 +176,7 @@
 
         <!-- 抽屉底部操作区 -->
         <template #footer>
-            <div class="drawer-footer">
+            <div class="flex justify-end p-3 border-t border-gray-200">
                 <el-popconfirm title="确定要将此设备从该物理位置下架吗？" confirm-button-text="确认下架" cancel-button-text="取消"
                     confirm-button-type="danger" @confirm="handleRemove">
                     <template #reference>
@@ -363,242 +375,7 @@ function handleClosed() {
 
 :deep(.el-drawer__header) {
     margin-bottom: 0;
-    padding: var(--ep-space-4);
-    border-bottom: 1px solid var(--ep-border-color-lighter);
-}
-
-.device-detail-content {
-    padding: var(--ep-space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--ep-space-5);
-}
-
-/* 状态概览卡片 */
-.status-overview-card {
-    padding: var(--ep-space-4);
-    border-radius: var(--ep-border-radius-base);
-    background: var(--ep-fill-color-light);
-    border: 1px solid var(--ep-border-color);
-}
-
-.status-overview-card.status-fault,
-.status-overview-card.status-sys_error {
-    background: var(--ep-color-danger-light-9);
-    border-color: var(--ep-color-danger);
-}
-
-.status-overview-card.status-print_error,
-.status-overview-card.status-starting,
-.status-overview-card.status-paused {
-    background: var(--ep-color-warning-light-9);
-    border-color: var(--ep-color-warning);
-}
-
-.status-overview-card.status-printing {
-    background: var(--ep-color-primary-light-9);
-    border-color: var(--ep-color-primary);
-}
-
-.status-overview-card.status-completed {
-    background: var(--ep-color-success-light-9);
-    border-color: var(--ep-color-success);
-}
-
-.status-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--ep-space-3);
-}
-
-.status-tag {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.progress-text {
-    font-size: 20px;
-    font-weight: bold;
-    color: var(--ep-color-primary);
-}
-
-.error-message {
-    margin-top: var(--ep-space-3);
-    padding: var(--ep-space-3);
-    background: var(--ep-color-danger-light-9);
-    border-radius: var(--ep-border-radius-small);
-    display: flex;
-    align-items: flex-start;
-    gap: var(--ep-space-2);
-    font-size: 13px;
-    color: var(--ep-color-danger);
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.error-message .el-icon {
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-/* 详情区块 */
-.detail-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ep-space-3);
-}
-
-.section-title {
-    display: flex;
-    align-items: center;
-    gap: var(--ep-space-2);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--ep-text-color-primary);
-}
-
-.section-title .el-icon {
-    color: var(--ep-color-primary);
-}
-
-.section-icon {
-    font-size: 16px;
-}
-
-.temp-icon,
-.task-icon {
-    font-size: 14px;
-    margin-right: 4px;
-}
-
-.icon-nozzle {
-    color: var(--ep-color-danger);
-}
-
-.icon-bed {
-    color: var(--ep-color-warning);
-}
-
-.icon-spool {
-    color: var(--ep-color-success);
-}
-
-.temp-label,
-.task-label {
-    display: flex;
-    align-items: center;
-}
-
-/* 温度网格 */
-.temp-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--ep-space-3);
-}
-
-.temp-item {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ep-space-1);
-    padding: var(--ep-space-3);
-    background: var(--ep-fill-color-light);
-    border-radius: var(--ep-border-radius-base);
-}
-
-.temp-label {
-    font-size: 12px;
-    color: var(--ep-text-color-secondary);
-}
-
-.temp-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: var(--ep-text-color-primary);
-}
-
-.temp-value.temp-hot {
-    color: var(--ep-color-danger);
-}
-
-/* 任务信息网格 */
-.task-info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--ep-space-3);
-}
-
-.task-item {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ep-space-1);
-    padding: var(--ep-space-3);
-    background: var(--ep-fill-color-light);
-    border-radius: var(--ep-border-radius-base);
-}
-
-.task-item.full-width {
-    grid-column: span 2;
-}
-
-.task-label {
-    font-size: 12px;
-    color: var(--ep-text-color-secondary);
-}
-
-.task-value {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--ep-text-color-primary);
-}
-
-.task-progress {
-    margin-top: var(--ep-space-2);
-}
-
-/* 快捷操作区域 */
-.quick-actions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ep-space-3);
-}
-
-.action-btn {
-    width: 100%;
-    justify-content: center;
-}
-
-.mainsail-btn {
-    height: 44px;
-    font-size: 14px;
-}
-
-.control-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--ep-space-2);
-}
-
-.control-grid .el-button {
-    height: 40px;
-}
-
-.emergency-actions {
-    margin-top: var(--ep-space-3);
-}
-
-.emergency-btn {
-    width: 100%;
-    height: 48px;
-    font-size: 15px;
-    font-weight: bold;
-}
-
-/* 底部操作区 */
-.drawer-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: var(--ep-space-3) var(--ep-space-4);
-    border-top: 1px solid var(--ep-border-color-lighter);
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
 }
 </style>

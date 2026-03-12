@@ -1,15 +1,15 @@
 <template>
-  <div class="printer-manage">
+  <div class="flex flex-col gap-5 p-6 bg-gray-50 min-h-screen">
     <!-- 操作栏 -->
-    <el-card class="operation-card" shadow="never">
-      <div class="operation-bar">
-        <div class="left">
-          <el-button type="primary" plain @click="fetchData">
+    <el-card class="shadow-none rounded-lg bg-white">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+          <el-button type="default" @click="fetchData">
             <el-icon><refresh /></el-icon>
             刷新列表
           </el-button>
         </div>
-        <div class="right">
+        <div class="flex items-center gap-3">
           <el-button type="warning" @click="openScanDialog">
             <el-icon><aim /></el-icon>
             扫描局域网设备
@@ -23,35 +23,35 @@
     </el-card>
 
     <!-- 数据表格 -->
-    <el-card class="table-card" shadow="hover">
-      <el-table 
-        :data="tableData" 
-        v-loading="loading" 
-        style="width: 100%" 
-        class="custom-table"
-        :header-cell-style="{ background: 'var(--ep-color-gray-1)' }"
+    <el-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+      <el-table
+        :data="tableData"
+        v-loading="loading"
+        style="width: 100%"
+        class="rounded-lg overflow-hidden"
+        :header-cell-style="{ background: '#f9fafb' }"
       >
         <el-table-column prop="id" label="ID" width="80" align="center">
           <template #default="scope">
-            <span class="printer-id">{{ scope.row.id }}</span>
+            <span class="font-mono font-semibold text-gray-600">{{ scope.row.id }}</span>
           </template>
         </el-table-column>
-        
+
         <el-table-column prop="name" label="机器名称" min-width="150">
           <template #default="scope">
-            <div class="printer-name-cell">
+            <div class="flex items-center gap-2 font-medium">
               <el-icon :size="16" :color="getStatusColor(scope.row.status)"><printer /></el-icon>
               <span>{{ scope.row.name }}</span>
             </div>
           </template>
         </el-table-column>
-        
+
         <el-table-column prop="ipAddress" label="IP 地址" width="160">
           <template #default="scope">
             <el-tag size="small" effect="plain" type="info">{{ scope.row.ipAddress }}</el-tag>
           </template>
         </el-table-column>
-        
+
         <el-table-column prop="status" label="当前状态" width="120" align="center">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)" effect="light" size="small">
@@ -67,10 +67,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        
+
         <el-table-column prop="nozzleSize" label="喷嘴(mm)" width="100" align="center">
           <template #default="scope">
-            <span class="nozzle-size">{{ scope.row.nozzleSize }}</span>
+            <span class="font-medium text-gray-900">{{ scope.row.nozzleSize }}</span>
           </template>
         </el-table-column>
 
@@ -80,8 +80,8 @@
               <el-icon><edit /></el-icon>
               编辑
             </el-button>
-            <el-popconfirm 
-              title="确定要删除这台机器吗？" 
+            <el-popconfirm
+              title="确定要删除这台机器吗？"
               confirm-button-type="danger"
               @confirm="handleDelete(scope.row.id)"
             >
@@ -96,7 +96,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="flex justify-end mt-5">
         <el-pagination
           v-model:current-page="queryParams.pageNum"
           v-model:page-size="queryParams.pageSize"
@@ -111,14 +111,13 @@
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog 
-      v-model="dialogVisible" 
-      :title="isEdit ? '编辑打印机' : '新增打印机'" 
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEdit ? '编辑打印机' : '新增打印机'"
       width="520px"
-      class="printer-dialog"
       destroy-on-close
     >
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="printer-form">
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="机器名称" prop="name">
           <el-input v-model="form.name" placeholder="例：Klipper-01">
             <template #prefix>
@@ -126,7 +125,7 @@
             </template>
           </el-input>
         </el-form-item>
-        
+
         <el-form-item label="IP 地址" prop="ipAddress">
           <el-input v-model="form.ipAddress" placeholder="例：192.168.1.10">
             <template #prefix>
@@ -134,7 +133,7 @@
             </template>
           </el-input>
         </el-form-item>
-        
+
         <el-form-item label="当前耗材" prop="currentMaterial">
           <el-select v-model="form.currentMaterial" placeholder="请选择装载耗材" style="width: 100%">
             <el-option label="PLA" value="PLA" />
@@ -143,22 +142,24 @@
             <el-option label="TPU" value="TPU" />
           </el-select>
         </el-form-item>
-        
+
         <el-form-item label="喷嘴大小" prop="nozzleSize">
-          <el-input-number 
-            v-model="form.nozzleSize" 
-            :precision="2" 
-            :step="0.1" 
-            :min="0.2" 
-            :max="1.2"
-            style="width: 150px"
-          />
-          <span class="form-unit">mm</span>
+          <div class="flex items-center gap-3">
+            <el-input-number
+              v-model="form.nozzleSize"
+              :precision="2"
+              :step="0.1"
+              :min="0.2"
+              :max="1.2"
+              style="width: 150px"
+            />
+            <span class="text-sm text-gray-600">mm</span>
+          </div>
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
-        <div class="dialog-footer">
+        <div class="flex justify-end gap-3">
           <el-button @click="dialogVisible = false">取消</el-button>
           <el-button type="primary" @click="submitForm" :loading="submitLoading">
             <el-icon><check /></el-icon>
@@ -169,27 +170,26 @@
     </el-dialog>
 
     <!-- 扫描局域网设备弹窗 -->
-    <el-dialog 
-      v-model="scanDialogVisible" 
-      title="扫描局域网设备" 
+    <el-dialog
+      v-model="scanDialogVisible"
+      title="扫描局域网设备"
       width="800px"
-      class="scan-dialog"
       destroy-on-close
     >
       <!-- 扫描输入区 -->
-      <div class="scan-input-section">
-        <el-form label-width="90px" class="scan-form">
+      <div class="mb-4">
+        <el-form label-width="90px">
           <el-form-item label="网段前缀">
-            <el-input 
-              v-model="subnet" 
-              placeholder="例：192.168.1" 
+            <el-input
+              v-model="subnet"
+              placeholder="例：192.168.1"
               size="default"
               :disabled="isScanning"
             >
               <template #append>
-                <el-button 
-                  type="primary" 
-                  @click="handleScan" 
+                <el-button
+                  type="primary"
+                  @click="handleScan"
                   :loading="isScanning"
                 >
                   <el-icon><search /></el-icon>
@@ -202,15 +202,15 @@
       </div>
 
       <!-- 加载状态 -->
-      <div v-if="isScanning" class="scan-loading">
+      <div v-if="isScanning" class="text-center py-8">
         <el-skeleton :rows="5" animated />
-        <p class="loading-text">正在扫描局域网设备，请稍候...</p>
+        <p class="mt-4 text-sm text-gray-600">正在扫描局域网设备，请稍候...</p>
       </div>
 
       <!-- 扫描结果表格 -->
-      <div v-else-if="scanResults.length > 0" class="scan-results-section">
+      <div v-else-if="scanResults.length > 0" class="bg-white rounded-lg">
         <!-- 统计文案 -->
-        <div class="scan-stats">
+        <div class="mb-4">
           <el-alert
             :title="scanStatsText"
             type="info"
@@ -224,15 +224,15 @@
           ref="scanTableRef"
           :data="scanResults"
           style="width: 100%"
-          class="scan-results-table"
-          :header-cell-style="{ background: 'var(--ep-color-gray-1)' }"
+          class="rounded-lg overflow-hidden"
+          :header-cell-style="{ background: '#f9fafb' }"
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="50" align="center" />
-          
+
           <el-table-column label="状态" width="120" align="center">
             <template #default="scope">
-              <el-tag 
+              <el-tag
                 :type="scope.row.isNewDevice ? 'success' : 'primary'"
                 effect="light"
                 size="small"
@@ -244,7 +244,7 @@
 
           <el-table-column label="MAC 地址" width="140" align="center">
             <template #default="scope">
-              <span class="mac-address">{{ scope.row.macAddress }}</span>
+              <span class="font-mono text-sm font-medium text-gray-700">{{ scope.row.macAddress }}</span>
             </template>
           </el-table-column>
 
@@ -272,30 +272,30 @@
 
           <el-table-column label="建议名称" width="120" align="center">
             <template #default="scope">
-              <span class="suggested-name">{{ scope.row.suggestedName }}</span>
+              <span class="text-sm text-gray-600">{{ scope.row.suggestedName }}</span>
             </template>
           </el-table-column>
         </el-table>
       </div>
-      
+
       <!-- 空状态 -->
-      <el-empty 
-        v-else-if="hasScanned && !isScanning" 
+      <el-empty
+        v-else-if="hasScanned && !isScanning"
         description="该网段未发现设备"
         :image-size="80"
       >
         <template #description>
           <p>该网段未发现设备</p>
-          <p class="empty-tip">请检查网段是否正确或设备是否在线</p>
+          <p class="mt-2 text-sm text-gray-400">请检查网段是否正确或设备是否在线</p>
         </template>
       </el-empty>
 
       <template #footer>
-        <div class="dialog-footer">
+        <div class="flex justify-end gap-3">
           <el-button @click="scanDialogVisible = false">关闭</el-button>
-          <el-button 
-            type="success" 
-            :disabled="selectedDevices.length === 0" 
+          <el-button
+            type="success"
+            :disabled="selectedDevices.length === 0"
             @click="handleBatchAdd"
             :loading="isBatchAdding"
           >
@@ -310,24 +310,24 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { 
-  Refresh, 
-  Aim, 
-  Plus, 
-  Printer, 
-  Edit, 
-  Delete, 
+import {
+  Refresh,
+  Aim,
+  Plus,
+  Printer,
+  Edit,
+  Delete,
   Check,
   Search,
   FolderAdd
 } from '@element-plus/icons-vue'
-import { 
-  getPrinterList, 
-  addPrinter, 
-  updatePrinter, 
-  deletePrinter, 
-  scanPrinters, 
-  batchAddPrinters 
+import {
+  getPrinterList,
+  addPrinter,
+  updatePrinter,
+  deletePrinter,
+  scanPrinters,
+  batchAddPrinters
 } from '@/api/printer'
 import { ElMessage } from 'element-plus'
 
@@ -383,12 +383,12 @@ const scanStatsText = computed(() => {
 // 获取状态对应颜色
 const getStatusColor = (status) => {
   const map = {
-    'PRINTING': 'var(--el-color-primary)',
-    'IDLE': 'var(--el-color-success)',
-    'ERROR': 'var(--el-color-danger)',
-    'OFFLINE': 'var(--el-color-info)'
+    'PRINTING': '#1d4ed8',
+    'IDLE': '#059669',
+    'ERROR': '#dc2626',
+    'OFFLINE': '#6b7280'
   }
-  return map[status?.toUpperCase()] || 'var(--el-color-info)'
+  return map[status?.toUpperCase()] || '#6b7280'
 }
 
 // 获取状态标签类型
@@ -518,14 +518,14 @@ const handleScan = async () => {
 
 const handleBatchAdd = async () => {
   if (selectedDevices.value.length === 0) return
-  
+
   // 构造符合新 API 契约的请求体
   const devicesToSubmit = selectedDevices.value.map(device => ({
     ipAddress: device.ipAddress,
     macAddress: device.macAddress,
     name: device.name || device.suggestedName
   }))
-  
+
   isBatchAdding.value = true
   try {
     const res = await batchAddPrinters(devicesToSubmit)
@@ -549,207 +549,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.printer-manage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ep-space-5);
-}
-
-/* Operation Card */
-.operation-card {
-  border-radius: var(--ep-border-radius-medium);
-  background-color: var(--ep-color-white);
-}
-
-.operation-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.left,
-.right {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-3);
-}
-
-/* Table Card */
-.table-card {
-  border-radius: var(--ep-border-radius-large);
-  box-shadow: var(--ep-box-shadow-base);
-  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.table-card:hover {
-  box-shadow: var(--ep-box-shadow-medium);
-}
-
-.custom-table {
-  border-radius: var(--ep-border-radius-medium);
-  overflow: hidden;
-}
-
-.printer-id {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  color: var(--el-text-color-secondary);
-}
-
-.printer-name-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-2);
-  font-weight: 500;
-}
-
-.nozzle-size {
-  font-weight: 500;
-  color: var(--el-text-color-primary);
-}
-
-/* Pagination */
-.pagination-container {
-  margin-top: var(--ep-space-5);
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* Dialog Styles */
-.printer-dialog :deep(.el-dialog__header),
-.scan-dialog :deep(.el-dialog__header) {
-  padding: var(--ep-space-6);
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.printer-dialog :deep(.el-dialog__body),
-.scan-dialog :deep(.el-dialog__body) {
-  padding: var(--ep-space-6);
-}
-
-.printer-dialog :deep(.el-dialog__footer),
-.scan-dialog :deep(.el-dialog__footer) {
-  padding: var(--ep-space-4) var(--ep-space-6);
-  border-top: 1px solid var(--el-border-color-light);
-}
-
-.printer-form .form-unit {
-  margin-left: var(--ep-space-3);
-  color: var(--el-text-color-secondary);
-  font-size: var(--el-font-size-small);
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--ep-space-3);
-}
-
-/* Scan Dialog Specific Styles */
-.scan-input-section {
-  margin-bottom: var(--ep-space-4);
-}
-
-.scan-loading {
-  padding: var(--ep-space-6) 0;
-  text-align: center;
-}
-
-.loading-text {
-  margin-top: var(--ep-space-4);
-  color: var(--el-text-color-secondary);
-  font-size: var(--el-font-size-small);
-}
-
-.scan-stats {
-  margin-bottom: var(--ep-space-4);
-}
-
-.scan-results-section {
-  background: var(--ep-color-white);
-  border-radius: var(--ep-border-radius-medium);
-}
-
-/* MAC 地址等宽字体 */
-.mac-address {
-  font-family: 'Courier New', 'Monaco', monospace;
-  font-size: var(--el-font-size-small);
-  font-weight: 500;
-  color: var(--el-text-color-regular);
-  letter-spacing: 0.5px;
-}
-
-/* 建议名称 */
-.suggested-name {
-  font-size: var(--el-font-size-small);
-  color: var(--el-text-color-secondary);
-}
-
-/* 空状态提示 */
-.empty-tip {
-  font-size: var(--el-font-size-small);
-  color: var(--el-text-color-placeholder);
-  margin-top: var(--ep-space-2);
-}
-
-/* 扫描结果表格优化 */
-.scan-results-table :deep(.el-input__wrapper) {
+/* 扫描结果表格输入框优化 */
+:deep(.el-table .el-input__wrapper) {
   padding: 0 8px;
 }
 
-.scan-results-table :deep(.el-input__inner) {
+:deep(.el-table .el-input__inner) {
   height: 28px;
-  font-size: var(--el-font-size-small);
-}
-
-/* 旧样式兼容 - 可删除 */
-.scan-intro {
-  margin-bottom: var(--ep-space-5);
-}
-
-.scan-results {
-  background-color: var(--ep-color-gray-1);
-  border-radius: var(--ep-border-radius-medium);
-  padding: var(--ep-space-4);
-  margin-top: var(--ep-space-4);
-}
-
-.results-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--ep-space-3);
-}
-
-.results-header h4 {
-  margin: 0;
-  font-size: var(--el-font-size-base);
-  color: var(--el-text-color-primary);
-}
-
-.results-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ep-space-2);
-}
-
-.result-tag {
-  display: flex;
-  align-items: center;
-  gap: var(--ep-space-2);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .operation-bar {
-    flex-direction: column;
-    gap: var(--ep-space-3);
-    align-items: stretch;
-  }
-  
-  .left,
-  .right {
-    justify-content: center;
-  }
+  font-size: 14px;
 }
 </style>

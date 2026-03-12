@@ -1,25 +1,40 @@
 <template>
-    <div class="grid-map" :class="{ 'is-edit-mode': isEditMode }">
+    <div class="flex shrink-0 gap-2" :class="{ 'is-edit-mode': isEditMode }">
         <!-- 行标签 -->
-        <div class="row-labels">
-            <div v-for="row in gridConfig.ROWS" :key="`label-${row}`" class="row-label">
-                {{ formatRowLabel(row) }}{{ rowSuffix }}
+        <div class="flex flex-col shrink-0">
+            <!-- 对齐填充层 - 与列标题高度一致 -->
+            <div class="h-7"></div>
+
+            <div class="grid gap-3" style="grid-template-rows: repeat(4, 120px);">
+                <div v-for="row in gridConfig.ROWS" :key="`label-${row}`"
+                    class="flex items-center justify-center w-10 bg-gray-100 border border-dashed border-gray-300 rounded text-sm font-medium text-gray-600"
+                    :class="{ 'bg-gray-50 border-gray-300 text-gray-700 font-bold': isEditMode }"
+                    style="writing-mode: vertical-rl; text-orientation: mixed; min-height: 120px;">
+                    {{ formatRowLabel(row) }}{{ rowSuffix }}
+                </div>
             </div>
         </div>
 
         <!-- 网格主体 -->
-        <div class="grid-container">
+        <div class="flex flex-col shrink-0 overflow-visible">
             <!-- 列标题 -->
-            <div class="col-headers">
-                <div v-for="col in gridConfig.TOTAL_COLS" :key="`header-${col}`" class="col-header"
-                    :class="{ 'aisle-header': col === gridConfig.AISLE_COL }">
+            <div class="grid gap-3 mb-2" style="grid-template-columns: repeat(13, 100px);">
+                <div v-for="col in gridConfig.TOTAL_COLS" :key="`header-${col}`"
+                    class="flex items-center justify-center h-7 bg-gray-100 border border-dashed border-gray-300 rounded text-xs font-medium text-gray-600"
+                    :class="[
+                        col === gridConfig.AISLE_COL ? 'bg-amber-50 border-amber-300 text-amber-700 font-semibold' : '',
+                        isEditMode && col !== gridConfig.AISLE_COL ? 'bg-gray-50 border-gray-300 text-gray-700 font-bold' : '',
+                        isEditMode && col === gridConfig.AISLE_COL ? 'bg-amber-100 border-amber-400 text-amber-800' : ''
+                    ]">
                     <template v-if="col === gridConfig.AISLE_COL">{{ aisleLabel }}</template>
                     <template v-else>{{ getPhysicalCol(col) }}</template>
                 </div>
             </div>
 
-            <!-- 设备网格 - 4行 x 13列 -->
-            <div class="device-matrix">
+            <!-- 设备网格 - 4行 x 13列 - 统一容器 -->
+            <div class="grid gap-3 shrink-0"
+                :class="{ 'bg-gray-100 rounded': isEditMode }"
+                style="grid-template-columns: repeat(13, 100px); grid-template-rows: repeat(4, 120px);">
                 <template v-for="(row, rowIndex) in deviceMatrix" :key="`row-${rowIndex}`">
                     <GridCell v-for="(cell, colIndex) in row" :key="`cell-${rowIndex}-${colIndex}`"
                         :cell-type="getCellType(cell, colIndex)" :device="getDevice(cell)"
@@ -203,116 +218,11 @@ function handleCellClick(device, rowIndex, colIndex) {
 </script>
 
 <style scoped>
-.grid-map {
-    display: flex;
-    flex: 0 0 auto;
-    gap: var(--ep-space-2);
-    min-width: auto;
-}
-
-/* 行标签 - 固定尺寸 */
-.row-labels {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: var(--ep-space-3);
-    padding-top: 34px;
-    /* 列标题高度 + margin */
-    height: auto;
-    flex: 0 0 auto;
-}
-
-.row-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 120px;
-    background: #faf8f3;
-    border: 2px dashed #d4c9b0;
-    border-radius: var(--ep-border-radius-base);
-    font-size: var(--ep-font-size-small);
-    font-weight: var(--ep-font-weight-medium);
-    color: #8b7355;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-}
-
-/* 编辑模式高亮 */
-.is-edit-mode .row-label {
-    background: #f5f0e1;
-    border-color: #c4b8a0;
-    color: var(--ep-color-primary);
-    font-weight: var(--ep-font-weight-bold);
-}
-
-/* 网格容器 - 固定尺寸 */
-.grid-container {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    overflow: visible;
-}
-
-/* 列标题 - 固定宽度 */
-.col-headers {
-    display: grid;
-    grid-template-columns: repeat(13, 100px);
-    gap: var(--ep-space-3);
-    margin-bottom: var(--ep-space-2);
-}
-
-.col-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 28px;
-    background: #faf8f3;
-    border: 2px dashed #d4c9b0;
-    border-radius: var(--ep-border-radius-small);
-    font-size: var(--ep-font-size-extra-small);
-    font-weight: var(--ep-font-weight-medium);
-    color: #8b7355;
-}
-
-.col-header.aisle-header {
-    background: #f0e8d8;
-    color: #8b7355;
-    font-weight: var(--ep-font-weight-semibold);
-    border: 1px dashed #d4c9b0;
-}
-
-/* 编辑模式高亮 */
-.is-edit-mode .col-header {
-    background: #f5f0e1;
-    border-color: #c4b8a0;
-    color: var(--ep-color-primary);
-    font-weight: var(--ep-font-weight-bold);
-}
-
-.is-edit-mode .col-header.aisle-header {
-    background: #e8e0d0;
-    color: #7a6545;
-}
-
-/* 设备矩阵 - 固定高度防止滚动 */
-.device-matrix {
-    display: grid;
-    grid-template-columns: repeat(13, 100px);
-    grid-template-rows: repeat(4, 120px);
-    gap: var(--ep-space-3);
-    flex: 0 0 auto;
-}
-
 /* 编辑模式网格背景 */
-.is-edit-mode .device-matrix {
-    background-image:
-        linear-gradient(to right, var(--ep-border-color-light) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--ep-border-color-light) 1px, transparent 1px);
+.is-edit-mode :deep(.device-matrix) {
+    background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+        linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
     background-size: 20px 20px;
     background-position: center center;
-    border-radius: var(--ep-border-radius-base);
-    padding: var(--ep-space-3);
-    background-color: var(--ep-fill-color-lighter);
 }
 </style>
