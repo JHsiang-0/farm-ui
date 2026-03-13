@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-col gap-6 p-6 bg-gray-50 min-h-screen">
-    <el-card class="shadow-sm rounded-xl min-h-[calc(100vh-180px)] hover:shadow-md transition-shadow duration-200">
+  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
+    <el-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
       <template #header>
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3 text-lg font-semibold text-gray-900">
@@ -18,8 +18,9 @@
         :data="queueData"
         v-loading="loading"
         style="width: 100%"
-        class="rounded-lg overflow-hidden"
+        class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
+        height="calc(100vh - 280px)"
       >
         <el-table-column prop="id" label="任务单号" width="100" align="center">
           <template #default="scope">

@@ -1,7 +1,14 @@
 <template>
-  <div class="flex flex-col gap-5 p-6 bg-gray-50 min-h-screen">
+  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
+    <!-- 设备详情抽屉 -->
+    <DeviceDetailDrawer
+      v-model="detailDrawerVisible"
+      :device="selectedDevice"
+      :real-time-data="selectedDeviceRealTimeData"
+    />
+
     <!-- 操作栏 -->
-    <el-card class="shadow-none rounded-lg bg-white">
+    <el-card class="shadow-none rounded-lg bg-white m-6">
       <div class="flex flex-wrap justify-between items-center gap-3">
         <div class="flex items-center gap-3">
           <el-button type="default" @click="fetchData">
@@ -23,13 +30,16 @@
     </el-card>
 
     <!-- 数据表格 -->
-    <el-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+    <el-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mx-6 mb-6">
       <el-table
         :data="tableData"
         v-loading="loading"
         style="width: 100%"
-        class="rounded-lg overflow-hidden"
+        class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
+        @row-click="handleRowClick"
+        row-class-name="cursor-pointer hover:bg-gray-50"
+        height="calc(100vh - 320px)"
       >
         <el-table-column prop="id" label="ID" width="80" align="center">
           <template #default="scope">
@@ -100,11 +110,9 @@
         <el-pagination
           v-model:current-page="queryParams.pageNum"
           v-model:page-size="queryParams.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
           background
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next"
           :total="total"
-          @size-change="fetchData"
           @current-change="fetchData"
         />
       </div>
@@ -330,6 +338,7 @@ import {
   batchAddPrinters
 } from '@/api/printer'
 import { ElMessage } from 'element-plus'
+import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 
 defineOptions({ name: 'PrinterManage' })
 
@@ -341,6 +350,11 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 20
 })
+
+// ===== 设备详情抽屉状态 =====
+const detailDrawerVisible = ref(false)
+const selectedDevice = ref(null)
+const selectedDeviceRealTimeData = ref(null)
 
 // ===== 表单与弹窗状态 =====
 const dialogVisible = ref(false)
@@ -401,6 +415,22 @@ const getStatusType = (status) => {
     'OFFLINE': 'info'
   }
   return map[status.toUpperCase()] || 'info'
+}
+
+// 表格行点击事件
+const handleRowClick = (row) => {
+  selectedDevice.value = row
+  // 为设备添加实时数据（这里可以根据实际情况获取真实数据）
+  selectedDeviceRealTimeData.value = {
+    state: row.status || 'IDLE',
+    toolTemperature: 0,
+    bedTemperature: 0,
+    printDuration: 0,
+    filamentUsed: 0,
+    progress: 0,
+    systemMessage: ''
+  }
+  detailDrawerVisible.value = true
 }
 
 // 加载分页数据
@@ -557,5 +587,14 @@ onMounted(() => {
 :deep(.el-table .el-input__inner) {
   height: 28px;
   font-size: 14px;
+}
+
+/* 表格行可点击样式 */
+:deep(.el-table .cursor-pointer) {
+  cursor: pointer;
+}
+
+:deep(.el-table .el-table__row:hover) {
+  background-color: #f3f4f6;
 }
 </style>

@@ -1,29 +1,35 @@
 <template>
-  <el-container v-cloak class="h-screen w-screen overflow-hidden">
+  <el-container v-cloak class="h-full w-full overflow-hidden">
     <!-- 侧边栏 -->
-    <el-aside :width="isCollapse ? '64px' : '220px'" class="bg-white relative z-10 flex flex-col transition-all duration-300" :class="{ 'is-collapse': isCollapse }">
+    <el-aside :width="isCollapse ? '64px' : '220px'"
+      class="bg-white relative z-10 flex flex-col transition-all duration-300" :class="{ 'is-collapse': isCollapse }">
       <!-- 右侧分隔线 -->
-      <div class="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent"></div>
+      <div class="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent">
+      </div>
 
-      <div class="h-16 flex items-center justify-center gap-3 border-b border-gray-100 overflow-hidden whitespace-nowrap relative bg-gradient-to-r from-white to-gray-50">
+      <div
+        class="h-16 flex items-center justify-center gap-3 border-b border-gray-100 overflow-hidden whitespace-nowrap relative bg-gradient-to-r from-white to-gray-50 shrink-0">
         <!-- 底部装饰线 -->
-        <div class="absolute left-0 right-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300 via-gray-600 via-gray-300 to-transparent opacity-60"></div>
+        <div
+          class="absolute left-0 right-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300 via-gray-600 via-gray-300 to-transparent opacity-60">
+        </div>
 
         <el-icon :size="32" class="text-primary shrink-0" style="filter: drop-shadow(0 2px 4px rgba(17, 24, 39, 0.2));">
           <monitor />
         </el-icon>
-        <span v-show="!isCollapse" class="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent tracking-wide">3D打印农场</span>
+        <span v-show="!isCollapse"
+          class="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent tracking-wide">3D打印农场</span>
       </div>
 
       <el-menu router :default-active="$route.path" :collapse="isCollapse" :collapse-transition="false"
         background-color="transparent" text-color="var(--ep-text-color-regular)"
-        active-text-color="var(--el-color-primary)" class="custom-menu flex-1 pt-2">
+        active-text-color="var(--el-color-primary)" class="custom-menu flex-1 pt-2 overflow-y-auto">
         <el-sub-menu index="/dashboard">
           <template #title>
             <el-icon>
               <odometer />
             </el-icon>
-            <span>车间大屏监控</span>
+            <span>车间监控</span>
           </template>
           <el-menu-item index="/" class="workshop-menu-item">
             <span class="workshop-name">3F-一号车间</span>
@@ -47,23 +53,24 @@
 
         <el-menu-item index="/files">
           <el-icon><folder-opened /></el-icon>
-          <template #title>切片文件库</template>
+          <template #title>文件库</template>
         </el-menu-item>
 
         <el-menu-item index="/jobs">
           <el-icon>
             <list />
           </el-icon>
-          <template #title>生产队列</template>
+          <template #title>任务队列</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
 
-    <el-container class="bg-gray-50 flex flex-col">
+    <el-container class="bg-gray-50 flex flex-col h-full overflow-hidden">
       <!-- 顶栏 -->
-      <el-header class="h-15 bg-white shadow-sm flex justify-between items-center px-6 z-5">
+      <el-header class="h-16 bg-white shadow-sm flex justify-between items-center px-6 z-5 shrink-0">
         <div class="flex items-center gap-4">
-          <div class="w-9 h-9 flex items-center justify-center rounded hover:bg-gray-50 cursor-pointer transition-colors text-gray-600 hover:text-primary"
+          <div
+            class="w-9 h-9 flex items-center justify-center rounded hover:bg-gray-50 cursor-pointer transition-colors text-gray-600 hover:text-primary"
             @click="toggleCollapse" :title="isCollapse ? '展开菜单' : '收起菜单'">
             <el-icon :size="18" :class="{ 'rotate-180 transition-transform duration-300': isCollapse }">
               <fold v-if="!isCollapse" />
@@ -127,7 +134,7 @@
       </el-header>
 
       <!-- 主内容区 -->
-      <el-main class="p-6 overflow-y-auto overflow-x-hidden">
+      <el-main class="overflow-hidden flex-1 p-0">
         <router-view v-slot="{ Component }">
           <transition name="fade-transform" mode="out-in">
             <component :is="Component" />

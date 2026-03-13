@@ -1,8 +1,9 @@
 <template>
-  <div v-cloak class="flex flex-col gap-4 p-4 bg-gray-100 min-h-screen">
+  <div v-cloak class="h-full bg-gray-100 flex flex-col overflow-hidden">
     <!-- 顶部标题和统计 -->
-    <dashboard-header :status-counts="store.statusCounts" :workshop-name="workshopName"
-      :last-update-time="lastUpdateTime" @refresh="handleRefresh">
+    <div class="p-4 pb-0">
+      <dashboard-header :status-counts="store.statusCounts" :workshop-name="workshopName"
+        :last-update-time="lastUpdateTime" @refresh="handleRefresh">
       <!-- 布局锁定/编辑模式切换按钮 -->
       <template #actions>
         <el-button v-if="!isEditMode" type="default" :icon="Lock" @click="toggleEditMode">
@@ -12,10 +13,11 @@
           保存布局
         </el-button>
       </template>
-    </dashboard-header>
+      </dashboard-header>
+    </div>
 
     <!-- 独立车间看板容器 -->
-    <div class="relative w-full h-[calc(100vh-200px)] p-5 bg-gray-100 border border-gray-200 rounded-xl shadow-sm overflow-auto flex items-start justify-center"
+    <div class="relative w-full flex-1 p-4 m-4 mt-2 bg-gray-100 border border-gray-200 rounded-xl shadow-sm overflow-auto flex items-start justify-center"
       style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent;">
       <!-- 滚动条样式（WebKit） -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none"
