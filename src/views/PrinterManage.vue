@@ -70,6 +70,21 @@
           </template>
         </el-table-column>
 
+        <!-- 安全状态列 -->
+        <el-table-column label="热床安全" width="120" align="center">
+          <template #default="scope">
+            <div class="flex items-center justify-center gap-1">
+              <el-icon :size="14" :color="scope.row.isSafeToPrint ? '#059669' : '#dc2626'">
+                <circle-check v-if="scope.row.isSafeToPrint" />
+                <circle-close v-else />
+              </el-icon>
+              <el-tag :type="scope.row.isSafeToPrint ? 'success' : 'danger'" effect="light" size="small">
+                {{ scope.row.isSafeToPrint ? '已清理' : '待清理' }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="currentMaterial" label="装载耗材" width="120" align="center">
           <template #default="scope">
             <el-tag size="small" type="warning" effect="light">
@@ -84,23 +99,63 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="180" align="center" fixed="right">
+        <el-table-column label="当前任务" width="180" align="center">
           <template #default="scope">
-            <el-button size="small" type="primary" @click="handleEdit(scope.row)">
-              <el-icon><edit /></el-icon>
-              编辑
-            </el-button>
-            <el-popconfirm
-              title="确定要删除这台机器吗？"
-              confirm-button-type="danger"
-              @confirm="handleDelete(scope.row.id)"
-            >
-              <template #reference>
-                <el-button size="small" type="danger" plain>
-                  <el-icon><delete /></el-icon>
-                </el-button>
-              </template>
-            </el-popconfirm>
+            <div class="text-center">
+              <span v-if="scope.row.currentJobId" class="text-sm">
+                #{{ scope.row.currentJobId }}
+                <el-tag v-if="scope.row.currentJobStatus" size="small" :type="getJobStatusType(scope.row.currentJobStatus)" class="ml-1">
+                  {{ scope.row.currentJobStatus }}
+                </el-tag>
+              </span>
+              <span v-else class="text-gray-400 text-sm">无</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="280" align="center" fixed="right">
+          <template #default="scope">
+            <div class="flex items-center justify-center gap-1">
+              <!-- 确认热床已清理按钮 -->
+              <el-button
+                v-if="shouldShowSafeButton(scope.row)"
+                size="small"
+                type="warning"
+                @click="handleConfirmSafe(scope.row)"
+                :loading="confirmingSafeIds.includes(scope.row.id)"
+              >
+                <el-icon><check /></el-icon>
+                确认清理
+              </el-button>
+              <!-- 启动打印按钮 -->
+              <el-button
+                v-if="shouldShowStartButton(scope.row)"
+                size="small"
+                type="success"
+                @click="handleStartJob(scope.row)"
+                :loading="startingJobIds.includes(scope.row.id)"
+              >
+                <el-icon><printer /></el-icon>
+                启动打印
+              </el-button>
+              <!-- 编辑按钮 -->
+              <el-button size="small" type="primary" @click="handleEdit(scope.row)">
+                <el-icon><edit /></el-icon>
+                编辑
+              </el-button>
+              <!-- 删除按钮 -->
+              <el-popconfirm
+                title="确定要删除这台机器吗？"
+                confirm-button-type="danger"
+                @confirm="handleDelete(scope.row.id)"
+              >
+                <template #reference>
+                  <el-button size="small" type="danger" plain>
+                    <el-icon><delete /></el-icon>
+                  </el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -327,7 +382,9 @@ import {
   Delete,
   Check,
   Search,
-  FolderAdd
+  FolderAdd,
+  CircleCheck,
+  CircleClose
 } from '@element-plus/icons-vue'
 import {
   getPrinterList,
@@ -335,9 +392,11 @@ import {
   updatePrinter,
   deletePrinter,
   scanPrinters,
-  batchAddPrinters
+  batchAddPrinters,
+  confirmSafe
 } from '@/api/printer'
-import { ElMessage } from 'element-plus'
+import { startJob } from '@/api/job'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 
 defineOptions({ name: 'PrinterManage' })
@@ -386,6 +445,10 @@ const isBatchAdding = ref(false)
 const selectedDevices = ref([])
 const scanTableRef = ref(null)
 
+// ===== 现场操作状态 =====
+const confirmingSafeIds = ref([])
+const startingJobIds = ref([])
+
 // 扫描统计文案
 const scanStatsText = computed(() => {
   const total = scanResults.value.length
@@ -415,6 +478,91 @@ const getStatusType = (status) => {
     'OFFLINE': 'info'
   }
   return map[status.toUpperCase()] || 'info'
+}
+
+// 获取任务状态标签类型
+const getJobStatusType = (status) => {
+  const map = {
+    'PENDING': 'primary',
+    'ASSIGNED': 'warning',
+    'PRINTING': 'success',
+    'COMPLETED': 'info',
+    'FAILED': 'danger'
+  }
+  return map[status] || 'info'
+}
+
+// 判断是否应该显示"确认清理"按钮
+const shouldShowSafeButton = (printer) => {
+  return printer.currentJobStatus === 'ASSIGNED' && !printer.isSafeToPrint
+}
+
+// 判断是否应该显示"启动打印"按钮
+const shouldShowStartButton = (printer) => {
+  return printer.currentJobStatus === 'ASSIGNED' && printer.isSafeToPrint && printer.currentJobId
+}
+
+// 确认热床已清理
+const handleConfirmSafe = async (printer) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认 ${printer.name} 热床已清理完毕，可以开始打印了吗？`,
+      '安全确认',
+      {
+        confirmButtonText: '已确认清理',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    confirmingSafeIds.value.push(printer.id)
+    await confirmSafe(printer.id)
+    ElMessage.success('安全确认成功！')
+    fetchData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('安全确认失败:', error)
+    }
+  } finally {
+    const index = confirmingSafeIds.value.indexOf(printer.id)
+    if (index > -1) {
+      confirmingSafeIds.value.splice(index, 1)
+    }
+  }
+}
+
+// 启动打印
+const handleStartJob = async (printer) => {
+  if (!printer.currentJobId) {
+    ElMessage.warning('该设备没有分配的任务')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确认启动 ${printer.name} 的打印任务 #${printer.currentJobId}？`,
+      '启动打印确认',
+      {
+        confirmButtonText: '启动打印',
+        cancelButtonText: '取消',
+        type: 'primary'
+      }
+    )
+
+    startingJobIds.value.push(printer.id)
+    await startJob(printer.currentJobId)
+    ElMessage.success('打印任务已启动！')
+    fetchData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('启动打印失败:', error)
+    }
+  } finally {
+    const index = startingJobIds.value.indexOf(printer.id)
+    if (index > -1) {
+      startingJobIds.value.splice(index, 1)
+    }
+  }
 }
 
 // 表格行点击事件

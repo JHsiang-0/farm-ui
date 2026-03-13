@@ -35,6 +35,21 @@ export function getFileList(params) {
 }
 
 /**
+ * 创建文件夹
+ * @param {Object} data - 文件夹参数
+ * @param {number} [data.parentId] - 父文件夹ID
+ * @param {string} data.folderName - 文件夹名称
+ * @returns {Promise<{code: number, message: string, data: any}>} 创建结果
+ */
+export function createFolder(data) {
+  return request({
+    url: '/api/v1/print-files/folder/create',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 上传切片文件
  * @param {FormData} formData - 包含文件的 FormData 对象
  * @returns {Promise<{code: number, message: string, data: PrintFile}>} 上传结果

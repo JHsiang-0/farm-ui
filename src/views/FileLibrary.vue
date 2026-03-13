@@ -4,6 +4,22 @@
     <div class="flex flex-wrap justify-between items-center gap-4 m-6 mb-4 p-4 bg-white rounded-lg shadow-sm">
       <div class="flex flex-wrap items-center gap-4">
         <h1 class="text-xl font-bold text-gray-900 m-0">📁 文件库</h1>
+
+        <!-- 面包屑导航 -->
+        <el-breadcrumb separator="/" class="hidden sm:block">
+          <el-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
+            <el-icon><folder-opened /></el-icon>
+            <span>根目录</span>
+          </el-breadcrumb-item>
+          <el-breadcrumb-item
+            v-for="(breadcrumb, index) in breadcrumbs"
+            :key="breadcrumb.id"
+            @click.prevent="navigateTo(index)"
+          >
+            {{ breadcrumb.name }}
+          </el-breadcrumb-item>
+        </el-breadcrumb>
+
         <el-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-40" size="default"
           @keyup.enter="handleSearch">
           <template #prefix>
@@ -43,6 +59,9 @@
           </el-button>
         </el-button-group>
         <el-switch v-model="isBatchMode" active-text="批量操作" inactive-text="详情查看" />
+        <el-button type="success" size="default" :icon="FolderOpened" @click="openCreateFolderDialog">
+          新建文件夹
+        </el-button>
         <el-button type="primary" size="default" :icon="Upload" @click="handleUpload">
           上传 G-Code 文件
         </el-button>
@@ -59,7 +78,61 @@
     <div v-if="fileList.length > 0" class="flex-1 overflow-hidden flex flex-col mx-6">
       <!-- 网格视图 -->
       <div v-if="viewMode === 'grid'" class="file-grid-view flex-1 overflow-y-auto pb-4">
-        <div v-for="file in fileList" :key="file.id"
+        <!-- 文件夹 -->
+        <div
+          v-for="file in folderList"
+          :key="file.id"
+          class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
+          :class="isBatchMode && selectedIds.includes(file.id) ? 'border-primary shadow-lg' : ''"
+          @dblclick="navigateToFolder(file)"
+          @click="handleFileClick(file)"
+        >
+          <!-- 卡片选中状态 -->
+          <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
+            <el-checkbox :model-value="selectedIds.includes(file.id)" @click.stop="toggleSelection(file.id)"
+              size="small" />
+          </div>
+
+          <!-- 文件夹图标 -->
+          <div class="relative h-24 overflow-hidden bg-blue-50 flex items-center justify-center">
+            <el-icon size="64" class="text-blue-500">
+              <IconFolder />
+            </el-icon>
+          </div>
+
+          <!-- 卡片内容 -->
+          <div class="p-2">
+            <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
+              :title="file.originalName">
+              {{ file.originalName }}
+            </h3>
+
+            <!-- 文件夹统计 -->
+            <div class="flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-xs text-gray-600 uppercase">类型</span>
+                <span class="text-sm font-semibold text-gray-900">文件夹</span>
+              </div>
+            </div>
+
+            <!-- 悬浮操作按钮 -->
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
+              <el-button type="primary" size="small" :icon="FolderOpened" @click.stop="navigateToFolder(file)"
+                class="flex-1 text-xs px-1 py-1">
+                打开
+              </el-button>
+              <el-button type="danger" size="small" :icon="Delete" @click.stop="handleDelete(file.id)"
+                class="flex-1 text-xs px-1 py-1">
+                删除
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 文件 -->
+        <div
+          v-for="file in fileItemsList"
+          :key="file.id"
           class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
           :class="isBatchMode && selectedIds.includes(file.id) ? 'border-primary shadow-lg' : ''"
           @click="handleFileClick(file)">
@@ -157,54 +230,69 @@
         <el-table :data="fileList" v-loading="loading" @selection-change="handleSelectionChange"
           @row-click="handleTableRowClick" border stripe style="width: 100%" height="calc(100vh - 300px)">
           <el-table-column type="selection" width="50" align="center" />
+
           <el-table-column prop="originalName" label="文件名" min-width="200">
             <template #default="{ row }">
               <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                  <el-image v-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="w-full h-full" />
-                  <div v-else class="w-full h-full flex items-center justify-center text-gray-600">
-                    <el-icon>
-                      <Document />
-                    </el-icon>
-                  </div>
+                <div class="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                  <el-icon v-if="row.isFolder === 1" class="text-blue-500">
+                    <IconFolder />
+                  </el-icon>
+                  <el-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="w-full h-full" />
+                  <el-icon v-else class="text-gray-600">
+                    <Document />
+                  </el-icon>
                 </div>
                 <span class="text-sm font-medium text-gray-900 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
                   :title="row.originalName">{{
                     row.originalName
                   }}</span>
-                <el-tag :type="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
+                <el-tag v-if="row.isFolder === 1" size="small" class="flex-shrink-0">
+                  文件夹
+                </el-tag>
+                <el-tag v-else :type="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
                   {{ row.materialType || 'PLA' }}
                 </el-tag>
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="estTime" label="预计耗时" width="85">
-            <template #default="{ row }">{{ formatTime(row.estTime) }}</template>
+
+          <el-table-column prop="estTime" label="预计耗时" width="85" v-if="currentParentId">
+            <template #default="{ row }">{{ row.isFolder === 1 ? '文件夹' : formatTime(row.estTime) }}</template>
           </el-table-column>
-          <el-table-column prop="filamentWeight" label="耗材重量" width="85">
+
+          <el-table-column prop="filamentWeight" label="耗材重量" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.filamentWeight || 0
-              }}g</template>
+              row.isFolder === 1 ? '-' : (row.filamentWeight || 0) + 'g'
+              }}</template>
           </el-table-column>
-          <el-table-column prop="filamentLength" label="所需线长" width="85">
+
+          <el-table-column prop="filamentLength" label="所需线长" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.filamentLength || 0
-              }}m</template>
+              row.isFolder === 1 ? '-' : (row.filamentLength || 0) + 'm'
+              }}</template>
           </el-table-column>
-          <el-table-column prop="printCount" label="打印次数" width="80" />
-          <el-table-column prop="successRate" label="成功率" width="100">
+
+          <el-table-column prop="printCount" label="打印次数" width="80" v-if="currentParentId" />
+
+          <el-table-column prop="successRate" label="成功率" width="100" v-if="currentParentId">
             <template #default="{ row }">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2" v-if="row.isFolder !== 1">
                 <el-progress :percentage="row.successRate || 0" :stroke-width="6" :show-text="false"
                   :class="getSuccessRateClass(row.successRate)" class="w-16" />
                 <span class="text-sm">{{ row.successRate || 0 }}%</span>
               </div>
+              <span v-else>-</span>
             </template>
           </el-table-column>
+
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="flex items-center gap-1">
-                <el-button type="primary" size="small" :icon="Printer" @click="handlePrint(row)">
+                <el-button v-if="row.isFolder === 1" type="primary" size="small" :icon="FolderOpened" @click="navigateToFolder(row)">
+                  打开
+                </el-button>
+                <el-button v-else type="primary" size="small" :icon="Printer" @click="handlePrint(row)">
                   打印
                 </el-button>
                 <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row.id)">
@@ -266,6 +354,24 @@
       </el-upload>
     </el-dialog>
 
+    <!-- 新建文件夹对话框 -->
+    <el-dialog v-model="createFolderDialogVisible" title="新建文件夹" width="400px">
+      <el-form :model="folderForm" :rules="folderRules" ref="folderFormRef" label-width="80px">
+        <el-form-item label="文件夹名称" prop="name">
+          <el-input v-model="folderForm.name" placeholder="请输入文件夹名称" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <el-button @click="createFolderDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleCreateFolder" :loading="creatingFolder">
+            创建
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 文件详情抽屉 -->
     <FileDetailDrawer
       v-model="detailDrawerVisible"
@@ -277,7 +383,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search,
@@ -300,9 +406,11 @@ import {
   uploadFile as uploadPrintFile,
   deleteFile,
   deleteBatchFiles,
-  downloadFile
+  downloadFile,
+  createFolder
 } from '@/api/printFile'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
+import IconFolder from '@/components/icons/IconFolder.vue'
 
 defineOptions({ name: 'FileLibrary' })
 
@@ -315,6 +423,8 @@ const materialFilter = ref('')
 const tagFilter = ref('')
 const viewMode = ref('grid')
 const uploadDialogVisible = ref(false)
+const createFolderDialogVisible = ref(false)
+const creatingFolder = ref(false)
 
 // 文件详情抽屉状态
 const detailDrawerVisible = ref(false)
@@ -322,11 +432,38 @@ const selectedFile = ref(null)
 // 批量操作模式
 const isBatchMode = ref(false)
 
+// 文件夹导航状态
+const currentParentId = ref(null)
+const breadcrumbs = ref([])
+
+// 新建文件夹表单
+const folderForm = reactive({
+  name: ''
+})
+
+const folderRules = {
+  name: [
+    { required: true, message: '请输入文件夹名称', trigger: 'blur' },
+    { min: 1, max: 50, message: '文件夹名称长度在 1 到 50 个字符之间', trigger: 'blur' }
+  ]
+}
+
+const folderFormRef = ref(null)
+
 // 分页状态
 const pagination = reactive({
   pageNum: 1,
   pageSize: 12,
   total: 0
+})
+
+// 计算文件夹和文件列表
+const folderList = computed(() => {
+  return fileList.value.filter(file => file.isFolder === 1)
+})
+
+const fileItemsList = computed(() => {
+  return fileList.value.filter(file => file.isFolder !== 1)
 })
 
 // ============ 方法定义 ============
@@ -342,7 +479,8 @@ const fetchData = async () => {
       pageSize: pagination.pageSize,
       keyword: searchKeyword.value || undefined,
       materialType: materialFilter.value || undefined,
-      tag: tagFilter.value || undefined
+      tag: tagFilter.value || undefined,
+      parentId: currentParentId.value
     }
     const res = await getFileList(params)
     fileList.value = res.data?.records || []
@@ -355,6 +493,70 @@ const fetchData = async () => {
     ElMessage.error('获取文件列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * 导航到根目录
+ */
+const navigateToRoot = () => {
+  currentParentId.value = null
+  breadcrumbs.value = []
+  pagination.pageNum = 1
+  fetchData()
+}
+
+/**
+ * 导航到指定文件夹
+ */
+const navigateToFolder = (folder) => {
+  currentParentId.value = folder.id
+  breadcrumbs.value.push({
+    id: folder.id,
+    name: folder.originalName
+  })
+  pagination.pageNum = 1
+  fetchData()
+}
+
+/**
+ * 导航到面包屑指定位置
+ */
+const navigateTo = (index) => {
+  breadcrumbs.value = breadcrumbs.value.slice(0, index + 1)
+  currentParentId.value = breadcrumbs.value[index]?.id || null
+  pagination.pageNum = 1
+  fetchData()
+}
+
+/**
+ * 打开新建文件夹对话框
+ */
+const openCreateFolderDialog = () => {
+  folderForm.name = ''
+  createFolderDialogVisible.value = true
+}
+
+/**
+ * 创建文件夹
+ */
+const handleCreateFolder = async () => {
+  await folderFormRef.value?.validate()
+  creatingFolder.value = true
+
+  try {
+    await createFolder({
+      parentId: currentParentId.value,
+      folderName: folderForm.name
+    })
+    ElMessage.success('文件夹创建成功')
+    createFolderDialogVisible.value = false
+    fetchData()
+  } catch (error) {
+    console.error('创建文件夹失败:', error)
+    ElMessage.error('创建文件夹失败')
+  } finally {
+    creatingFolder.value = false
   }
 }
 
@@ -425,7 +627,7 @@ const handleFileChange = async (uploadFile) => {
  */
 const handleDelete = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个文件吗？', '提示', {
+    await ElMessageBox.confirm('确定要删除吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
@@ -457,7 +659,7 @@ const handleBatchDelete = async () => {
 
   try {
     await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedIds.value.length} 个文件吗？`,
+      `确定要删除选中的 ${selectedIds.value.length} 个项目吗？`,
       '提示',
       {
         confirmButtonText: '确定',
@@ -585,8 +787,12 @@ const handleFileClick = (file) => {
     // 批量操作模式：执行选择操作
     toggleSelection(file.id)
   } else {
-    // 详情查看模式：直接打开详情抽屉
-    openFileDetail(file)
+    // 详情查看模式：如果是文件夹则打开，否则显示详情
+    if (file.isFolder === 1) {
+      navigateToFolder(file)
+    } else {
+      openFileDetail(file)
+    }
   }
 }
 
@@ -597,8 +803,12 @@ const handleTableRowClick = (row) => {
   if (isBatchMode.value) {
     // 批量操作模式：表格有内置的选择功能，不额外处理
   } else {
-    // 详情查看模式：打开详情抽屉
-    openFileDetail(row)
+    // 详情查看模式：如果是文件夹则打开，否则显示详情
+    if (row.isFolder === 1) {
+      navigateToFolder(row)
+    } else {
+      openFileDetail(row)
+    }
   }
 }
 

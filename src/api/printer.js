@@ -128,6 +128,19 @@ export function batchUpdatePositions(positions) {
   })
 }
 
+/**
+ * 确认打印机热床已清理完毕 - 安全模式第二步之一
+ * @param {number} printerId - 打印机ID
+ * @returns {Promise<{code: number, message: string, data: Printer}>} 更新结果
+ */
+export function confirmSafe(printerId) {
+  return request({
+    url: '/api/v1/print-jobs/safe/confirm',
+    method: 'post',
+    data: { printerId }
+  })
+}
+
 // ============================================
 // Type Definitions (JSDoc)
 // ============================================

@@ -64,9 +64,11 @@
         <el-table-column prop="status" label="状态" width="140" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2">
-              <el-icon v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><loading /></el-icon>
-              <el-icon v-else-if="scope.row.status === 'MANUAL'" class="text-sm text-yellow-600"><pointer /></el-icon>
+              <el-icon v-if="scope.row.status === 'PENDING'" class="text-sm animate-spin"><loading /></el-icon>
+              <el-icon v-else-if="scope.row.status === 'ASSIGNED'" class="text-sm text-yellow-600"><pointer /></el-icon>
               <el-icon v-else-if="scope.row.status === 'PRINTING'" class="text-sm text-gray-600"><printer /></el-icon>
+              <el-icon v-else-if="scope.row.status === 'COMPLETED'" class="text-sm text-green-600"><check /></el-icon>
+              <el-icon v-else-if="scope.row.status === 'FAILED'" class="text-sm text-red-600"><circle-close /></el-icon>
               <el-tag :type="getStatusType(scope.row.status)" effect="light" size="small">
                 {{ getStatusLabel(scope.row.status) }}
               </el-tag>
@@ -89,18 +91,19 @@
               size="small"
               type="primary"
               @click="openAssignDialog(scope.row)"
-              :disabled="scope.row.status === 'PRINTING'"
+              :disabled="scope.row.status !== 'PENDING'"
             >
               <el-icon><promotion /></el-icon>
-              强制派单
+              分配机器
             </el-button>
             <el-popconfirm
               title="确定要取消这个任务吗？"
               confirm-button-type="danger"
               @confirm="handleCancel(scope.row.id)"
+              :disabled="scope.row.status === 'PRINTING' || scope.row.status === 'COMPLETED'"
             >
               <template #reference>
-                <el-button size="small" type="danger" plain>
+                <el-button size="small" type="danger" plain :disabled="scope.row.status === 'PRINTING' || scope.row.status === 'COMPLETED'">
                   <el-icon><circle-close /></el-icon>
                 </el-button>
               </template>
@@ -177,7 +180,7 @@
             :loading="assigning"
           >
             <el-icon><check /></el-icon>
-            确认下发指令
+            确认分配
           </el-button>
         </div>
       </template>
@@ -226,11 +229,11 @@ const getPriorityType = (priority) => {
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
-    'MANUAL': 'warning',
-    'QUEUED': 'primary',
+    'PENDING': 'primary',
+    'ASSIGNED': 'warning',
     'PRINTING': 'success',
     'COMPLETED': 'info',
-    'CANCELLED': 'info'
+    'FAILED': 'danger'
   }
   return map[status] || 'info'
 }
@@ -238,11 +241,11 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
-    'MANUAL': '待手动派单',
-    'QUEUED': '自动排队中',
+    'PENDING': '待调度',
+    'ASSIGNED': '已分配',
     'PRINTING': '打印中',
     'COMPLETED': '已完成',
-    'CANCELLED': '已取消'
+    'FAILED': '已失败'
   }
   return map[status] || status
 }
@@ -303,7 +306,7 @@ const submitAssign = async () => {
   assigning.value = true
   try {
     await assignJobToPrinter(currentJob.value.id, selectedPrinterId.value)
-    ElMessage.success('派单成功！打印机开始工作')
+    ElMessage.success('任务分配成功！请等待操作员确认安全后启动打印')
     assignDialogVisible.value = false
     fetchQueue()
   } catch {

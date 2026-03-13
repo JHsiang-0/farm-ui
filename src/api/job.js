@@ -36,16 +36,29 @@ export function createPrintJob(data) {
 }
 
 /**
- * 指派任务给指定打印机
+ * 指派任务给指定打印机（仅分配，不触发打印）- 安全模式第一步
  * @param {number} jobId - 任务ID
  * @param {number} printerId - 打印机ID
  * @returns {Promise<{code: number, message: string, data: PrintJob}>} 指派结果
  */
 export function assignJobToPrinter(jobId, printerId) {
   return request({
-    url: `/api/v1/print-jobs/${jobId}/assign`,
+    url: '/api/v1/print-jobs/safe/assign',
     method: 'post',
-    params: { printerId }
+    data: { jobId, printerId }
+  })
+}
+
+/**
+ * 启动任务打印（现场启动打印）- 安全模式第二步之二
+ * @param {number} jobId - 任务ID
+ * @returns {Promise<{code: number, message: string, data: PrintJob}>} 启动结果
+ */
+export function startJob(jobId) {
+  return request({
+    url: '/api/v1/print-jobs/safe/start',
+    method: 'post',
+    data: { jobId }
   })
 }
 
