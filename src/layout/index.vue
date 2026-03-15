@@ -18,7 +18,7 @@
           <monitor />
         </el-icon>
         <span v-show="!isCollapse"
-          class="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent tracking-wide">3D打印农场</span>
+          class="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent tracking-wide">嘉东三维打印控制系统</span>
       </div>
 
       <el-menu router :default-active="$route.path" :collapse="isCollapse" :collapse-transition="false"
@@ -56,12 +56,22 @@
           <template #title>文件库</template>
         </el-menu-item>
 
-        <el-menu-item index="/jobs">
-          <el-icon>
-            <list />
-          </el-icon>
-          <template #title>任务队列</template>
-        </el-menu-item>
+        <el-sub-menu index="/tasks">
+          <template #title>
+            <el-icon>
+              <list />
+            </el-icon>
+            <span>任务</span>
+          </template>
+          <el-menu-item index="/tasks/queue">
+            <el-icon><list /></el-icon>
+            <span>任务队列</span>
+          </el-menu-item>
+          <el-menu-item index="/tasks/history">
+            <el-icon><document /></el-icon>
+            <span>打印记录</span>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
 
@@ -156,6 +166,7 @@ import {
   Printer,
   FolderOpened,
   List,
+  Document,
   Fold,
   Expand,
   Bell,
@@ -183,7 +194,9 @@ const currentRoute = computed(() => {
     '/': { name: '监控大屏', icon: 'Odometer' },
     '/printers': { name: '机器管理', icon: 'Printer' },
     '/files': { name: '切片文件库', icon: 'FolderOpened' },
-    '/jobs': { name: '生产队列', icon: 'List' }
+    '/tasks': { name: '任务管理', icon: 'List' },
+    '/tasks/queue': { name: '任务队列', icon: 'List' },
+    '/tasks/history': { name: '打印记录', icon: 'Document' }
   }
   return map[route.path] || { name: '', icon: '' }
 })

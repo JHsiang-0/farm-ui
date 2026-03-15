@@ -100,10 +100,10 @@
               title="确定要取消这个任务吗？"
               confirm-button-type="danger"
               @confirm="handleCancel(scope.row.id)"
-              :disabled="scope.row.status === 'PRINTING' || scope.row.status === 'COMPLETED'"
+              :disabled="!canCancel(scope.row.status)"
             >
               <template #reference>
-                <el-button size="small" type="danger" plain :disabled="scope.row.status === 'PRINTING' || scope.row.status === 'COMPLETED'">
+                <el-button size="small" type="danger" plain :disabled="!canCancel(scope.row.status)">
                   <el-icon><circle-close /></el-icon>
                 </el-button>
               </template>
@@ -241,13 +241,23 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
-    'PENDING': '待调度',
-    'ASSIGNED': '已分配',
+    'PENDING': '待分配',
+    'QUEUED': '排队中',
+    'ASSIGNED': '已分配待确认',
+    'READY': '已上传待机',
     'PRINTING': '打印中',
+    'PAUSED': '已暂停',
     'COMPLETED': '已完成',
-    'FAILED': '已失败'
+    'FAILED': '失败',
+    'CANCELLED': '已取消'
   }
   return map[status] || status
+}
+
+// 判断任务是否可以取消
+const canCancel = (status) => {
+  const cancelableStatuses = ['PENDING', 'QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  return cancelableStatuses.includes(status)
 }
 
 // 格式化时间

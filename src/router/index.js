@@ -31,10 +31,23 @@ const router = createRouter({
           name: 'files',
           component: () => import('../views/FileLibrary.vue') 
         },
-        { 
-          path: 'jobs', 
-          name: 'jobs',
-          component: () => import('../views/JobQueue.vue') 
+        {
+          path: 'tasks',
+          name: 'tasks',
+          component: () => import('../views/TaskManagement.vue'),
+          redirect: '/tasks/queue',
+          children: [
+            {
+              path: 'queue',
+              name: 'tasks-queue',
+              component: () => import('../views/JobQueue.vue')
+            },
+            {
+              path: 'history',
+              name: 'tasks-history',
+              component: () => import('../views/JobHistory.vue')
+            }
+          ]
         },
         // 👇 未来这里可以继续加：
         // { path: 'printers', component: () => import('../views/PrinterManage.vue') },
