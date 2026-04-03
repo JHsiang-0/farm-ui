@@ -52,13 +52,14 @@ export function assignJobToPrinter(jobId, printerId) {
 /**
  * 启动任务打印（现场启动打印）- 安全模式第二步之二
  * @param {number} jobId - 任务ID
+ * @param {string} [action='START_PRINT'] - 操作类型：'START_PRINT' 或 'UPLOAD_ONLY'
  * @returns {Promise<{code: number, message: string, data: PrintJob}>} 启动结果
  */
-export function startJob(jobId) {
+export function startJob(jobId, action = 'START_PRINT') {
   return request({
     url: '/api/v1/print-jobs/safe/start',
     method: 'post',
-    data: { jobId }
+    data: { jobId, action }
   })
 }
 
@@ -71,6 +72,25 @@ export function cancelJob(id) {
   return request({
     url: `/api/v1/print-jobs/${id}`,
     method: 'delete'
+  })
+}
+
+/**
+ * 获取打印任务分页列表（支持高级检索）
+ * @param {Object} params - 查询参数
+ * @param {number} params.pageNum - 页码
+ * @param {number} params.pageSize - 每页大小
+ * @param {string} [params.status] - 任务状态
+ * @param {number} [params.printerId] - 打印机ID
+ * @param {string} [params.startTime] - 开始时间（ISO格式）
+ * @param {string} [params.endTime] - 结束时间（ISO格式）
+ * @returns {Promise<{code: number, message: string, data: {records: Array<PrintJob>, total: number}}>} 分页结果
+ */
+export function getJobPage(params) {
+  return request({
+    url: '/api/v1/print-jobs/page',
+    method: 'post',
+    data: params
   })
 }
 

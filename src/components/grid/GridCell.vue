@@ -9,7 +9,8 @@
     <div v-else-if="cellType === 'empty'"
         class="flex flex-col items-center justify-center h-full bg-gray-50 border border-dashed border-gray-200 rounded cursor-default transition-all"
         :class="{ 'ring-1 ring-green-400 bg-green-50 border-green-300': isDragOver, 'cursor-pointer bg-amber-50 border-amber-300': isEditMode }"
-        @click="handleClick">
+        @click="handleClick" @dragenter="handleDragEnter" @dragleave="handleDragLeave" @dragover.prevent="handleDragOver"
+        @drop="handleDrop">
         <div class="text-sm font-medium text-gray-500">{{ slotLabel }}</div>
         <div v-if="!isEditMode" class="text-gray-400">
             <span>空</span>
@@ -24,9 +25,9 @@
 
     <!-- 设备卡片 - 企业级风格 -->
     <div v-else class="flex flex-col h-full p-2 cursor-pointer transition-all relative overflow-hidden rounded-md border"
-        :class="[statusClass, { 'opacity-70 cursor-grabbing shadow-sm': isDragging, 'border-dashed': isEditMode }]"
-        draggable="true" @dragstart="handleDragStart" @dragend="handleDragEnd" @dragenter="handleDragEnter"
-        @dragleave="handleDragLeave" @drop="handleDrop" @click="handleClick">
+        :class="[statusClass, { 'opacity-70 cursor-grabbing shadow-sm': isDragging, 'border-dashed cursor-grab': isEditMode }]"
+        :draggable="isEditMode" @dragstart="handleDragStart" @dragend="handleDragEnd" @dragenter="handleDragEnter"
+        @dragleave="handleDragLeave" @dragover.prevent="handleDragOver" @drop="handleDrop" @click="handleClick">
         <!-- 卡片头部：设备编号 -->
         <div class="flex justify-start items-center mb-1">
             <div class="text-sm font-bold text-gray-900">{{ device.machineNumber }}</div>
@@ -257,7 +258,14 @@ function truncateText(text, maxLength) {
 // Event Handlers
 // ============================================
 
-function handleDragStart() {
+function handleDragStart(event) {
+    // 只有编辑模式下才允许拖拽
+    if (!props.isEditMode) {
+        event.preventDefault()
+        return
+    }
+    // 设置拖拽效果
+    event.dataTransfer.effectAllowed = 'move'
     emit('dragstart', props.device, props.rowIndex, props.colIndex)
 }
 
@@ -265,15 +273,24 @@ function handleDragEnd() {
     emit('dragend')
 }
 
-function handleDragEnter() {
+function handleDragEnter(event) {
+    // 防止默认行为，允许放置
+    event.preventDefault()
     emit('dragenter', props.rowIndex, props.colIndex)
+}
+
+function handleDragOver(event) {
+    // 防止默认行为，允许放置
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
 }
 
 function handleDragLeave() {
     emit('dragleave')
 }
 
-function handleDrop() {
+function handleDrop(event) {
+    event.preventDefault()
     emit('drop', props.rowIndex, props.colIndex)
 }
 

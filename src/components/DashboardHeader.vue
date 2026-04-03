@@ -22,7 +22,8 @@
     <div class="flex flex-col items-center gap-2 flex-1 max-w-[800px]">
       <div class="flex items-center gap-1 flex-nowrap justify-center">
         <!-- 设备总数 -->
-        <div class="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
+        <div
+          class="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-gray-600">
             <el-icon :size="12" />
           </div>
@@ -35,7 +36,8 @@
         <div class="w-px h-5 bg-gray-100 mx-1 shrink-0"></div>
 
         <!-- 打印中 -->
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
+        <div
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
           :class="{ 'ring-1 ring-blue-300': statusCounts.PRINTING > 0 }">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-blue-600">
             <IconNozzle class="w-3.5 h-3.5" />
@@ -47,7 +49,8 @@
         </div>
 
         <!-- 待机 -->
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
+        <div
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-blue-500">
             <el-icon :size="12"><circle-check /></el-icon>
           </div>
@@ -58,7 +61,8 @@
         </div>
 
         <!-- 已完成 -->
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-green-50 to-green-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
+        <div
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-green-50 to-green-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-green-600">
             <el-icon :size="12"><circle-check-filled /></el-icon>
           </div>
@@ -69,7 +73,8 @@
         </div>
 
         <!-- 已暂停 -->
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-yellow-50 to-yellow-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
+        <div
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-yellow-50 to-yellow-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
           :class="{ 'ring-1 ring-yellow-300': statusCounts.PAUSED > 0 }">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-yellow-600">
             <el-icon :size="12"><video-pause /></el-icon>
@@ -81,7 +86,8 @@
         </div>
 
         <!-- 致命错误 -->
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-red-50 to-red-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
+        <div
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-red-50 to-red-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
           :class="{ 'ring-1 ring-red-300': fatalCount > 0 }">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-red-600">
             <el-icon :size="12"><circle-close /></el-icon>
@@ -93,10 +99,13 @@
         </div>
 
         <!-- 打印中断 -->
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-orange-50 to-orange-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
+        <div
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-orange-50 to-orange-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
           :class="{ 'ring-1 ring-orange-300': statusCounts.PRINT_ERROR > 0 }">
           <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-orange-600">
-            <el-icon :size="12"><warning /></el-icon>
+            <el-icon :size="12">
+              <warning />
+            </el-icon>
           </div>
           <div class="flex items-center gap-1">
             <span class="text-xs text-gray-500 font-medium">{{ labels.printError }}</span>
@@ -124,8 +133,7 @@
         <slot name="actions"></slot>
 
         <!-- 刷新按钮 -->
-        <el-button type="default" class="h-9 px-4 flex items-center gap-1.5"
-          :disabled="isRefreshing"
+        <el-button type="default" class="h-9 px-4 flex items-center gap-1.5" :disabled="isRefreshing"
           @click="handleRefresh">
           <el-icon :class="{ 'animate-spin': isRefreshing }">
             <refresh />
@@ -169,7 +177,7 @@ defineOptions({ name: 'DashboardHeader' })
 // ============================================
 
 const labels = {
-  title: '3D打印农场监控',
+  title: '嘉东三维打印控制系统',
   total: '设备总数',
   printing: '打印中',
   standby: '待机',
@@ -298,20 +306,24 @@ function handleRefresh() {
    动画关键帧
    ============================================ */
 @keyframes pulse-primary {
+
   0%,
   100% {
     box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.5);
   }
+
   50% {
     box-shadow: 0 0 0 4px rgba(219, 234, 254, 0.5);
   }
 }
 
 @keyframes pulse-danger {
+
   0%,
   100% {
     box-shadow: 0 0 0 2px rgba(254, 202, 202, 0.5);
   }
+
   50% {
     box-shadow: 0 0 0 4px rgba(254, 226, 226, 0.5);
   }
@@ -325,6 +337,7 @@ function handleRefresh() {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

@@ -378,7 +378,88 @@
       :file="selectedFile"
       @download="handleFileDownload"
       @closed="closeFileDetail"
+      @print="handlePrintFromDetail"
     />
+
+    <!-- 创建打印任务对话框 -->
+    <el-dialog
+      v-model="createJobDialogVisible"
+      title="创建打印任务"
+      width="480px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="true"
+    >
+      <div class="create-job-form">
+        <!-- 文件信息展示 -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-5">
+          <div class="flex items-start gap-3">
+            <div class="w-12 h-12 rounded border border-gray-200 overflow-hidden bg-white flex-shrink-0">
+              <el-image
+                v-if="jobForm.file?.thumbnailUrl || jobForm.file?.thumbnail_url"
+                :src="jobForm.file?.thumbnailUrl || jobForm.file?.thumbnail_url"
+                fit="cover"
+                class="w-full h-full"
+              >
+                <template #error>
+                  <div class="w-full h-full flex items-center justify-center text-gray-400">
+                    <el-icon><Document /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+              <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
+                <el-icon><Document /></el-icon>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm text-gray-500 mb-1">当前选中文件</div>
+              <div class="text-base font-semibold text-gray-900 truncate" :title="jobForm.file?.originalName || jobForm.file?.original_name">
+                {{ jobForm.file?.originalName || jobForm.file?.original_name }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 表单区域 -->
+        <el-form :model="jobForm" label-width="90px" size="default">
+          <!-- 任务优先级 -->
+          <el-form-item label="任务优先级">
+            <el-radio-group v-model="jobForm.priority">
+              <el-radio :value="0">
+                <span class="text-gray-700">普通</span>
+              </el-radio>
+              <el-radio :value="1">
+                <span class="text-yellow-600">优先</span>
+              </el-radio>
+              <el-radio :value="2">
+                <span class="text-red-600">加急</span>
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <!-- 打印份数 -->
+          <el-form-item label="打印份数">
+            <el-input-number
+              v-model="jobForm.copies"
+              :min="1"
+              :max="99"
+              :step="1"
+              controls-position="right"
+              class="w-full"
+            />
+            <div class="text-xs text-gray-500 mt-1">将为同一文件创建多个排队任务</div>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <el-button @click="createJobDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSubmitCreateJob" :loading="submittingJob">
+            确认提交
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -409,6 +490,7 @@ import {
   downloadFile,
   createFolder
 } from '@/api/printFile'
+import { createPrintJob } from '@/api/job'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
 
@@ -425,6 +507,14 @@ const viewMode = ref('grid')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
+// 打印任务对话框状态
+const createJobDialogVisible = ref(false)
+const submittingJob = ref(false)
+const jobForm = reactive({
+  file: null,
+  priority: 0, // 0-普通, 1-优先, 2-加急
+  copies: 1
+})
 
 // 文件详情抽屉状态
 const detailDrawerVisible = ref(false)
@@ -684,8 +774,56 @@ const handleBatchDelete = async () => {
  * 发送打印
  */
 const handlePrint = (file) => {
-  ElMessage.info(`准备打印: ${file.originalName}`)
-  // 这里可以添加发送到打印队列的逻辑
+  jobForm.file = file
+  jobForm.priority = 0
+  jobForm.copies = 1
+  createJobDialogVisible.value = true
+}
+
+/**
+ * 从文件详情抽屉发送打印
+ */
+const handlePrintFromDetail = (file) => {
+  jobForm.file = file
+  jobForm.priority = 0
+  jobForm.copies = 1
+  createJobDialogVisible.value = true
+}
+
+/**
+ * 提交创建打印任务
+ */
+const handleSubmitCreateJob = async () => {
+  if (!jobForm.file) {
+    ElMessage.error('未选择文件')
+    return
+  }
+
+  submittingJob.value = true
+  try {
+    // 构建请求数据 - 直接使用数字优先级 (0-普通, 1-优先, 2-加急)
+    const jobData = {
+      fileId: jobForm.file.id,
+      priority: jobForm.priority
+    }
+
+    // 根据打印份数创建任务
+    const promises = []
+    for (let i = 0; i < jobForm.copies; i++) {
+      promises.push(createPrintJob(jobData))
+    }
+
+    // 并发执行所有请求
+    await Promise.all(promises)
+
+    ElMessage.success('任务已成功加入队列')
+    createJobDialogVisible.value = false
+  } catch (error) {
+    console.error('创建打印任务失败:', error)
+    ElMessage.error(error.message || '创建打印任务失败')
+  } finally {
+    submittingJob.value = false
+  }
 }
 
 /**

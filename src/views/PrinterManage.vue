@@ -570,7 +570,9 @@ const handleRowClick = (row) => {
   selectedDevice.value = row
   // 为设备添加实时数据（这里可以根据实际情况获取真实数据）
   selectedDeviceRealTimeData.value = {
-    state: row.status || 'IDLE',
+    state: row.currentJobStatus === 'ASSIGNED' ? 'ASSIGNED' : (row.status || 'IDLE'),
+    currentJobId: row.currentJobId,
+    currentJobFileName: row.currentJobFileName,
     toolTemperature: 0,
     bedTemperature: 0,
     printDuration: 0,

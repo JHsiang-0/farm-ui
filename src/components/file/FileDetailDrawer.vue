@@ -41,6 +41,10 @@
 
         <!-- 操作按钮 -->
         <div class="flex flex-col gap-2">
+          <el-button type="success" size="default" @click="handlePrint">
+            <el-icon><Printer /></el-icon>
+            打印
+          </el-button>
           <el-button type="primary" size="default" @click="handleDownload">
             <el-icon><Download /></el-icon>
             下载 G-Code
@@ -153,7 +157,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Download, Document } from '@element-plus/icons-vue'
+import { Download, Document, Printer } from '@element-plus/icons-vue'
 import IconCube from '../icons/IconCube.vue'
 import IconClock from '../icons/IconClock.vue'
 import IconWeight from '../icons/IconWeight.vue'
@@ -175,7 +179,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:modelValue', 'download', 'closed'])
+const emit = defineEmits(['update:modelValue', 'download', 'closed', 'print'])
 
 // Computed
 const visible = computed({
@@ -184,6 +188,32 @@ const visible = computed({
 })
 
 // Methods
+const handlePrint = () => {
+  // 将 snake_case 转换为 camelCase 以适配 FileLibrary 组件
+  const fileData = {
+    id: props.file.id,
+    originalName: props.file.original_name,
+    safeName: props.file.safe_name,
+    fileUrl: props.file.file_url,
+    fileSize: props.file.file_size,
+    userId: props.file.user_id,
+    createdAt: props.file.created_at,
+    thumbnailUrl: props.file.thumbnail_url,
+    estTime: props.file.est_time,
+    materialType: props.file.material_type,
+    filamentWeight: props.file.filament_weight,
+    filamentLength: props.file.filament_length,
+    nozzleSize: props.file.nozzle_size,
+    layerHeight: props.file.layer_height,
+    firstLayerHeight: props.file.first_layer_height,
+    bedTemp: props.file.bed_temp,
+    nozzleTemp: props.file.nozzle_temp,
+    firstLayerNozzleTemp: props.file.first_layer_nozzle_temp,
+    firstLayerBedTemp: props.file.first_layer_bed_temp
+  }
+  emit('print', fileData)
+}
+
 const handleDownload = () => {
   emit('download', props.file)
 }

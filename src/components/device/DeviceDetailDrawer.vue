@@ -3,22 +3,23 @@
         class="printer-detail-drawer" @closed="handleClosed">
         <div v-if="device" class="p-4 flex flex-col gap-5">
             <!-- 实时状态概览卡片 -->
-            <div class="p-4 rounded-lg bg-gray-100 border"
-                :class="[
-                    currentStateClass === 'fault' || currentStateClass === 'sys_error' ? 'bg-red-50 border-red-300' : '',
-                    currentStateClass === 'print_error' || currentStateClass === 'starting' || currentStateClass === 'paused' ? 'bg-yellow-50 border-yellow-300' : '',
-                    currentStateClass === 'printing' ? 'bg-gray-100 border-gray-500' : '',
-                    currentStateClass === 'completed' ? 'bg-green-50 border-green-300' : ''
-                ]">
+            <div class="p-4 rounded-lg bg-gray-100 border" :class="[
+                currentStateClass === 'fault' || currentStateClass === 'sys_error' ? 'bg-red-50 border-red-300' : '',
+                currentStateClass === 'print_error' || currentStateClass === 'starting' || currentStateClass === 'paused' ? 'bg-yellow-50 border-yellow-300' : '',
+                currentStateClass === 'printing' ? 'bg-gray-100 border-gray-500' : '',
+                currentStateClass === 'completed' ? 'bg-green-50 border-green-300' : ''
+            ]">
                 <div class="flex items-center justify-between gap-3">
                     <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="text-sm font-semibold">
                         {{ currentStateConfig.label }}
                     </el-tag>
-                    <span v-if="realTimeData?.progress !== undefined && isPrintingState" class="text-2xl font-bold text-gray-700">
+                    <span v-if="realTimeData?.progress !== undefined && isPrintingState"
+                        class="text-2xl font-bold text-gray-700">
                         {{ realTimeData.progress }}%
                     </span>
                 </div>
-                <div v-if="realTimeData?.systemMessage && isErrorState" class="mt-3 p-3 bg-red-50 border border-red-300 rounded text-xs text-red-700 leading-tight flex items-start gap-2">
+                <div v-if="realTimeData?.systemMessage && isErrorState"
+                    class="mt-3 p-3 bg-red-50 border border-red-300 rounded text-xs text-red-700 leading-tight flex items-start gap-2">
                     <el-icon class="shrink-0 mt-0.5">
                         <Warning />
                     </el-icon>
@@ -54,6 +55,77 @@
                 </div>
             </div>
 
+            <!-- ASSIGNED 状态：待安全确认的任务信息 -->
+            <div v-if="isAssignedState" class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                    <el-icon class="text-yellow-600">
+                        <Lock />
+                    </el-icon>
+                    待打印任务
+                </div>
+                <div class="p-4 bg-yellow-50 border border-yellow-300 rounded-lg flex flex-col gap-3">
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 mt-0.5">
+                            <el-icon :size="24" class="text-yellow-600">
+                                <Lock />
+                            </el-icon>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-yellow-800 text-base">
+                                {{ props.realTimeData?.currentJobFileName ||
+                                    props.device?.currentJobFileName ||
+                                    '任务 #' + (props.realTimeData?.currentJobId || props.device?.currentJobId) }}
+                            </div>
+                            <div class="text-xs text-yellow-700 mt-1">
+                                任务已分配，请确认现场安全后启动打印
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 任务详情 -->
+                    <el-divider class="my-2" />
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-yellow-600">任务编号</span>
+                            <span class="font-medium text-yellow-800">#{{ props.realTimeData?.currentJobId ||
+                                props.device?.currentJobId || '-' }}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-xs text-yellow-600">文件名称</span>
+                            <span class="font-medium text-yellow-800 truncate">{{ props.realTimeData?.currentJobFileName
+                                || props.device?.currentJobFileName || '-' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="mt-2">
+                        <el-button v-if="!isSafetyConfirmed" type="warning" size="large"
+                            class="w-full h-12 text-base font-semibold" @click="handleConfirmSafe" :loading="isLoading">
+                            <el-icon>
+                                <Lock />
+                            </el-icon>
+                            确认现场安全
+                        </el-button>
+                        <div v-else class="flex gap-2">
+                            <el-button type="primary" size="large" class="flex-1 h-12 text-base font-semibold"
+                                @click="handleStartPrint('START_PRINT')" :loading="isLoading">
+                                <el-icon>
+                                    <VideoPlay />
+                                </el-icon>
+                                下发并开始打印
+                            </el-button>
+                            <el-button type="default" size="large" class="flex-1 h-12 text-base font-semibold"
+                                @click="handleStartPrint('UPLOAD_ONLY')" :loading="isLoading">
+                                <el-icon>
+                                    <DocumentAdd />
+                                </el-icon>
+                                仅下发文件
+                            </el-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 打印任务信息 -->
             <div v-if="isPrintingOrRelated" class="flex flex-col gap-3">
                 <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
@@ -65,14 +137,16 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
                         <span class="text-xs text-gray-600">打印时长</span>
-                        <span class="text-base font-medium text-gray-900">{{ formatDuration(realTimeData?.printDuration) }}</span>
+                        <span class="text-base font-medium text-gray-900">{{ formatDuration(realTimeData?.printDuration)
+                            }}</span>
                     </div>
                     <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
                         <span class="flex items-center text-xs text-gray-600">
                             <IconSpool class="w-3.5 h-3.5 mr-1 text-green-600" />
                             已用耗材
                         </span>
-                        <span class="text-base font-medium text-gray-900">{{ formatFilament(realTimeData?.filamentUsed) }}</span>
+                        <span class="text-base font-medium text-gray-900">{{ formatFilament(realTimeData?.filamentUsed)
+                            }}</span>
                     </div>
                     <div v-if="isPrintingState" class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1 col-span-2">
                         <span class="text-xs text-gray-600">打印进度</span>
@@ -118,9 +192,8 @@
                     远程控制 (Moonraker / Mainsail)
                 </div>
                 <div class="flex flex-col gap-3">
-                    <el-button v-if="device.ipAddress" type="primary" size="large"
-                        tag="a" :href="mainsailUrl" target="_blank" rel="noopener noreferrer"
-                        class="w-full justify-center h-11 text-sm">
+                    <el-button v-if="device.ipAddress" type="primary" size="large" tag="a" :href="mainsailUrl"
+                        target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-sm">
                         <el-icon>
                             <Monitor />
                         </el-icon>
@@ -128,29 +201,25 @@
                     </el-button>
 
                     <div class="grid grid-cols-2 gap-2">
-                        <el-button type="warning" :disabled="!canPause" @click="handleAction('pause')"
-                            class="h-10">
+                        <el-button type="warning" :disabled="!canPause" @click="handleAction('pause')" class="h-10">
                             <el-icon>
                                 <VideoPause />
                             </el-icon>
                             暂停打印
                         </el-button>
-                        <el-button type="success" :disabled="!canResume" @click="handleAction('resume')"
-                            class="h-10">
+                        <el-button type="success" :disabled="!canResume" @click="handleAction('resume')" class="h-10">
                             <el-icon>
                                 <VideoPlay />
                             </el-icon>
                             恢复打印
                         </el-button>
-                        <el-button type="danger" :disabled="!canCancel" @click="handleAction('cancel')"
-                            class="h-10">
+                        <el-button type="danger" :disabled="!canCancel" @click="handleAction('cancel')" class="h-10">
                             <el-icon>
                                 <CircleClose />
                             </el-icon>
                             取消任务
                         </el-button>
-                        <el-button type="info" @click="handleAction('reboot')"
-                            class="h-10">
+                        <el-button type="info" @click="handleAction('reboot')" class="h-10">
                             <el-icon>
                                 <Refresh />
                             </el-icon>
@@ -194,7 +263,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
     Delete,
     Printer,
@@ -204,13 +273,18 @@ import {
     VideoPlay,
     CircleClose,
     Refresh,
-    Warning
+    Warning,
+    Lock,
+    DocumentAdd
 } from '@element-plus/icons-vue'
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconBed from '../icons/IconBed.vue'
 import IconSpool from '../icons/IconSpool.vue'
 import { PRINTER_STATE, PRINTER_STATE_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
 import { formatTemp, formatDuration, formatFilament } from '@/utils/formatters'
+import { confirmSafe } from '@/api/printer'
+import { startJob } from '@/api/job'
+import { ElMessage } from 'element-plus'
 
 defineOptions({ name: 'DeviceDetailDrawer' })
 
@@ -255,7 +329,17 @@ const emit = defineEmits([
 /** 可见性双向绑定 */
 const visible = computed({
     get: () => props.modelValue,
-    set: (val) => emit('update:modelValue', val)
+    set: (val) => {
+        emit('update:modelValue', val)
+    }
+})
+
+// 监听抽屉打开事件
+watch(() => props.modelValue, (newVal) => {
+    if (newVal) {
+        // 打开抽屉时根据后端返回的 isSafeToPrint 初始化安全确认状态
+        isSafetyConfirmed.value = !!props.device?.isSafeToPrint
+    }
 })
 
 /** 抽屉标题 */
@@ -330,6 +414,21 @@ const progressStatus = computed(() => {
     return PROGRESS_STATUS_MAP[currentState.value] || ''
 })
 
+/** 是否为已分配状态（等待安全确认） */
+const isAssignedState = computed(() => {
+    const state = props.realTimeData?.state
+    const hasJob = props.realTimeData?.currentJobId || props.device?.currentJobId
+    const isPrinting = state === PRINTER_STATE.PRINTING
+
+    return state === 'ASSIGNED' || (hasJob && !isPrinting && state !== PRINTER_STATE.COMPLETED)
+})
+
+/** 是否已确认安全 */
+const isSafetyConfirmed = ref(false)
+
+/** 是否正在执行操作 */
+const isLoading = ref(false)
+
 /** 是否可以暂停 */
 const canPause = computed(() => {
     return currentState.value === PRINTER_STATE.PRINTING
@@ -363,6 +462,41 @@ function handleRemove() {
 
 function handleClosed() {
     emit('closed')
+}
+
+/** 确认现场安全 */
+async function handleConfirmSafe() {
+    try {
+        isLoading.value = true
+        await confirmSafe(props.device.id)
+        ElMessage.success('现场安全确认成功！')
+        isSafetyConfirmed.value = true
+    } catch {
+        // 错误信息由拦截器处理
+    } finally {
+        isLoading.value = false
+    }
+}
+
+/** 启动打印 */
+async function handleStartPrint(action) {
+    try {
+        isLoading.value = true
+        const jobId = props.realTimeData?.currentJobId || props.device?.currentJobId
+        if (!jobId) {
+            ElMessage.error('找不到任务ID')
+            return
+        }
+        await startJob(jobId, action)
+        const successMsg = action === 'START_PRINT' ? '下发并开始打印成功！' : '仅下发文件成功！'
+        ElMessage.success(successMsg)
+        // 关闭抽屉
+        visible.value = false
+    } catch {
+        // 错误信息由拦截器处理
+    } finally {
+        isLoading.value = false
+    }
 }
 </script>
 
