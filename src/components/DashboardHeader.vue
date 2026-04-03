@@ -1,14 +1,27 @@
 <template>
-  <div v-cloak class="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm gap-4">
+  <!--
+    仪表盘头部组件 - 完全响应式重构版
+    设计原则：
+    1. 移动端（< 768px）：垂直堆叠布局，减少信息量
+    2. 平板（768px - 1279px）：水平布局，适度紧凑
+    3. 桌面（>= 1280px）：完整水平布局，所有功能可见
+  -->
+  <div v-cloak class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center p-fluid-md bg-white rounded-lg shadow-sm gap-fluid-md">
+
     <!-- 左侧：标题和车间信息 -->
     <div class="flex items-center shrink-0">
       <div class="flex items-center gap-3">
-        <el-icon :size="28" class="text-primary">
+        <!-- 图标：移动端缩小 -->
+        <el-icon :size="isMobile ? 24 : 28" class="text-primary">
           <office-building />
         </el-icon>
+
         <div class="flex flex-col gap-0.5">
-          <h2 class="text-lg font-bold text-gray-900 leading-tight">{{ labels.title }}</h2>
-          <span class="inline-flex items-center gap-1 text-xs text-gray-500 font-medium">
+          <!-- 标题：响应式字体 -->
+          <h2 class="text-fluid-lg font-bold text-gray-900 leading-tight">{{ labels.title }}</h2>
+
+          <!-- 车间信息：移动端隐藏详细地址 -->
+          <span class="inline-flex items-center gap-1 text-fluid-xs text-gray-500 font-medium">
             <el-icon :size="12" class="text-red-500">
               <location />
             </el-icon>
@@ -18,103 +31,85 @@
       </div>
     </div>
 
-    <!-- 中间：状态统计条 -->
-    <div class="flex flex-col items-center gap-2 flex-1 max-w-[800px]">
-      <div class="flex items-center gap-1 flex-nowrap justify-center">
-        <!-- 设备总数 -->
-        <div
-          class="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-gray-600">
-            <el-icon :size="12" />
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.total }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ totalCount }}</span>
-          </div>
-        </div>
+    <!-- 中间：状态统计条 - 响应式布局 -->
+    <div class="flex flex-col items-center gap-2 flex-1 lg:max-w-[800px]">
+      <!-- 状态标签行：平板和桌面端使用 flex，移动端使用 wrap -->
+      <div class="flex flex-wrap items-center gap-1 justify-center lg:justify-center">
+
+        <!-- 设备总数 - 始终显示 -->
+        <StatBadge
+          :count="totalCount"
+          :label="labels.total"
+          bgClass="bg-gradient-to-r from-gray-100 to-gray-200"
+          iconBgClass="bg-gray-600"
+        />
 
         <div class="w-px h-5 bg-gray-100 mx-1 shrink-0"></div>
 
-        <!-- 打印中 -->
-        <div
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
-          :class="{ 'ring-1 ring-blue-300': statusCounts.PRINTING > 0 }">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-blue-600">
-            <IconNozzle class="w-3.5 h-3.5" />
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.printing }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ statusCounts.PRINTING || 0 }}</span>
-          </div>
-        </div>
+        <!-- 打印中 - 高亮显示 -->
+        <StatBadge
+          :count="statusCounts.PRINTING"
+          :label="labels.printing"
+          bgClass="bg-gradient-to-r from-blue-50 to-blue-100"
+          iconBgClass="bg-blue-600"
+          iconComponent="IconNozzle"
+          :highlight="statusCounts.PRINTING > 0"
+          highlightRing="ring-blue-300"
+        />
 
         <!-- 待机 -->
-        <div
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-blue-500">
-            <el-icon :size="12"><circle-check /></el-icon>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.standby }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ statusCounts.STANDBY || 0 }}</span>
-          </div>
-        </div>
+        <StatBadge
+          :count="statusCounts.STANDBY"
+          :label="labels.standby"
+          bgClass="bg-gradient-to-r from-blue-50 to-blue-100"
+          iconBgClass="bg-blue-500"
+          iconType="circle-check"
+        />
 
         <!-- 已完成 -->
-        <div
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-green-50 to-green-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-green-600">
-            <el-icon :size="12"><circle-check-filled /></el-icon>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.completed }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ statusCounts.COMPLETED || 0 }}</span>
-          </div>
-        </div>
+        <StatBadge
+          :count="statusCounts.COMPLETED"
+          :label="labels.completed"
+          bgClass="bg-gradient-to-r from-green-50 to-green-100"
+          iconBgClass="bg-green-600"
+          iconType="circle-check-filled"
+        />
 
         <!-- 已暂停 -->
-        <div
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-yellow-50 to-yellow-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
-          :class="{ 'ring-1 ring-yellow-300': statusCounts.PAUSED > 0 }">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-yellow-600">
-            <el-icon :size="12"><video-pause /></el-icon>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.paused }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ statusCounts.PAUSED || 0 }}</span>
-          </div>
-        </div>
+        <StatBadge
+          :count="statusCounts.PAUSED"
+          :label="labels.paused"
+          bgClass="bg-gradient-to-r from-yellow-50 to-yellow-100"
+          iconBgClass="bg-yellow-600"
+          iconType="video-pause"
+          :highlight="statusCounts.PAUSED > 0"
+          highlightRing="ring-yellow-300"
+        />
 
-        <!-- 致命错误 -->
-        <div
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-red-50 to-red-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
-          :class="{ 'ring-1 ring-red-300': fatalCount > 0 }">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-red-600">
-            <el-icon :size="12"><circle-close /></el-icon>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.fatal }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ fatalCount }}</span>
-          </div>
-        </div>
+        <!-- 致命错误 - 严重警告 -->
+        <StatBadge
+          :count="fatalCount"
+          :label="labels.fatal"
+          bgClass="bg-gradient-to-r from-red-50 to-red-100"
+          iconBgClass="bg-red-600"
+          iconType="circle-close"
+          :highlight="fatalCount > 0"
+          highlightRing="ring-red-300"
+        />
 
         <!-- 打印中断 -->
-        <div
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-orange-50 to-orange-100 transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
-          :class="{ 'ring-1 ring-orange-300': statusCounts.PRINT_ERROR > 0 }">
-          <div class="flex items-center justify-center w-5 h-5 rounded-full text-white bg-orange-600">
-            <el-icon :size="12">
-              <warning />
-            </el-icon>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 font-medium">{{ labels.printError }}</span>
-            <span class="text-sm font-bold text-gray-900 text-center min-w-4">{{ statusCounts.PRINT_ERROR || 0 }}</span>
-          </div>
-        </div>
+        <StatBadge
+          :count="statusCounts.PRINT_ERROR"
+          :label="labels.printError"
+          bgClass="bg-gradient-to-r from-orange-50 to-orange-100"
+          iconBgClass="bg-orange-600"
+          iconType="warning"
+          :highlight="statusCounts.PRINT_ERROR > 0"
+          highlightRing="ring-orange-300"
+        />
       </div>
 
-      <!-- 进度概览 -->
+      <!-- 进度概览 - 仅在有设备时显示 -->
       <div class="flex items-center gap-3 w-full max-w-[400px]" v-if="totalCount > 0">
         <div class="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex">
           <div class="h-full bg-blue-600 transition-all" :style="{ width: printingPercent + '%' }"></div>
@@ -122,28 +117,35 @@
           <div class="h-full bg-blue-500 transition-all" :style="{ width: standbyPercent + '%' }"></div>
           <div class="h-full bg-red-600 transition-all" :style="{ width: errorPercent + '%' }"></div>
         </div>
-        <span class="text-xs text-gray-500 font-medium whitespace-nowrap">{{ printingCount }} 台正在打印</span>
+        <span class="text-fluid-xs text-gray-500 font-medium whitespace-nowrap">{{ printingCount }} 台正在打印</span>
       </div>
     </div>
 
-    <!-- 右侧：操作按钮 -->
-    <div class="flex flex-col items-end gap-2 shrink-0">
-      <div class="flex items-center gap-2">
-        <!-- 外部传入的操作按钮（解锁/保存布局） -->
-        <slot name="actions"></slot>
+    <!-- 右侧：操作按钮 - 响应式布局 -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:gap-3 shrink-0">
+      <!-- 外部传入的操作按钮（解锁/保存布局） -->
+      <slot name="actions"></slot>
 
-        <!-- 刷新按钮 -->
-        <el-button type="default" class="h-9 px-4 flex items-center gap-1.5" :disabled="isRefreshing"
-          @click="handleRefresh">
-          <el-icon :class="{ 'animate-spin': isRefreshing }">
-            <refresh />
-          </el-icon>
-          <span>{{ isRefreshing ? labels.refreshing : labels.refresh }}</span>
-        </el-button>
-      </div>
+      <!-- 刷新按钮 - 移动端全宽 -->
+      <el-button
+        type="default"
+        class="h-9 px-4 flex items-center justify-center gap-1.5"
+        :class="{ 'w-full sm:w-auto': isMobile }"
+        :disabled="isRefreshing"
+        @click="handleRefresh"
+      >
+        <el-icon :class="{ 'animate-spin': isRefreshing }">
+          <refresh />
+        </el-icon>
+        <span class="hidden sm:inline">{{ isRefreshing ? labels.refreshing : labels.refresh }}</span>
+        <span class="sm:hidden">{{ isRefreshing ? '更新中...' : '刷新' }}</span>
+      </el-button>
 
-      <!-- 最后更新时间 -->
-      <span class="inline-flex items-center gap-1 text-xs text-gray-400 font-normal" v-if="lastUpdateTime">
+      <!-- 最后更新时间 - 移动端隐藏，平板显示 -->
+      <span
+        class="hidden sm:flex items-center justify-center gap-1 text-fluid-xs text-gray-400 font-normal"
+        v-if="lastUpdateTime"
+      >
         <el-icon :size="12">
           <clock />
         </el-icon>
@@ -154,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   OfficeBuilding,
   Location,
@@ -169,8 +171,33 @@ import {
 } from '@element-plus/icons-vue'
 import IconNozzle from './icons/IconNozzle.vue'
 import { PRINTER_STATE } from '@/utils/constants'
+import StatBadge from './StatBadge.vue'
 
 defineOptions({ name: 'DashboardHeader' })
+
+// ============================================
+// 响应式断点检测
+// ============================================
+
+const windowWidth = ref(window.innerWidth)
+const isMobile = computed(() => windowWidth.value < 768)
+const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1280)
+
+// 监听窗口大小变化
+let resizeHandler = null
+
+onMounted(() => {
+  resizeHandler = () => {
+    windowWidth.value = window.innerWidth
+  }
+  window.addEventListener('resize', resizeHandler)
+})
+
+onUnmounted(() => {
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+  }
+})
 
 // ============================================
 // Data - 中文标签配置
@@ -306,24 +333,18 @@ function handleRefresh() {
    动画关键帧
    ============================================ */
 @keyframes pulse-primary {
-
-  0%,
-  100% {
+  0%, 100% {
     box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.5);
   }
-
   50% {
     box-shadow: 0 0 0 4px rgba(219, 234, 254, 0.5);
   }
 }
 
 @keyframes pulse-danger {
-
-  0%,
-  100% {
+  0%, 100% {
     box-shadow: 0 0 0 2px rgba(254, 202, 202, 0.5);
   }
-
   50% {
     box-shadow: 0 0 0 4px rgba(254, 226, 226, 0.5);
   }
@@ -337,7 +358,6 @@ function handleRefresh() {
   from {
     transform: rotate(0deg);
   }
-
   to {
     transform: rotate(360deg);
   }
@@ -346,7 +366,25 @@ function handleRefresh() {
 /* ============================================
    响应式适配
    ============================================ */
-@media (max-width: 1400px) {
+
+/* 超大屏幕优化（2.5K+）：限制最大宽度，保持内容居中 */
+@media (min-width: 1920px) {
+  .dashboard-header {
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* 桌面端（1280px - 1919px）：标准布局 */
+@media (max-width: 1919px) and (min-width: 1280px) {
+  .dashboard-header {
+    flex-wrap: nowrap;
+  }
+}
+
+/* 平板端（768px - 1279px）：适度紧凑 */
+@media (max-width: 1279px) and (min-width: 768px) {
   .dashboard-header {
     flex-wrap: wrap;
   }
@@ -359,13 +397,16 @@ function handleRefresh() {
 
   .stats-bar {
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 
-@media (max-width: 768px) {
+/* 移动端（< 768px）：垂直堆叠 */
+@media (max-width: 767px) {
   .dashboard-header {
     flex-direction: column;
     align-items: stretch;
+    padding: 0.75rem;
   }
 
   .header-left,
@@ -379,8 +420,10 @@ function handleRefresh() {
 
   .stats-bar {
     justify-content: center;
+    gap: 0.5rem;
   }
 
+  /* 移动端：隐藏部分统计标签，仅保留数字 */
   .stat-label {
     display: none;
   }
@@ -388,6 +431,18 @@ function handleRefresh() {
   .action-group {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* 小屏手机（< 375px）：极致紧凑 */
+@media (max-width: 374px) {
+  .dashboard-header {
+    padding: 0.5rem;
+  }
+
+  /* 只显示最关键的状态 */
+  .stat-item:not(.stat-critical) {
+    display: none;
   }
 }
 </style>

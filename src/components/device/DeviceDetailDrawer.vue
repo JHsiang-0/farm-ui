@@ -1,25 +1,42 @@
 <template>
-    <el-drawer v-model="visible" :title="drawerTitle" size="480px" :destroy-on-close="true"
-        class="printer-detail-drawer" @closed="handleClosed">
-        <div v-if="device" class="p-4 flex flex-col gap-5">
+    <!--
+      设备详情抽屉 - 响应式优化版本
+      - 移动端：全屏宽度，优化触摸体验
+      - 平板：70% 宽度
+      - 桌面：固定最大宽度，防止大屏过度拉伸
+    -->
+    <el-drawer
+        v-model="visible"
+        :title="drawerTitle"
+        :size="drawerSize"
+        :destroy-on-close="true"
+        class="printer-detail-drawer"
+        :class="{ 'is-mobile': isMobile, 'is-tablet': isTablet }"
+        @closed="handleClosed">
+
+        <!-- 内容区域 - 使用流式内边距 -->
+        <div v-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
             <!-- 实时状态概览卡片 -->
-            <div class="p-4 rounded-lg bg-gray-100 border" :class="[
+            <div class="p-fluid-md rounded-lg bg-gray-100 border" :class="[
                 currentStateClass === 'fault' || currentStateClass === 'sys_error' ? 'bg-red-50 border-red-300' : '',
                 currentStateClass === 'print_error' || currentStateClass === 'starting' || currentStateClass === 'paused' ? 'bg-yellow-50 border-yellow-300' : '',
                 currentStateClass === 'printing' ? 'bg-gray-100 border-gray-500' : '',
                 currentStateClass === 'completed' ? 'bg-green-50 border-green-300' : ''
             ]">
+                <!-- 状态标签和进度 -->
                 <div class="flex items-center justify-between gap-3">
-                    <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="text-sm font-semibold">
+                    <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="text-fluid-sm font-semibold">
                         {{ currentStateConfig.label }}
                     </el-tag>
                     <span v-if="realTimeData?.progress !== undefined && isPrintingState"
-                        class="text-2xl font-bold text-gray-700">
+                        class="text-fluid-2xl font-bold text-gray-700">
                         {{ realTimeData.progress }}%
                     </span>
                 </div>
+
+                <!-- 系统错误信息 -->
                 <div v-if="realTimeData?.systemMessage && isErrorState"
-                    class="mt-3 p-3 bg-red-50 border border-red-300 rounded text-xs text-red-700 leading-tight flex items-start gap-2">
+                    class="mt-3 p-fluid-sm bg-red-50 border border-red-300 rounded text-fluid-xs text-red-700 leading-tight flex items-start gap-2">
                     <el-icon class="shrink-0 mt-0.5">
                         <Warning />
                     </el-icon>
@@ -28,27 +45,30 @@
             </div>
 
             <!-- 温度监控 -->
-            <div class="flex flex-col gap-3">
-                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <div class="flex flex-col gap-fluid-sm">
+                <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
                     <IconNozzle class="w-4 h-4 text-red-600" />
                     温度监控
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
-                        <span class="flex items-center text-xs text-gray-600">
+                <!-- 温度卡片网格 - 响应式：移动端堆叠，桌面端并排 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-fluid-sm">
+                    <!-- 喷头温度 -->
+                    <div class="p-fluid-sm bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="flex items-center text-fluid-xs text-gray-600">
                             <IconNozzle class="w-3.5 h-3.5 mr-1 text-red-600" />
                             喷头温度
                         </span>
-                        <span class="text-2xl font-bold text-gray-900" :class="{ 'text-red-600': nozzleTemp > 50 }">
+                        <span class="text-fluid-2xl font-bold text-gray-900" :class="{ 'text-red-600': nozzleTemp > 50 }">
                             {{ formatTemp(nozzleTemp) }}
                         </span>
                     </div>
-                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
-                        <span class="flex items-center text-xs text-gray-600">
+                    <!-- 热床温度 -->
+                    <div class="p-fluid-sm bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="flex items-center text-fluid-xs text-gray-600">
                             <IconBed class="w-3.5 h-3.5 mr-1 text-yellow-600" />
                             热床温度
                         </span>
-                        <span class="text-2xl font-bold text-gray-900" :class="{ 'text-yellow-600': bedTemp > 40 }">
+                        <span class="text-fluid-2xl font-bold text-gray-900" :class="{ 'text-yellow-600': bedTemp > 40 }">
                             {{ formatTemp(bedTemp) }}
                         </span>
                     </div>
@@ -56,14 +76,15 @@
             </div>
 
             <!-- ASSIGNED 状态：待安全确认的任务信息 -->
-            <div v-if="isAssignedState" class="flex flex-col gap-3">
-                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <div v-if="isAssignedState" class="flex flex-col gap-fluid-sm">
+                <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
                     <el-icon class="text-yellow-600">
                         <Lock />
                     </el-icon>
                     待打印任务
                 </div>
-                <div class="p-4 bg-yellow-50 border border-yellow-300 rounded-lg flex flex-col gap-3">
+                <div class="p-fluid-md bg-yellow-50 border border-yellow-300 rounded-lg flex flex-col gap-fluid-sm">
+                    <!-- 任务标题和图标 -->
                     <div class="flex items-start gap-3">
                         <div class="shrink-0 mt-0.5">
                             <el-icon :size="24" class="text-yellow-600">
@@ -71,27 +92,27 @@
                             </el-icon>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="font-semibold text-yellow-800 text-base">
+                            <div class="font-semibold text-yellow-800 text-fluid-lg">
                                 {{ props.realTimeData?.currentJobFileName ||
                                     props.device?.currentJobFileName ||
                                     '任务 #' + (props.realTimeData?.currentJobId || props.device?.currentJobId) }}
                             </div>
-                            <div class="text-xs text-yellow-700 mt-1">
+                            <div class="text-fluid-xs text-yellow-700 mt-1">
                                 任务已分配，请确认现场安全后启动打印
                             </div>
                         </div>
                     </div>
 
-                    <!-- 任务详情 -->
+                    <!-- 任务详情网格 -->
                     <el-divider class="my-2" />
-                    <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="grid grid-cols-2 gap-2 text-fluid-sm">
                         <div class="flex flex-col">
-                            <span class="text-xs text-yellow-600">任务编号</span>
+                            <span class="text-fluid-xs text-yellow-600">任务编号</span>
                             <span class="font-medium text-yellow-800">#{{ props.realTimeData?.currentJobId ||
                                 props.device?.currentJobId || '-' }}</span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-xs text-yellow-600">文件名称</span>
+                            <span class="text-fluid-xs text-yellow-600">文件名称</span>
                             <span class="font-medium text-yellow-800 truncate">{{ props.realTimeData?.currentJobFileName
                                 || props.device?.currentJobFileName || '-' }}</span>
                         </div>
@@ -100,21 +121,21 @@
                     <!-- 操作按钮 -->
                     <div class="mt-2">
                         <el-button v-if="!isSafetyConfirmed" type="warning" size="large"
-                            class="w-full h-12 text-base font-semibold" @click="handleConfirmSafe" :loading="isLoading">
+                            class="w-full h-12 text-fluid-base font-semibold" @click="handleConfirmSafe" :loading="isLoading">
                             <el-icon>
                                 <Lock />
                             </el-icon>
                             确认现场安全
                         </el-button>
                         <div v-else class="flex gap-2">
-                            <el-button type="primary" size="large" class="flex-1 h-12 text-base font-semibold"
+                            <el-button type="primary" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
                                 @click="handleStartPrint('START_PRINT')" :loading="isLoading">
                                 <el-icon>
                                     <VideoPlay />
                                 </el-icon>
                                 下发并开始打印
                             </el-button>
-                            <el-button type="default" size="large" class="flex-1 h-12 text-base font-semibold"
+                            <el-button type="default" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
                                 @click="handleStartPrint('UPLOAD_ONLY')" :loading="isLoading">
                                 <el-icon>
                                     <DocumentAdd />
@@ -127,29 +148,29 @@
             </div>
 
             <!-- 打印任务信息 -->
-            <div v-if="isPrintingOrRelated" class="flex flex-col gap-3">
-                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <div v-if="isPrintingOrRelated" class="flex flex-col gap-fluid-sm">
+                <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
                     <el-icon class="text-gray-600">
                         <Printer />
                     </el-icon>
                     打印任务
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
-                        <span class="text-xs text-gray-600">打印时长</span>
-                        <span class="text-base font-medium text-gray-900">{{ formatDuration(realTimeData?.printDuration)
+                <div class="grid grid-cols-2 gap-fluid-sm">
+                    <div class="p-fluid-sm bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="text-fluid-xs text-gray-600">打印时长</span>
+                        <span class="text-fluid-base font-medium text-gray-900">{{ formatDuration(realTimeData?.printDuration)
                             }}</span>
                     </div>
-                    <div class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1">
-                        <span class="flex items-center text-xs text-gray-600">
+                    <div class="p-fluid-sm bg-gray-100 rounded-lg flex flex-col gap-1">
+                        <span class="flex items-center text-fluid-xs text-gray-600">
                             <IconSpool class="w-3.5 h-3.5 mr-1 text-green-600" />
                             已用耗材
                         </span>
-                        <span class="text-base font-medium text-gray-900">{{ formatFilament(realTimeData?.filamentUsed)
+                        <span class="text-fluid-base font-medium text-gray-900">{{ formatFilament(realTimeData?.filamentUsed)
                             }}</span>
                     </div>
-                    <div v-if="isPrintingState" class="p-3 bg-gray-100 rounded-lg flex flex-col gap-1 col-span-2">
-                        <span class="text-xs text-gray-600">打印进度</span>
+                    <div v-if="isPrintingState" class="p-fluid-sm bg-gray-100 rounded-lg flex flex-col gap-1 col-span-2">
+                        <span class="text-fluid-xs text-gray-600">打印进度</span>
                         <el-progress :percentage="realTimeData?.progress || 0" :status="progressStatus"
                             :stroke-width="10" class="mt-2" />
                     </div>
@@ -157,21 +178,21 @@
             </div>
 
             <!-- 设备信息 -->
-            <div class="flex flex-col gap-3">
-                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <div class="flex flex-col gap-fluid-sm">
+                <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
                     <el-icon class="text-gray-600">
                         <InfoFilled />
                     </el-icon>
                     设备信息
                 </div>
-                <el-descriptions :column="2" size="small" border>
-                    <el-descriptions-item label="机器编号" :span="2">
+                <el-descriptions :column="descriptionColumn" size="small" border>
+                    <el-descriptions-item label="机器编号" :span="descriptionColumn">
                         {{ device.machineNumber || '-' }}
                     </el-descriptions-item>
-                    <el-descriptions-item label="设备名称" :span="2">
+                    <el-descriptions-item label="设备名称" :span="descriptionColumn">
                         {{ device.name || '-' }}
                     </el-descriptions-item>
-                    <el-descriptions-item label="IP 地址" :span="2">
+                    <el-descriptions-item label="IP 地址" :span="descriptionColumn">
                         {{ device.ipAddress || '-' }}
                     </el-descriptions-item>
                     <el-descriptions-item label="固件类型">
@@ -184,46 +205,47 @@
             </div>
 
             <!-- Moonraker / Mainsail 快捷操作 -->
-            <div class="flex flex-col gap-3">
-                <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <div class="flex flex-col gap-fluid-sm">
+                <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
                     <el-icon class="text-gray-600">
                         <Monitor />
                     </el-icon>
                     远程控制 (Moonraker / Mainsail)
                 </div>
-                <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-fluid-sm">
                     <el-button v-if="device.ipAddress" type="primary" size="large" tag="a" :href="mainsailUrl"
-                        target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-sm">
+                        target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-fluid-sm">
                         <el-icon>
                             <Monitor />
                         </el-icon>
                         打开 Mainsail 界面
                     </el-button>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <!-- 操作按钮网格 - 移动端 2列，桌面 4列 -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
                         <el-button type="warning" :disabled="!canPause" @click="handleAction('pause')" class="h-10">
                             <el-icon>
                                 <VideoPause />
                             </el-icon>
-                            暂停打印
+                            暂停
                         </el-button>
                         <el-button type="success" :disabled="!canResume" @click="handleAction('resume')" class="h-10">
                             <el-icon>
                                 <VideoPlay />
                             </el-icon>
-                            恢复打印
+                            恢复
                         </el-button>
                         <el-button type="danger" :disabled="!canCancel" @click="handleAction('cancel')" class="h-10">
                             <el-icon>
                                 <CircleClose />
                             </el-icon>
-                            取消任务
+                            取消
                         </el-button>
                         <el-button type="info" @click="handleAction('reboot')" class="h-10">
                             <el-icon>
                                 <Refresh />
                             </el-icon>
-                            重启主机
+                            重启
                         </el-button>
                     </div>
 
@@ -231,7 +253,7 @@
                         <el-divider>
                             <el-tag type="danger" effect="dark">紧急操作</el-tag>
                         </el-divider>
-                        <el-button type="danger" size="large" class="w-full h-12 text-base font-bold"
+                        <el-button type="danger" size="large" class="w-full h-12 text-fluid-base font-bold"
                             @click="handleEmergencyStop">
                             <el-icon>
                                 <Warning />
@@ -245,7 +267,7 @@
 
         <!-- 抽屉底部操作区 -->
         <template #footer>
-            <div class="flex justify-end p-3 border-t border-gray-200">
+            <div class="flex justify-end p-fluid-md border-t border-gray-200">
                 <el-popconfirm title="确定要将此设备从该物理位置下架吗？" confirm-button-text="确认下架" cancel-button-text="取消"
                     confirm-button-type="danger" @confirm="handleRemove">
                     <template #reference>
@@ -263,7 +285,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import {
     Delete,
     Printer,
@@ -287,6 +309,45 @@ import { startJob } from '@/api/job'
 import { ElMessage } from 'element-plus'
 
 defineOptions({ name: 'DeviceDetailDrawer' })
+
+// ============================================
+// 响应式断点检测
+// ============================================
+
+const windowWidth = ref(window.innerWidth)
+const isMobile = computed(() => windowWidth.value < 768)
+const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1280)
+const isDesktop = computed(() => windowWidth.value >= 1280)
+const isLargeScreen = computed(() => windowWidth.value >= 1920)
+
+// 响应式抽屉尺寸 - 使用响应式断点
+const drawerSize = computed(() => {
+    if (isMobile.value) return '100%'      // 移动端：全屏
+    if (isTablet.value) return '70%'       // 平板：70% 宽度
+    if (isLargeScreen.value) return '480px' // 大屏：固定 480px (30rem)
+    return '416px'                          // 桌面：固定 416px (26rem)
+})
+
+// 响应式描述列表列数
+const descriptionColumn = computed(() => {
+    return isMobile.value ? 1 : 2
+})
+
+// 监听窗口大小变化
+let resizeHandler = null
+
+onMounted(() => {
+    resizeHandler = () => {
+        windowWidth.value = window.innerWidth
+    }
+    window.addEventListener('resize', resizeHandler)
+})
+
+onUnmounted(() => {
+    if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler)
+    }
+})
 
 // ============================================
 // Props
@@ -501,15 +562,73 @@ async function handleStartPrint(action) {
 </script>
 
 <style scoped>
-/* 抽屉整体样式 */
+/* ============================================
+   抽屉整体样式 - 响应式优化
+   ============================================ */
 :deep(.el-drawer__body) {
     padding: 0;
     overflow-y: auto;
+    /* 滚动条样式优化 */
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+}
+
+:deep(.el-drawer__body::-webkit-scrollbar) {
+    width: 6px;
+}
+
+:deep(.el-drawer__body::-webkit-scrollbar-thumb) {
+    background: #d1d5db;
+    border-radius: 3px;
 }
 
 :deep(.el-drawer__header) {
     margin-bottom: 0;
-    padding: 16px;
+    padding: 1rem;
     border-bottom: 1px solid #e5e7eb;
+}
+
+:deep(.el-drawer__title) {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* ============================================
+   移动端适配
+   ============================================ */
+@media (max-width: 767px) {
+    :deep(.el-drawer) {
+        width: 100% !important;
+    }
+
+    :deep(.el-drawer__header) {
+        padding: 0.75rem 1rem;
+    }
+
+    :deep(.el-drawer__title) {
+        font-size: 0.9375rem;
+    }
+
+    :deep(.el-drawer__footer) {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* ============================================
+   平板适配
+   ============================================ */
+@media (min-width: 768px) and (max-width: 1279px) {
+    :deep(.el-drawer) {
+        width: 70% !important;
+    }
+}
+
+/* ============================================
+   大屏适配（2.5K/4K）
+   ============================================ */
+@media (min-width: 1920px) {
+    :deep(.el-drawer) {
+        max-width: 30rem;
+    }
 }
 </style>

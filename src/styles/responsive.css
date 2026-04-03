@@ -1,0 +1,366 @@
+/* ============================================
+   3D打印农场管理系统 - 全局响应式样式
+   文件名: responsive.css
+   作用: 提供全局响应式工具类和断点优化
+   ============================================ */
+
+/* ============================================
+   CSS 变量定义
+   ============================================ */
+:root {
+  /* 断点参考（与 Tailwind 配置保持一致） */
+  --bp-xs: 375px;
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1536px;
+  --bp-3xl: 1920px;
+  --bp-4xl: 2560px;
+
+  /* 字体大小变量（使用 rem 单位） */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+
+  /* 间距变量 */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* 容器最大宽度 */
+  --container-max: 1440px;
+  --container-content: 1200px;
+  --container-narrow: 960px;
+}
+
+/* ============================================
+   基础响应式重置
+   ============================================ */
+
+/* 防止移动设备上的字体缩放 */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 平滑滚动 */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ============================================
+   容器工具类
+   ============================================ */
+
+/* 响应式容器 - 自动居中，限制最大宽度 */
+.container-responsive {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* 内容容器 - 较窄，适合长文本 */
+.container-content {
+  width: 100%;
+  max-width: var(--container-content);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* 窄容器 - 适合表单和对话框 */
+.container-narrow {
+  width: 100%;
+  max-width: var(--container-narrow);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* 全宽容器 - 无边距 */
+.container-full {
+  width: 100%;
+  max-width: 100%;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* ============================================
+   响应式容器断点调整
+   ============================================ */
+
+/* 小屏手机（xs） */
+@media (max-width: 374px) {
+  .container-responsive,
+  .container-content,
+  .container-narrow,
+  .container-full {
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+  }
+}
+
+/* 平板（md）及以上 */
+@media (min-width: 768px) {
+  .container-responsive,
+  .container-content,
+  .container-narrow {
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+}
+
+/* 大屏桌面（xl）及以上 */
+@media (min-width: 1280px) {
+  .container-responsive,
+  .container-content {
+    padding-left: var(--spacing-xl);
+    padding-right: var(--spacing-xl);
+  }
+}
+
+/* 2.5K/4K 屏幕优化 */
+@media (min-width: 1920px) {
+  .container-responsive {
+    max-width: 1600px;
+  }
+}
+
+/* ============================================
+   流式排版工具类
+   ============================================ */
+
+/* 使用 CSS clamp() 实现流式字体大小 */
+.text-fluid-xs {
+  font-size: clamp(0.625rem, 0.8vw, 0.75rem);
+  line-height: 1.25;
+}
+
+.text-fluid-sm {
+  font-size: clamp(0.75rem, 0.9vw, 0.875rem);
+  line-height: 1.4;
+}
+
+.text-fluid-base {
+  font-size: clamp(0.875rem, 1vw, 1rem);
+  line-height: 1.5;
+}
+
+.text-fluid-lg {
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
+  line-height: 1.5;
+}
+
+.text-fluid-xl {
+  font-size: clamp(1.125rem, 1.5vw, 1.25rem);
+  line-height: 1.4;
+}
+
+.text-fluid-2xl {
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  line-height: 1.3;
+}
+
+.text-fluid-3xl {
+  font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+  line-height: 1.2;
+}
+
+/* ============================================
+   响应式间距工具类
+   ============================================ */
+
+.gap-fluid-xs {
+  gap: clamp(0.125rem, 0.25vw, 0.25rem);
+}
+
+.gap-fluid-sm {
+  gap: clamp(0.25rem, 0.5vw, 0.5rem);
+}
+
+.gap-fluid-md {
+  gap: clamp(0.5rem, 1vw, 1rem);
+}
+
+.gap-fluid-lg {
+  gap: clamp(1rem, 1.5vw, 1.5rem);
+}
+
+.gap-fluid-xl {
+  gap: clamp(1.5rem, 2vw, 2rem);
+}
+
+/* 内边距 */
+.p-fluid-xs {
+  padding: clamp(0.125rem, 0.25vw, 0.25rem);
+}
+
+.p-fluid-sm {
+  padding: clamp(0.25rem, 0.5vw, 0.5rem);
+}
+
+.p-fluid-md {
+  padding: clamp(0.5rem, 1vw, 1rem);
+}
+
+.p-fluid-lg {
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+}
+
+.p-fluid-xl {
+  padding: clamp(1.5rem, 2vw, 2rem);
+}
+
+/* ============================================
+   响应式显示/隐藏工具类
+   ============================================ */
+
+/* 小屏手机（xs） */
+@media (max-width: 374px) {
+  .hide-xs { display: none !important; }
+  .show-xs { display: block !important; }
+}
+
+/* 手机（sm 及以下） */
+@media (max-width: 639px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
+}
+
+/* 平板（md 及以下） */
+@media (max-width: 767px) {
+  .hide-tablet { display: none !important; }
+  .show-tablet { display: block !important; }
+}
+
+/* 桌面（lg 及以上） */
+@media (min-width: 1024px) {
+  .hide-desktop { display: none !important; }
+  .show-desktop { display: block !important; }
+}
+
+/* 大屏桌面（xl 及以上） */
+@media (min-width: 1280px) {
+  .hide-large { display: none !important; }
+  .show-large { display: block !important; }
+}
+
+/* 超大屏（2.5K/4K） */
+@media (min-width: 1920px) {
+  .hide-ultra { display: none !important; }
+  .show-ultra { display: block !important; }
+}
+
+/* ============================================
+   滚动条样式优化
+   ============================================ */
+
+/* 全局滚动条 - Webkit 浏览器 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox 滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+/* ============================================
+   打印样式
+   ============================================ */
+
+@media print {
+  /* 隐藏不必要的元素 */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* 确保内容可见 */
+  .print-only {
+    display: block !important;
+  }
+
+  /* 页面设置 */
+  @page {
+    margin: 1cm;
+    size: auto;
+  }
+
+  /* 确保颜色正确打印 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+
+/* ============================================
+   可访问性增强
+   ============================================ */
+
+/* 焦点样式 */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .border,
+  [class*="border-"] {
+    border-width: 2px !important;
+  }
+}

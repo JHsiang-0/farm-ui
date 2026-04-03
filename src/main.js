@@ -7,6 +7,9 @@ import 'element-plus/dist/index.css'
 // 引入自定义主题样式（必须在 Element Plus 之后引入以覆盖默认样式）
 import '@/styles/index.css'
 
+// 引入全局响应式样式（包含流式排版、响应式容器、断点工具类等）
+import '@/styles/responsive.css'
+
 import App from './App.vue'
 import router from './router'
 
