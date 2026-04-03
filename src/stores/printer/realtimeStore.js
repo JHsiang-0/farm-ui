@@ -40,8 +40,18 @@ export const useRealtimeStore = defineStore('realtime', () => {
   // WebSocket 配置
   // ============================================
 
+  // 获取 WebSocket 地址：优先使用环境变量，否则使用当前页面 host
+  const getWsUrl = () => {
+    const envWsUrl = import.meta.env.VITE_WS_URL
+    if (envWsUrl) return envWsUrl
+    // 降级：使用当前页面协议和 host，兼容局域网访问
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    return `${protocol}//${host}/ws/farm-status`
+  }
+
   const WS_CONFIG = {
-    url: 'ws://localhost:8080/ws/farm-status',
+    url: getWsUrl(),
     reconnectDelay: 3000,
     maxReconnectDelay: 60000,
     reconnectBackoffMultiplier: 2,
@@ -159,7 +169,11 @@ export const useRealtimeStore = defineStore('realtime', () => {
         printDuration: data.printDuration ?? 0,
         filamentUsed: data.filamentUsed ?? 0,
         systemMessage: data.systemMessage || '',
-        lastUpdate: timestamp
+        lastUpdate: timestamp,
+        // 任务相关字段
+        currentJobId: data.currentJobId,
+        currentJobFileName: data.currentJobFileName,
+        currentJobStatus: data.currentJobStatus
       })
     })
 
