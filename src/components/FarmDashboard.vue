@@ -424,12 +424,27 @@ async function saveLayout() {
 // ============================================
 
 /**
- * 处理刷新按钮点击
+ * 处理刷新按钮点击 - 刷新打印机 WebSocket 状态
+ * 1. 断开现有 WebSocket 连接
+ * 2. 重新获取设备数据
+ * 3. 重新建立 WebSocket 连接
  */
 async function handleRefresh() {
-  await store.fetchDeviceData()
-  updateLastUpdateTime()
-  ElMessage.success('状态已刷新')
+  try {
+    // 先断开现有 WebSocket 连接
+    store.disconnectWs()
+    ElMessage.info('正在重新连接打印机...')
+
+    // 重新获取设备数据并建立 WebSocket 连接
+    await store.fetchDeviceData()
+    store.connectWs()
+
+    updateLastUpdateTime()
+    ElMessage.success('打印机状态已刷新')
+  } catch (error) {
+    console.error('刷新打印机状态失败:', error)
+    ElMessage.error('刷新打印机状态失败，请重试')
+  }
 }
 
 // ============================================
