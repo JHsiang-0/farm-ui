@@ -5,35 +5,35 @@
       <div class="brand-panel">
         <div class="brand-content">
           <div class="brand-icon">
-            <el-icon :size="64" color="#ffffff"><Monitor /></el-icon>
+            <Monitor :size="64" stroke-color="#ffffff" />
           </div>
           <h1 class="brand-title">3D 打印农场</h1>
           <p class="brand-subtitle">智能总控管理系统</p>
-          
+
           <div class="brand-divider"></div>
-          
+
           <div class="feature-list">
             <div class="feature-item">
               <div class="feature-icon">
-                <el-icon><View /></el-icon>
+                <span><View /></span>
               </div>
               <span class="feature-text">实时监控设备状态</span>
             </div>
             <div class="feature-item">
               <div class="feature-icon">
-                <el-icon><DataAnalysis /></el-icon>
+                <span><DataAnalysis /></span>
               </div>
               <span class="feature-text">智能数据分析</span>
             </div>
             <div class="feature-item">
               <div class="feature-icon">
-                <el-icon><Connection /></el-icon>
+                <span><Connection /></span>
               </div>
               <span class="feature-text">远程批量控制</span>
             </div>
           </div>
         </div>
-        
+
         <!-- 装饰圆圈 -->
         <div class="decoration-circle circle-1"></div>
         <div class="decoration-circle circle-2"></div>
@@ -47,57 +47,54 @@
             <h2 class="form-title">欢迎回来</h2>
             <p class="form-desc">请登录您的账户以继续操作</p>
           </div>
-          
-          <el-form 
-            :model="loginForm" 
-            :rules="rules" 
-            ref="loginFormRef" 
+
+          <t-form :data="loginForm"
+            :rules="rules"
+            ref="loginFormRef"
             size="large"
             class="login-form"
           >
-            <el-form-item prop="username">
-              <el-input 
-                v-model="loginForm.username" 
+            <t-form-item name="username">
+              <t-input
+                v-model="loginForm.username"
                 placeholder="请输入用户名"
-                :prefix-icon="User"
+                :prefix-icon="renderIcon(User)"
                 clearable
               />
-            </el-form-item>
-            
-            <el-form-item prop="password">
-              <el-input 
-                v-model="loginForm.password" 
-                type="password" 
-                placeholder="请输入密码" 
-                show-password
-                :prefix-icon="Lock"
+            </t-form-item>
+
+            <t-form-item name="password">
+              <t-input
+                v-model="loginForm.password"
+                type="password"
+                placeholder="请输入密码"
+                :prefix-icon="renderIcon(Lock)"
                 @keyup.enter="handleLogin"
               />
-            </el-form-item>
-            
+            </t-form-item>
+
             <div class="form-options">
-              <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-              <el-link type="primary" :underline="false" class="forgot-link">
+              <t-checkbox v-model="rememberMe">记住我</t-checkbox>
+              <t-link theme="primary" :underline="false" class="forgot-link">
                 忘记密码？
-              </el-link>
+              </t-link>
             </div>
-            
-            <el-button 
-              type="primary" 
-              size="large" 
-              class="submit-btn" 
-              :loading="loading" 
+
+            <t-button theme="primary"
+              size="large"
+              class="submit-btn"
+              :loading="loading"
               @click="handleLogin"
             >
               登 录
-            </el-button>
-          </el-form>
-          
+            </t-button>
+          </t-form>
+
           <div class="form-switch">
             <span class="switch-text">还没有账户？</span>
-            <el-button link type="primary" class="switch-btn" @click="isLogin = false">
+            <t-button variant="text" theme="primary" class="switch-btn" @click="isLogin = false">
               立即注册
-            </el-button>
+            </t-button>
           </div>
         </div>
 
@@ -107,94 +104,90 @@
             <h2 class="form-title">创建账户</h2>
             <p class="form-desc">填写信息开始您的3D打印之旅</p>
           </div>
-          
-          <el-form 
-            :model="registerForm" 
-            :rules="rules" 
-            ref="registerFormRef" 
+
+          <t-form :data="registerForm"
+            :rules="rules"
+            ref="registerFormRef"
             size="large"
             class="register-form"
           >
-            <el-form-item prop="username">
-              <el-input 
-                v-model="registerForm.username" 
+            <t-form-item name="username">
+              <t-input
+                v-model="registerForm.username"
                 placeholder="用户名（3-20个字符）"
-                :prefix-icon="User"
+                :prefix-icon="renderIcon(User)"
                 clearable
               />
-            </el-form-item>
-            
-            <el-form-item prop="email">
-              <el-input 
-                v-model="registerForm.email" 
+            </t-form-item>
+
+            <t-form-item name="email">
+              <t-input
+                v-model="registerForm.email"
                 placeholder="电子邮箱"
-                :prefix-icon="Message"
+                :prefix-icon="renderIcon(Message)"
                 clearable
               />
-            </el-form-item>
-            
-            <el-form-item prop="phone">
-              <el-input 
-                v-model="registerForm.phone" 
+            </t-form-item>
+
+            <t-form-item name="phone">
+              <t-input
+                v-model="registerForm.phone"
                 placeholder="手机号码（选填）"
-                :prefix-icon="Phone"
+                :prefix-icon="renderIcon(Phone)"
                 clearable
               />
-            </el-form-item>
-            
-            <el-form-item prop="password">
-              <el-input 
-                v-model="registerForm.password" 
-                type="password" 
-                placeholder="设置密码（至少6位）" 
-                show-password
-                :prefix-icon="Lock"
+            </t-form-item>
+
+            <t-form-item name="password">
+              <t-input
+                v-model="registerForm.password"
+                type="password"
+                placeholder="设置密码（至少6位）"
+                :prefix-icon="renderIcon(Lock)"
               />
-            </el-form-item>
-            
-            <el-form-item prop="confirmPassword">
-              <el-input 
-                v-model="registerForm.confirmPassword" 
-                type="password" 
-                placeholder="确认密码" 
-                show-password
-                :prefix-icon="Check"
+            </t-form-item>
+
+            <t-form-item name="confirmPassword">
+              <t-input
+                v-model="registerForm.confirmPassword"
+                type="password"
+                placeholder="确认密码"
+                :prefix-icon="renderIcon(Check)"
                 @keyup.enter="handleRegister"
               />
-            </el-form-item>
-            
-            <el-form-item class="terms-item">
-              <el-checkbox v-model="agreeTerms">
+            </t-form-item>
+
+            <t-form-item class="terms-item">
+              <t-checkbox v-model="agreeTerms">
                 <span class="terms-text">
                   我已阅读并同意
-                  <el-link type="primary">服务条款</el-link>
+                  <t-link theme="primary">服务条款</t-link>
                   和
-                  <el-link type="primary">隐私政策</el-link>
+                  <t-link theme="primary">隐私政策</t-link>
                 </span>
-              </el-checkbox>
-            </el-form-item>
-            
-            <el-button 
-              type="primary" 
-              size="large" 
-              class="submit-btn" 
-              :loading="loading" 
+              </t-checkbox>
+            </t-form-item>
+
+            <t-button theme="primary"
+              size="large"
+              class="submit-btn"
+              :loading="loading"
               @click="handleRegister"
             >
               注 册
-            </el-button>
-          </el-form>
-          
+            </t-button>
+          </t-form>
+
           <div class="form-switch">
             <span class="switch-text">已有账户？</span>
-            <el-button link type="primary" class="switch-btn" @click="isLogin = true">
+            <t-button variant="text" theme="primary" class="switch-btn" @click="isLogin = true">
               立即登录
-            </el-button>
+            </t-button>
           </div>
         </div>
       </div>
     </div>
-    
+
     <!-- 页脚版权 -->
     <div class="login-footer">
       <p>&copy; 2024 3D打印农场管理系统. All rights reserved.</p>
@@ -206,20 +199,21 @@
 defineOptions({ name: 'LoginView' })
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
+import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
 import { register } from '@/api/user'
-import { 
-  User, 
-  Lock, 
-  Check, 
-  Message, 
-  Phone, 
-  Monitor, 
-  View, 
-  DataAnalysis, 
-  Connection 
-} from '@element-plus/icons-vue'
+import {
+  UserIcon as User,
+  LockOnIcon as Lock,
+  CheckIcon as Check,
+  MailIcon as Message,
+  PhoneSearchIcon as Phone,
+  DesktopIcon as Monitor,
+  ViewImageIcon as View,
+  ChartIcon as DataAnalysis,
+  MapConnectionIcon as Connection
+} from 'tdesign-icons-vue-next'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -229,12 +223,12 @@ const loading = ref(false)
 const rememberMe = ref(false)
 
 const loginForm = reactive({ username: '', password: '' })
-const registerForm = reactive({ 
-  username: '', 
-  email: '', 
-  phone: '', 
-  password: '', 
-  confirmPassword: '' 
+const registerForm = reactive({
+  username: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: ''
 })
 const agreeTerms = ref(false)
 
@@ -242,24 +236,24 @@ const loginFormRef = ref(null)
 const registerFormRef = ref(null)
 
 // 校验规则
-const validateConfirm = (rule, value, callback) => {
+const validateConfirm = (value) => {
   if (!value) {
-    return callback(new Error('请确认密码'))
+    return { result: false, message: '请确认密码' }
   }
   if (value !== registerForm.password) {
-    return callback(new Error('两次输入的密码不一致'))
+    return { result: false, message: '两次输入的密码不一致' }
   }
-  callback()
+  return true
 }
 
-const validatePhone = (rule, value, callback) => {
+const validatePhone = (value) => {
   if (!value) {
-    return callback()
+    return true
   }
   if (!/^\d{11}$/.test(value)) {
-    return callback(new Error('请输入有效的11位手机号'))
+    return { result: false, message: '请输入有效的11位手机号' }
   }
-  callback()
+  return true
 }
 
 const rules = {
@@ -268,7 +262,7 @@ const rules = {
     { min: 3, max: 20, message: '用户名长度应为3-20个字符', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }, 
+    { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度应为6-20位', trigger: 'blur' }
   ],
   confirmPassword: [
@@ -286,10 +280,10 @@ const handleLogin = async () => {
   loading.value = true
   try {
     await userStore.userLogin(loginForm)
-    ElMessage.success('登录成功')
+    message.success('登录成功')
     router.push('/')
   } catch (e) {
-    ElMessage.error(e.message || '登录失败')
+    message.error(e.message || '登录失败')
   } finally {
     loading.value = false
   }
@@ -298,7 +292,7 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   await registerFormRef.value.validate()
   if (!agreeTerms.value) {
-    ElMessage.warning('请先同意服务条款和隐私政策')
+    message.warning('请先同意服务条款和隐私政策')
     return
   }
   loading.value = true
@@ -309,14 +303,14 @@ const handleRegister = async () => {
       email: registerForm.email,
       phone: registerForm.phone
     })
-    ElMessage.success('注册成功，正在为您登录')
-    await userStore.userLogin({ 
-      username: registerForm.username, 
-      password: registerForm.password 
+    message.success('注册成功，正在为您登录')
+    await userStore.userLogin({
+      username: registerForm.username,
+      password: registerForm.password
     })
     router.push('/')
   } catch (e) {
-    ElMessage.error(e.message || '注册失败')
+    message.error(e.message || '注册失败')
   } finally {
     loading.value = false
   }
@@ -372,7 +366,7 @@ const handleRegister = async () => {
    ============================================ */
 .brand-panel {
   width: 42%;
-  background: linear-gradient(135deg, var(--el-color-primary) 0%, #1e40af 60%, #1e3a8a 100%);
+  background: linear-gradient(135deg, var(--farm-color-primary) 0%, #1e40af 60%, #1e3a8a 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -393,7 +387,7 @@ const handleRegister = async () => {
   animation: float 3s ease-in-out infinite;
 }
 
-.brand-icon :deep(.el-icon) {
+.brand-icon :deep(.t-icon) {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
@@ -451,7 +445,7 @@ const handleRegister = async () => {
   border-radius: 50%;
 }
 
-.feature-icon .el-icon {
+.feature-icon .t-icon {
   font-size: 16px;
 }
 
@@ -507,34 +501,34 @@ const handleRegister = async () => {
 .form-title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--el-text-color-primary);
+  color: var(--farm-text-color-primary);
   margin: 0 0 8px;
 }
 
 .form-desc {
   font-size: 14px;
-  color: var(--el-text-color-secondary);
+  color: var(--farm-text-color-secondary);
   margin: 0;
 }
 
 /* 表单样式 */
-.login-form :deep(.el-form-item),
-.register-form :deep(.el-form-item) {
+.login-form :deep(.t-form-item),
+.register-form :deep(.t-form-item) {
   margin-bottom: 20px;
 }
 
-.login-form :deep(.el-form-item:last-child),
-.register-form :deep(.el-form-item:last-child) {
+.login-form :deep(.t-form-item:last-child),
+.register-form :deep(.t-form-item:last-child) {
   margin-bottom: 0;
 }
 
-.login-form :deep(.el-input__wrapper),
-.register-form :deep(.el-input__wrapper) {
+.login-form :deep(.t-input__wrapper),
+.register-form :deep(.t-input__wrapper) {
   padding: 1px 16px;
 }
 
-.login-form :deep(.el-input__inner),
-.register-form :deep(.el-input__inner) {
+.login-form :deep(.t-input__inner),
+.register-form :deep(.t-input__inner) {
   height: 48px;
 }
 
@@ -545,9 +539,9 @@ const handleRegister = async () => {
   margin-bottom: 24px;
 }
 
-.form-options :deep(.el-checkbox__label) {
+.form-options :deep(.t-checkbox__label) {
   font-size: 13px;
-  color: var(--el-text-color-regular);
+  color: var(--farm-text-color-regular);
 }
 
 .forgot-link {
@@ -568,10 +562,10 @@ const handleRegister = async () => {
 
 .terms-text {
   font-size: 13px;
-  color: var(--el-text-color-regular);
+  color: var(--farm-text-color-regular);
 }
 
-.terms-text :deep(.el-link) {
+.terms-text :deep(.t-link) {
   font-size: 13px;
   vertical-align: baseline;
 }
@@ -588,7 +582,7 @@ const handleRegister = async () => {
 
 .switch-text {
   font-size: 13px;
-  color: var(--el-text-color-secondary);
+  color: var(--farm-text-color-secondary);
 }
 
 .switch-btn {
@@ -620,21 +614,21 @@ const handleRegister = async () => {
     flex-direction: column;
     max-width: 480px;
   }
-  
+
   .brand-panel,
   .form-panel {
     width: 100%;
   }
-  
+
   .brand-panel {
     min-height: 200px;
     padding: 32px;
   }
-  
+
   .form-panel {
     padding: 32px;
   }
-  
+
   .circle-1,
   .circle-2 {
     display: none;
@@ -645,15 +639,15 @@ const handleRegister = async () => {
   .login-page {
     padding: 16px;
   }
-  
+
   .form-panel {
     padding: 24px;
   }
-  
+
   .brand-title {
     font-size: 24px;
   }
-  
+
   .form-title {
     font-size: 20px;
   }

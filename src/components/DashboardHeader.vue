@@ -12,9 +12,7 @@
     <div class="flex items-center shrink-0">
       <div class="flex items-center gap-3">
         <!-- 图标：移动端缩小 -->
-        <el-icon :size="isMobile ? 24 : 28" class="text-primary">
-          <office-building />
-        </el-icon>
+        <office-building :size="isMobile ? 24 : 28" class="text-primary" />
 
         <div class="flex flex-col gap-0.5">
           <!-- 标题：响应式字体 -->
@@ -22,9 +20,7 @@
 
           <!-- 车间信息：移动端隐藏详细地址 -->
           <span class="inline-flex items-center gap-1 text-fluid-xs text-gray-500 font-medium">
-            <el-icon :size="12" class="text-red-500">
-              <location />
-            </el-icon>
+            <location :size="12" class="text-red-500" />
             {{ workshopName }}
           </span>
         </div>
@@ -52,7 +48,7 @@
           :label="labels.printing"
           bgClass="bg-gradient-to-r from-blue-50 to-blue-100"
           iconBgClass="bg-blue-600"
-          iconComponent="IconNozzle"
+           :iconComponent="IconNozzle"
           :highlight="statusCounts.PRINTING > 0"
           highlightRing="ring-blue-300"
         />
@@ -127,28 +123,25 @@
       <slot name="actions"></slot>
 
       <!-- 刷新按钮 - 移动端全宽 -->
-      <el-button
-        type="default"
+      <t-button theme="default"
         class="h-9 px-4 flex items-center justify-center gap-1.5"
         :class="{ 'w-full sm:w-auto': isMobile }"
         :disabled="isRefreshing"
         @click="handleRefresh"
       >
-        <el-icon :class="{ 'animate-spin': isRefreshing }">
+        <span :class="{ 'animate-spin': isRefreshing }">
           <refresh />
-        </el-icon>
+        </span>
         <span class="hidden sm:inline">{{ isRefreshing ? labels.refreshing : labels.refresh }}</span>
         <span class="sm:hidden">{{ isRefreshing ? '更新中...' : '刷新' }}</span>
-      </el-button>
+      </t-button>
 
       <!-- 最后更新时间 - 移动端隐藏，平板显示 -->
       <span
         class="hidden sm:flex items-center justify-center gap-1 text-fluid-xs text-gray-400 font-normal"
         v-if="lastUpdateTime"
       >
-        <el-icon :size="12">
-          <clock />
-        </el-icon>
+        <clock :size="12" />
         {{ labels.updatedAt }} {{ lastUpdateTime }}
       </span>
     </div>
@@ -158,17 +151,11 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
-  OfficeBuilding,
-  Location,
-  CircleCheck,
-  CircleCheckFilled,
-  VideoPause,
-  CircleClose,
-  Warning,
-  Refresh,
-  Clock,
-  Monitor
-} from '@element-plus/icons-vue'
+  BuildingIcon as OfficeBuilding,
+  LocationIcon as Location,
+  RefreshIcon as Refresh,
+  TimeIcon as Clock
+} from 'tdesign-icons-vue-next'
 import IconNozzle from './icons/IconNozzle.vue'
 import { PRINTER_STATE } from '@/utils/constants'
 import StatBadge from './StatBadge.vue'
@@ -181,8 +168,6 @@ defineOptions({ name: 'DashboardHeader' })
 
 const windowWidth = ref(window.innerWidth)
 const isMobile = computed(() => windowWidth.value < 768)
-const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1280)
-
 // 监听窗口大小变化
 let resizeHandler = null
 

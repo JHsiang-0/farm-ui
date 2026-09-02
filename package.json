@@ -13,11 +13,11 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
     "axios": "^1.13.6",
-    "element-plus": "^2.13.3",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
+    "tdesign-icons-vue-next": "^0.4.11",
+    "tdesign-vue-next": "^1.20.7",
     "vue": "^3.5.29",
     "vue-router": "^5.0.3"
   },

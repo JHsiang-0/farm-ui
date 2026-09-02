@@ -58,7 +58,7 @@ const router = createRouter({
 })
 
 // 全局路由守卫（门禁系统）
-router.beforeEach((to, from) => {
+router.beforeEach((to, _from) => {
   const userStore = useUserStore()
   
   // 如果用户要去非登录页，但没有 token，一律踢回登录页

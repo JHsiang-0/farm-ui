@@ -11,7 +11,8 @@
     class="flex items-center gap-1 px-2 py-1 rounded-full transition-all cursor-default select-none shrink-0 hover:-translate-y-0.5"
     :class="[
       bgClass,
-      { 'ring-1': highlight }
+      { 'ring-1': highlight },
+      highlightClass
     ]"
   >
     <!-- 图标容器 -->
@@ -38,12 +39,12 @@
 <script setup>
 import { computed } from 'vue'
 import {
-  CircleCheck,
-  CircleCheckFilled,
-  VideoPause,
-  CircleClose,
-  Warning
-} from '@element-plus/icons-vue'
+  CheckCircleIcon as CircleCheck,
+  CheckCircleFilledIcon as CircleCheckFilled,
+  PauseIcon as VideoPause,
+  CloseCircleIcon as CircleClose,
+  ErrorCircleFilledIcon as Warning
+} from 'tdesign-icons-vue-next'
 
 defineOptions({ name: 'StatBadge' })
 

@@ -1,59 +1,66 @@
 <template>
-  <el-dialog
-    :model-value="visible"
-    @update:model-value="$emit('update:visible', $event)"
-    :title="`绑定设备至 ${targetSlotLabel}`"
+  <t-dialog
+    :visible="visible"
+    @update:visible="$emit('update:visible', $event)"
+    :header="`绑定设备至 ${targetSlotLabel}`"
     width="700px"
     destroy-on-close
-    :close-on-click-modal="false"
+    :footer="false"
+    :close-on-overlay-click="false"
   >
     <!-- 搜索框 -->
     <div class="mb-4">
-      <el-input
+      <t-input
         v-model="searchKeyword"
         placeholder="请输入 IP 或机器编号搜索"
         clearable
-        prefix-icon="Search"
-        @input="handleSearch"
+        @change="handleSearch"
         class="w-full"
-      />
+      >
+        <template #prefixIcon>
+          <Search />
+        </template>
+      </t-input>
     </div>
 
     <!-- 未分配设备列表 -->
-    <el-table
-      v-loading="loading"
+    <TdTable
+      :loading="loading"
       :data="filteredList"
       height="400"
       style="width: 100%"
       highlight-current-row
       @row-click="handleRowClick"
     >
-      <el-table-column prop="machineNumber" label="机器编号" width="120">
+      <TdTableColumn prop="machineNumber" label="机器编号" width="120">
         <template #default="{ row }">
           {{ row.machineNumber || '-' }}
         </template>
-      </el-table-column>
-      <el-table-column prop="ipAddress" label="IP地址" width="125" />
-      <el-table-column prop="macAddress" label="MAC地址" width="145" />
-      <el-table-column prop="name" label="设备名称" width="130" show-overflow-tooltip />
-      <el-table-column prop="status" label="状态" width="85">
+      </TdTableColumn>
+      <TdTableColumn prop="ipAddress" label="IP地址" width="125" />
+      <TdTableColumn prop="macAddress" label="MAC地址" width="145" />
+      <TdTableColumn prop="name" label="设备名称" width="130" show-overflow-tooltip />
+      <TdTableColumn prop="status" label="状态" width="85">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">
+          <t-tag :theme="getStatusType(row.status)" size="small">
             {{ getStatusLabel(row.status) }}
-          </el-tag>
+          </t-tag>
         </template>
-      </el-table-column>
-    </el-table>
+      </TdTableColumn>
+    </TdTable>
 
     <!-- 空状态提示 -->
-    <el-empty v-if="!loading && filteredList.length === 0" description="暂无可绑定的设备" />
-  </el-dialog>
+    <t-empty v-if="!loading && filteredList.length === 0" description="暂无可绑定的设备" />
+  </t-dialog>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { confirmMessage } from '@/utils/message'
 import { getUnallocatedPrinters } from '@/api/printer'
+import { SearchIcon as Search } from 'tdesign-icons-vue-next'
+import TdTable from './TdTable.vue'
+import TdTableColumn from './TdTableColumn.vue'
 
 defineOptions({ name: 'BindDeviceDialog' })
 
@@ -90,7 +97,7 @@ const searchKeyword = ref('')
 /** 状态映射配置 */
 const STATUS_MAP = {
   ONLINE: { label: '在线', type: 'success' },
-  OFFLINE: { label: '离线', type: 'info' },
+  OFFLINE: { label: '离线', type: 'default' },
   PRINTING: { label: '打印中', type: 'primary' },
   ERROR: { label: '故障', type: 'danger' },
   IDLE: { label: '空闲', type: 'success' }
@@ -134,18 +141,18 @@ watch(() => props.visible, (newVal) => {
 // ============================================
 
 /**
- * 获取状态对应的Element Plus标签类型
+ * 获取状态对应的 TDesign 标签主题
  * @param {string} status - 设备状态
- * @returns {string} Element Plus标签类型
+ * @returns {string} TDesign 标签主题
  */
 function getStatusType(status) {
   const typeMap = {
     ONLINE: 'success',
-    OFFLINE: 'info',
+    OFFLINE: 'default',
     PRINTING: 'primary',
     ERROR: 'danger'
   }
-  return typeMap[status] || 'info'
+  return typeMap[status] || 'default'
 }
 
 /**
@@ -187,7 +194,7 @@ function handleSearch() {
 function handleRowClick(row) {
   if (!row) return
 
-  ElMessageBox.confirm(
+  confirmMessage(
     `确定要将设备 "${row.name}" 绑定到 ${props.targetSlotLabel} 吗？`,
     '确认绑定',
     {

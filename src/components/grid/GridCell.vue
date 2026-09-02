@@ -37,9 +37,9 @@
             <span>空</span>
         </div>
         <div v-if="isEditMode" class="flex flex-col items-center gap-1 text-gray-600 text-xs">
-            <el-icon class="w-4 h-4 sm:w-5 sm:h-5">
+            <span class="w-4 h-4 sm:w-5 sm:h-5">
                 <Plus />
-            </el-icon>
+            </span>
             <span class="hidden sm:inline">点击绑定</span>
         </div>
     </div>
@@ -68,9 +68,9 @@
             <div class="flex items-start gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-red-50 border border-red-300 rounded text-[10px] sm:text-xs text-red-700 leading-tight flex-1 overflow-hidden"
                  :title="realTimeData.systemMessage"
             >
-                <el-icon class="shrink-0 mt-0.5 w-3 h-3 sm:w-4 sm:h-4">
+                <span class="shrink-0 mt-0.5 w-3 h-3 sm:w-4 sm:h-4">
                     <WarningFilled />
-                </el-icon>
+                </span>
                 <span class="line-clamp-1 sm:line-clamp-2">{{ truncateText(realTimeData.systemMessage, 40) }}</span>
             </div>
         </div>
@@ -124,7 +124,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Plus, WarningFilled } from '@element-plus/icons-vue'
+import { AddIcon as Plus, ErrorCircleFilledIcon as WarningFilled } from 'tdesign-icons-vue-next'
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconBed from '../icons/IconBed.vue'
 import { PRINTER_STATE, PRINTER_STATE_MAP } from '@/utils/constants'

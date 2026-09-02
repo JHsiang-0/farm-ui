@@ -6,27 +6,22 @@
         :last-update-time="lastUpdateTime" @refresh="handleRefresh">
       <!-- 布局锁定/编辑模式切换按钮 -->
       <template #actions>
-        <el-button v-if="!isEditMode" type="default" :icon="Lock" @click="toggleEditMode">
+        <t-button v-if="!isEditMode" theme="default" :icon="renderIcon(Lock)" @click="toggleEditMode">
           解锁布局
-        </el-button>
-        <el-button v-else type="primary" :icon="Unlock" @click="saveLayout">
+        </t-button>
+        <t-button v-else theme="primary" :icon="renderIcon(Unlock)" @click="saveLayout">
           保存布局
-        </el-button>
+        </t-button>
       </template>
       </dashboard-header>
     </div>
 
-    <!-- 独立车间看板容器 -->
-    <div class="relative w-full flex-1 p-4 m-4 mt-2 bg-gray-100 border border-gray-200 rounded-xl shadow-sm overflow-auto flex items-start justify-center"
-      style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent;">
-      <!-- 滚动条样式（WebKit） -->
-      <div class="absolute inset-0 overflow-hidden pointer-events-none"
-        style="mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);">
-        <div class="w-full h-full"></div>
-      </div>
+    <!-- 独立车间看板容器 - 响应式布局，与状态栏对齐 -->
+    <div class="relative w-full flex-1 px-4 pb-4 bg-gray-100 overflow-auto"
+      style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent; min-height: 0;">
 
-      <!-- 厂房网格布局 - 4行13列（含过道） -->
-      <div class="flex shrink-0 gap-2" style="width: 1452px;">
+      <!-- 厂房网格布局 - 与DashboardHeader保持相同最大宽度 -->
+      <div class="w-full max-w-[1920px] mx-auto bg-gray-100 border border-gray-200 rounded-xl shadow-sm p-4">
         <!-- 使用 GridMap 组件 -->
         <grid-map :device-matrix="store.deviceMatrix" :real-time-status="store.realTimeStatus"
           :grid-config="store.GRID_CONFIG" :is-edit-mode="isEditMode" :dragged-device="draggedDevice"
@@ -48,8 +43,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Lock, Unlock } from '@element-plus/icons-vue'
+import { message } from '@/utils/message'
+import { renderIcon } from '@/utils/tdesign'
+import { LockOnIcon as Lock, LockOffIcon as Unlock } from 'tdesign-icons-vue-next'
 import { usePrinterStore } from '@/stores/printer'
 import DashboardHeader from './DashboardHeader.vue'
 import GridMap from './grid/GridMap.vue'
@@ -211,10 +207,10 @@ async function handleDrop(targetRowIndex, targetColIndex) {
       )
     }
 
-    ElMessage.success('设备位置已更新')
+  message.success('设备位置已更新')
   } catch (error) {
     console.error('更新设备位置失败:', error)
-    ElMessage.error('更新设备位置失败，请重试')
+  message.error('更新设备位置失败，请重试')
   } finally {
     handleDragEnd()
   }
@@ -318,11 +314,11 @@ async function performBind(deviceId) {
       machineNumber: targetSlotLabel.value
     })
 
-    ElMessage.success('设备绑定成功')
+  message.success('设备绑定成功')
     bindDialogVisible.value = false
   } catch (error) {
     console.error('绑定设备失败:', error)
-    ElMessage.error('绑定设备失败，请重试')
+  message.error('绑定设备失败，请重试')
   }
 }
 
@@ -344,7 +340,7 @@ function handlePrinterAction(action, device) {
   }
 
   // TODO: 调用 Moonraker API
-  ElMessage.info(`正在发送 ${actionMap[action]} 指令到 ${device.machineNumber}...`)
+  message.info(`正在发送 ${actionMap[action]} 指令到 ${device.machineNumber}...`)
   console.log(`[Printer Action] ${action} -> ${device.ipAddress}`)
 }
 
@@ -354,7 +350,7 @@ function handlePrinterAction(action, device) {
  */
 function handleEmergencyStop(device) {
   // TODO: 调用 Moonraker ESTOP API
-  ElMessage.warning(`正在发送紧急停机指令到 ${device.machineNumber}...`)
+  message.warning(`正在发送紧急停机指令到 ${device.machineNumber}...`)
   console.log(`[Emergency Stop] ESTOP -> ${device.ipAddress}`)
 }
 
@@ -366,14 +362,14 @@ async function handleRemoveFromBoard(device) {
   try {
     await store.removeDeviceFromBoard(device.id)
 
-    ElMessage.success(`设备 ${device.machineNumber} 已从看板下架`)
+  message.success(`设备 ${device.machineNumber} 已从看板下架`)
 
     // 关闭抽屉
     drawerVisible.value = false
     activeDevice.value = null
   } catch (error) {
     console.error('下架设备失败:', error)
-    ElMessage.error('下架设备失败，请重试')
+  message.error('下架设备失败，请重试')
   }
 }
 
@@ -393,7 +389,7 @@ function handleDrawerClosed() {
  */
 function toggleEditMode() {
   isEditMode.value = true
-  ElMessage.info('已进入编辑模式，现在可以拖拽设备调整位置')
+  message.info('已进入编辑模式，现在可以拖拽设备调整位置')
 }
 
 /**
@@ -412,10 +408,10 @@ async function saveLayout() {
   try {
     await saveLayoutPositions()
     isEditMode.value = false
-    ElMessage.success('布局已保存')
+  message.success('布局已保存')
   } catch (error) {
     console.error('保存布局失败:', error)
-    ElMessage.error('保存布局失败，请重试')
+  message.error('保存布局失败，请重试')
   }
 }
 
@@ -433,17 +429,17 @@ async function handleRefresh() {
   try {
     // 先断开现有 WebSocket 连接
     store.disconnectWs()
-    ElMessage.info('正在重新连接打印机...')
+  message.info('正在重新连接打印机...')
 
     // 重新获取设备数据并建立 WebSocket 连接
     await store.fetchDeviceData()
     store.connectWs()
 
     updateLastUpdateTime()
-    ElMessage.success('打印机状态已刷新')
+  message.success('打印机状态已刷新')
   } catch (error) {
     console.error('刷新打印机状态失败:', error)
-    ElMessage.error('刷新打印机状态失败，请重试')
+  message.error('刷新打印机状态失败，请重试')
   }
 }
 

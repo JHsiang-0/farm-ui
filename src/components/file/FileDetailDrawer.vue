@@ -1,9 +1,8 @@
 <template>
-  <el-drawer
-    v-model="visible"
-    title="文件详情"
+  <t-drawer v-model:visible="visible" header="文件详情"
     size="520px"
     :destroy-on-close="true"
+    :footer="false"
     class="file-detail-drawer"
     @closed="handleClosed"
   >
@@ -12,7 +11,7 @@
       <div class="flex items-start gap-4 mb-6">
         <!-- 缩略图 -->
         <div class="w-24 h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-100 flex-shrink-0">
-          <el-image
+          <t-image
             v-if="file.thumbnail_url"
             :src="file.thumbnail_url"
             fit="cover"
@@ -23,7 +22,7 @@
                 <IconCube />
               </div>
             </template>
-          </el-image>
+          </t-image>
           <div v-else class="w-full h-full flex items-center justify-center text-gray-500">
             <IconCube />
           </div>
@@ -34,21 +33,21 @@
           <h2 class="text-xl font-bold text-gray-900 mb-2 truncate" :title="file.original_name">
             {{ file.original_name }}
           </h2>
-          <el-tag :type="getMaterialTagType(file.material_type)" class="mr-2">
+          <t-tag :theme="getMaterialTagType(file.material_type)" class="mr-2">
             {{ file.material_type || 'PLA' }}
-          </el-tag>
+          </t-tag>
         </div>
 
         <!-- 操作按钮 -->
         <div class="flex flex-col gap-2">
-          <el-button type="success" size="default" @click="handlePrint">
-            <el-icon><Printer /></el-icon>
+          <t-button theme="success" size="medium" @click="handlePrint">
+            <span><Printer /></span>
             打印
-          </el-button>
-          <el-button type="primary" size="default" @click="handleDownload">
-            <el-icon><Download /></el-icon>
+          </t-button>
+          <t-button theme="primary" size="medium" @click="handleDownload">
+            <span><Download /></span>
             下载 G-Code
-          </el-button>
+          </t-button>
         </div>
       </div>
 
@@ -90,74 +89,72 @@
       <!-- 参数详情面板 -->
       <div class="space-y-6">
         <!-- 温度与层高 -->
-        <el-card class="border-gray-200">
+        <t-card class="border-gray-200">
           <template #header>
             <div class="flex items-center gap-2">
               <IconTemperature />
               <span class="text-sm font-semibold text-gray-900">温度与层高控制</span>
             </div>
           </template>
-          <el-descriptions :column="2" size="small" border>
-            <el-descriptions-item label="常规层高">
+          <t-descriptions :column="2" size="small" bordered>
+            <t-descriptions-item label="常规层高">
               {{ formatHeight(file.layer_height) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="首层层高">
+            </t-descriptions-item>
+            <t-descriptions-item label="首层层高">
               {{ formatHeight(file.first_layer_height) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="喷嘴温度">
+            </t-descriptions-item>
+            <t-descriptions-item label="喷嘴温度">
               {{ formatTemperature(file.nozzle_temp) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="首层喷嘴温度">
+            </t-descriptions-item>
+            <t-descriptions-item label="首层喷嘴温度">
               {{ formatTemperature(file.first_layer_nozzle_temp) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="热床温度">
+            </t-descriptions-item>
+            <t-descriptions-item label="热床温度">
               {{ formatTemperature(file.bed_temp) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="首层热床温度">
+            </t-descriptions-item>
+            <t-descriptions-item label="首层热床温度">
               {{ formatTemperature(file.first_layer_bed_temp) }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
+            </t-descriptions-item>
+          </t-descriptions>
+        </t-card>
 
         <!-- 系统与文件元数据 -->
-        <el-card class="border-gray-200">
+        <t-card class="border-gray-200">
           <template #header>
             <div class="flex items-center gap-2">
               <IconInfo />
               <span class="text-sm font-semibold text-gray-900">系统与文件元数据</span>
             </div>
           </template>
-          <el-descriptions :column="1" size="small" border>
-            <el-descriptions-item label="文件大小">
+          <t-descriptions :column="1" size="small" bordered>
+            <t-descriptions-item label="文件大小">
               {{ formatFileSize(file.file_size) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="上传时间">
+            </t-descriptions-item>
+            <t-descriptions-item label="上传时间">
               {{ formatDateTime(file.created_at) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="系统存储名">
+            </t-descriptions-item>
+            <t-descriptions-item label="系统存储名">
               <span class="text-xs text-gray-600 font-mono">{{ file.safe_name }}</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="上传用户ID">
+            </t-descriptions-item>
+            <t-descriptions-item label="上传用户ID">
               {{ file.user_id || '-' }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
+            </t-descriptions-item>
+          </t-descriptions>
+        </t-card>
       </div>
     </div>
 
     <!-- 空状态 -->
     <div v-else class="flex flex-col items-center justify-center py-16 text-gray-500">
-      <el-icon size="48" class="mb-4">
-        <Document />
-      </el-icon>
+      <Document :size="48" class="mb-4" />
       <p>未选择文件</p>
     </div>
-  </el-drawer>
+  </t-drawer>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { Download, Document, Printer } from '@element-plus/icons-vue'
+import { DownloadIcon as Download, FileIcon as Document, PrintIcon as Printer } from 'tdesign-icons-vue-next'
 import IconCube from '../icons/IconCube.vue'
 import IconClock from '../icons/IconClock.vue'
 import IconWeight from '../icons/IconWeight.vue'
@@ -280,20 +277,20 @@ const getMaterialTagType = (materialType) => {
     PLA: 'success',
     ABS: 'warning',
     PETG: 'primary',
-    TPU: 'info',
+    TPU: 'default',
     尼龙: 'danger'
   }
-  return types[materialType] || 'info'
+  return types[materialType] || 'default'
 }
 </script>
 
 <style scoped>
-:deep(.el-drawer__body) {
+:deep(.t-drawer__body) {
   padding: 0;
   overflow-y: auto;
 }
 
-:deep(.el-drawer__header) {
+:deep(.t-drawer__header) {
   margin-bottom: 0;
   padding: 16px;
   border-bottom: 1px solid #e5e7eb;

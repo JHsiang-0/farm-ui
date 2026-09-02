@@ -65,12 +65,12 @@ export const PRINTER_STATE = Object.freeze({
 
 /**
  * 打印机状态映射配置 - UX 故障分级优化
- * 严格按照工业级 UX 标准映射 Element Plus 的 type 颜色和中文文本
+ * 按照工业级 UX 标准映射 TDesign 的主题颜色和中文文本
  * @constant {Object}
  */
 export const PRINTER_STATE_MAP = Object.freeze({
   // ⚪ 未知/离线状态
-  [PRINTER_STATE.UNKNOWN]: { label: '离线', type: 'info', level: 'unknown', icon: 'QuestionFilled' },
+  [PRINTER_STATE.UNKNOWN]: { label: '离线', type: 'default', level: 'unknown', icon: 'QuestionFilled' },
 
   // 🔴 致命级 (Danger)
   [PRINTER_STATE.FAULT]: { label: '硬件故障', type: 'danger', level: 'fatal', icon: 'CircleCloseFilled' },
@@ -84,8 +84,8 @@ export const PRINTER_STATE_MAP = Object.freeze({
   // 🔵 正常业务级
   [PRINTER_STATE.PRINTING]: { label: '打印中', type: 'primary', level: 'normal', icon: 'VideoPlay' },
   [PRINTER_STATE.COMPLETED]: { label: '已完成', type: 'success', level: 'normal', icon: 'SuccessFilled' },
-  [PRINTER_STATE.STANDBY]: { label: '待机', type: 'info', level: 'normal', icon: 'Coffee' },
-  [PRINTER_STATE.CANCELLED]: { label: '已取消', type: 'info', level: 'normal', icon: 'RemoveFilled' }
+  [PRINTER_STATE.STANDBY]: { label: '待机', type: 'default', level: 'normal', icon: 'Coffee' },
+  [PRINTER_STATE.CANCELLED]: { label: '已取消', type: 'default', level: 'normal', icon: 'RemoveFilled' }
 })
 
 /**
@@ -99,7 +99,7 @@ export const ERROR_ALERT_STATES = [
 ]
 
 /**
- * el-progress 状态映射
+ * 进度状态映射
  * @constant {Object}
  */
 export const PROGRESS_STATUS_MAP = {

@@ -144,7 +144,7 @@ export default {
   },
   plugins: [
     // 添加自定义插件：响应式容器查询支持
-    function({ addComponents, theme }) {
+    function({ addComponents }) {
       addComponents({
         // 大屏限制容器：防止 2.5K/4K 屏幕 UI 无限放大
         '.container-optimized': {

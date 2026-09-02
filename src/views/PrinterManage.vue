@@ -8,32 +8,32 @@
     />
 
     <!-- 操作栏 -->
-    <el-card class="shadow-none rounded-lg bg-white m-6">
+    <t-card class="shadow-none rounded-lg bg-white m-6">
       <div class="flex flex-wrap justify-between items-center gap-3">
         <div class="flex items-center gap-3">
-          <el-button type="default" @click="fetchData">
-            <el-icon><refresh /></el-icon>
+          <t-button theme="default" @click="fetchData">
+            <span><refresh /></span>
             刷新列表
-          </el-button>
+          </t-button>
         </div>
         <div class="flex items-center gap-3">
-          <el-button type="warning" @click="openScanDialog">
-            <el-icon><aim /></el-icon>
+          <t-button theme="warning" @click="openScanDialog">
+            <span><aim /></span>
             扫描局域网设备
-          </el-button>
-          <el-button type="success" @click="handleAdd">
-            <el-icon><plus /></el-icon>
+          </t-button>
+          <t-button theme="success" @click="handleAdd">
+            <span><plus /></span>
             新增打印机
-          </el-button>
+          </t-button>
         </div>
       </div>
-    </el-card>
+    </t-card>
 
     <!-- 数据表格 -->
-    <el-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mx-6 mb-6">
-      <el-table
+    <t-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mx-6 mb-6">
+      <TdTable
         :data="tableData"
-        v-loading="loading"
+        :loading="loading"
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
@@ -41,174 +41,166 @@
         row-class-name="cursor-pointer hover:bg-gray-50"
         height="calc(100vh - 320px)"
       >
-        <el-table-column prop="id" label="ID" width="80" align="center">
+        <TdTableColumn prop="id" label="ID" width="80" align="center">
           <template #default="scope">
             <span class="font-mono font-semibold text-gray-600">{{ scope.row.id }}</span>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="name" label="机器名称" min-width="150">
+        <TdTableColumn prop="name" label="机器名称" min-width="150">
           <template #default="scope">
             <div class="flex items-center gap-2 font-medium">
-              <el-icon :size="16" :color="getStatusColor(scope.row.status)"><printer /></el-icon>
+              <printer :size="16" :stroke-color="getStatusColor(scope.row.status)" />
               <span>{{ scope.row.name }}</span>
             </div>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="ipAddress" label="IP 地址" width="160">
+        <TdTableColumn prop="ipAddress" label="IP 地址" width="160">
           <template #default="scope">
-            <el-tag size="small" effect="plain" type="info">{{ scope.row.ipAddress }}</el-tag>
+            <t-tag size="small" variant="light-outline" theme="default">{{ scope.row.ipAddress }}</t-tag>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="status" label="当前状态" width="120" align="center">
+        <TdTableColumn prop="status" label="当前状态" width="120" align="center">
           <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)" effect="light" size="small">
+            <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
               {{ scope.row.status || '未知' }}
-            </el-tag>
+            </t-tag>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
         <!-- 安全状态列 -->
-        <el-table-column label="热床安全" width="120" align="center">
+        <TdTableColumn label="热床安全" width="120" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-1">
-              <el-icon :size="14" :color="scope.row.isSafeToPrint ? '#059669' : '#dc2626'">
-                <circle-check v-if="scope.row.isSafeToPrint" />
-                <circle-close v-else />
-              </el-icon>
-              <el-tag :type="scope.row.isSafeToPrint ? 'success' : 'danger'" effect="light" size="small">
+              <circle-check v-if="scope.row.isSafeToPrint" :size="14" stroke-color="#059669" />
+              <circle-close v-else :size="14" stroke-color="#dc2626" />
+              <t-tag :theme="scope.row.isSafeToPrint ? 'success' : 'danger'" variant="light" size="small">
                 {{ scope.row.isSafeToPrint ? '已清理' : '待清理' }}
-              </el-tag>
+              </t-tag>
             </div>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="currentMaterial" label="装载耗材" width="120" align="center">
+        <TdTableColumn prop="currentMaterial" label="装载耗材" width="120" align="center">
           <template #default="scope">
-            <el-tag size="small" type="warning" effect="light">
+            <t-tag size="small" theme="warning" variant="light">
               {{ scope.row.currentMaterial || '-' }}
-            </el-tag>
+            </t-tag>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="nozzleSize" label="喷嘴(mm)" width="100" align="center">
+        <TdTableColumn prop="nozzleSize" label="喷嘴(mm)" width="100" align="center">
           <template #default="scope">
             <span class="font-medium text-gray-900">{{ scope.row.nozzleSize }}</span>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column label="当前任务" width="180" align="center">
+        <TdTableColumn label="当前任务" width="180" align="center">
           <template #default="scope">
             <div class="text-center">
               <span v-if="scope.row.currentJobId" class="text-sm">
                 #{{ scope.row.currentJobId }}
-                <el-tag v-if="scope.row.currentJobStatus" size="small" :type="getJobStatusType(scope.row.currentJobStatus)" class="ml-1">
+                <t-tag v-if="scope.row.currentJobStatus" size="small" :theme="getJobStatusType(scope.row.currentJobStatus)" class="ml-1">
                   {{ scope.row.currentJobStatus }}
-                </el-tag>
+                </t-tag>
               </span>
               <span v-else class="text-gray-400 text-sm">无</span>
             </div>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column label="操作" width="280" align="center" fixed="right">
+        <TdTableColumn label="操作" width="280" align="center" fixed="right">
           <template #default="scope">
             <div class="flex items-center justify-center gap-1">
               <!-- 确认热床已清理按钮 -->
-              <el-button
+              <t-button
                 v-if="shouldShowSafeButton(scope.row)"
-                size="small"
-                type="warning"
+                size="small" theme="warning"
                 @click="handleConfirmSafe(scope.row)"
                 :loading="confirmingSafeIds.includes(scope.row.id)"
               >
-                <el-icon><check /></el-icon>
+                <span><check /></span>
                 确认清理
-              </el-button>
+              </t-button>
               <!-- 启动打印按钮 -->
-              <el-button
+              <t-button
                 v-if="shouldShowStartButton(scope.row)"
-                size="small"
-                type="success"
+                size="small" theme="success"
                 @click="handleStartJob(scope.row)"
                 :loading="startingJobIds.includes(scope.row.id)"
               >
-                <el-icon><printer /></el-icon>
+                <span><printer /></span>
                 启动打印
-              </el-button>
+              </t-button>
               <!-- 编辑按钮 -->
-              <el-button size="small" type="primary" @click="handleEdit(scope.row)">
-                <el-icon><edit /></el-icon>
+              <t-button size="small" theme="primary" @click="handleEdit(scope.row)">
+                <span><edit /></span>
                 编辑
-              </el-button>
+              </t-button>
               <!-- 删除按钮 -->
-              <el-popconfirm
-                title="确定要删除这台机器吗？"
-                confirm-button-type="danger"
+              <t-popconfirm content="确定要删除这台机器吗？"
+                theme="danger"
                 @confirm="handleDelete(scope.row.id)"
               >
-                <template #reference>
-                  <el-button size="small" type="danger" plain>
-                    <el-icon><delete /></el-icon>
-                  </el-button>
+                <template>
+                  <t-button size="small" theme="danger" variant="outline">
+                    <span><delete /></span>
+                  </t-button>
                 </template>
-              </el-popconfirm>
+              </t-popconfirm>
             </div>
           </template>
-        </el-table-column>
-      </el-table>
+        </TdTableColumn>
+      </TdTable>
 
       <!-- 分页 -->
       <div class="flex justify-end mt-5">
-        <el-pagination
-          v-model:current-page="queryParams.pageNum"
-          v-model:page-size="queryParams.pageSize"
-          background
-          layout="total, prev, pager, next"
+        <t-pagination
+          v-model:current="queryParams.pageNum"
+          v-model:pageSize="queryParams.pageSize"
           :total="total"
-          @current-change="fetchData"
+          :show-page-size="false"
+          @change="fetchData"
         />
       </div>
-    </el-card>
+    </t-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="isEdit ? '编辑打印机' : '新增打印机'"
+    <t-dialog v-model:visible="dialogVisible" :header="isEdit ? '编辑打印机' : '新增打印机'"
       width="520px"
       destroy-on-close
     >
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-        <el-form-item label="机器名称" prop="name">
-          <el-input v-model="form.name" placeholder="例：Klipper-01">
-            <template #prefix>
-              <el-icon><printer /></el-icon>
+      <t-form :data="form" :rules="rules" ref="formRef" label-width="100px">
+        <t-form-item label="机器名称" name="name">
+          <t-input v-model="form.name" placeholder="例：Klipper-01">
+            <template #prefixIcon>
+              <span><printer /></span>
             </template>
-          </el-input>
-        </el-form-item>
+          </t-input>
+        </t-form-item>
 
-        <el-form-item label="IP 地址" prop="ipAddress">
-          <el-input v-model="form.ipAddress" placeholder="例：192.168.1.10">
-            <template #prefix>
-              <el-icon><link /></el-icon>
+        <t-form-item label="IP 地址" name="ipAddress">
+          <t-input v-model="form.ipAddress" placeholder="例：192.168.1.10">
+            <template #prefixIcon>
+              <span><link /></span>
             </template>
-          </el-input>
-        </el-form-item>
+          </t-input>
+        </t-form-item>
 
-        <el-form-item label="当前耗材" prop="currentMaterial">
-          <el-select v-model="form.currentMaterial" placeholder="请选择装载耗材" style="width: 100%">
-            <el-option label="PLA" value="PLA" />
-            <el-option label="PETG" value="PETG" />
-            <el-option label="ABS" value="ABS" />
-            <el-option label="TPU" value="TPU" />
-          </el-select>
-        </el-form-item>
+        <t-form-item label="当前耗材" name="currentMaterial">
+          <t-select v-model="form.currentMaterial" placeholder="请选择装载耗材" style="width: 100%">
+            <t-option label="PLA" value="PLA" />
+            <t-option label="PETG" value="PETG" />
+            <t-option label="ABS" value="ABS" />
+            <t-option label="TPU" value="TPU" />
+          </t-select>
+        </t-form-item>
 
-        <el-form-item label="喷嘴大小" prop="nozzleSize">
+        <t-form-item label="喷嘴大小" name="nozzleSize">
           <div class="flex items-center gap-3">
-            <el-input-number
+            <t-input-number
               v-model="form.nozzleSize"
               :precision="2"
               :step="0.1"
@@ -218,55 +210,52 @@
             />
             <span class="text-sm text-gray-600">mm</span>
           </div>
-        </el-form-item>
-      </el-form>
+        </t-form-item>
+      </t-form>
 
       <template #footer>
         <div class="flex justify-end gap-3">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm" :loading="submitLoading">
-            <el-icon><check /></el-icon>
+          <t-button @click="dialogVisible = false">取消</t-button>
+          <t-button theme="primary" @click="submitForm" :loading="submitLoading">
+            <span><check /></span>
             确定
-          </el-button>
+          </t-button>
         </div>
       </template>
-    </el-dialog>
+    </t-dialog>
 
     <!-- 扫描局域网设备弹窗 -->
-    <el-dialog
-      v-model="scanDialogVisible"
-      title="扫描局域网设备"
+    <t-dialog v-model:visible="scanDialogVisible" header="扫描局域网设备"
       width="800px"
       destroy-on-close
     >
       <!-- 扫描输入区 -->
       <div class="mb-4">
-        <el-form label-width="90px">
-          <el-form-item label="网段前缀">
-            <el-input
+        <t-form label-width="90px">
+          <t-form-item label="网段前缀">
+            <t-input
               v-model="subnet"
               placeholder="例：192.168.1"
-              size="default"
+              size="medium"
               :disabled="isScanning"
             >
-              <template #append>
-                <el-button
-                  type="primary"
+              <template #suffix>
+                <t-button theme="primary"
                   @click="handleScan"
                   :loading="isScanning"
                 >
-                  <el-icon><search /></el-icon>
+                  <span><search /></span>
                   {{ isScanning ? '扫描中...' : '开始扫描' }}
-                </el-button>
+                </t-button>
               </template>
-            </el-input>
-          </el-form-item>
-        </el-form>
+            </t-input>
+          </t-form-item>
+        </t-form>
       </div>
 
       <!-- 加载状态 -->
       <div v-if="isScanning" class="text-center py-8">
-        <el-skeleton :rows="5" animated />
+        <t-skeleton :rows="5" animated />
         <p class="mt-4 text-sm text-gray-600">正在扫描局域网设备，请稍候...</p>
       </div>
 
@@ -274,16 +263,15 @@
       <div v-else-if="scanResults.length > 0" class="bg-white rounded-lg">
         <!-- 统计文案 -->
         <div class="mb-4">
-          <el-alert
-            :title="scanStatsText"
-            type="info"
+          <t-alert
+            :title="scanStatsText" theme="info"
             :closable="false"
-            show-icon
+
           />
         </div>
 
         <!-- 结果表格 -->
-        <el-table
+        <TdTable
           ref="scanTableRef"
           :data="scanResults"
           style="width: 100%"
@@ -291,101 +279,100 @@
           :header-cell-style="{ background: '#f9fafb' }"
           @selection-change="handleSelectionChange"
         >
-          <el-table-column type="selection" width="50" align="center" />
+          <TdTableColumn type="selection" width="50" align="center" />
 
-          <el-table-column label="状态" width="120" align="center">
+          <TdTableColumn label="状态" width="120" align="center">
             <template #default="scope">
-              <el-tag
-                :type="scope.row.isNewDevice ? 'success' : 'primary'"
-                effect="light"
+              <t-tag
+                :theme="scope.row.isNewDevice ? 'success' : 'primary'"
+                variant="light"
                 size="small"
               >
                 {{ scope.row.isNewDevice ? '全新设备' : '已知设备' }}
-              </el-tag>
+              </t-tag>
             </template>
-          </el-table-column>
+          </TdTableColumn>
 
-          <el-table-column label="MAC 地址" width="140" align="center">
+          <TdTableColumn label="MAC 地址" width="140" align="center">
             <template #default="scope">
               <span class="font-mono text-sm font-medium text-gray-700">{{ scope.row.macAddress }}</span>
             </template>
-          </el-table-column>
+          </TdTableColumn>
 
-          <el-table-column label="IP 地址" width="130" align="center">
+          <TdTableColumn label="IP 地址" width="130" align="center">
             <template #default="scope">
-              <el-tag size="small" effect="plain" type="info">
+              <t-tag size="small" variant="light-outline" theme="default">
                 {{ scope.row.ipAddress }}
-              </el-tag>
+              </t-tag>
             </template>
-          </el-table-column>
+          </TdTableColumn>
 
-          <el-table-column label="机器名称" min-width="150">
+          <TdTableColumn label="机器名称" min-width="150">
             <template #default="scope">
-              <el-input
+              <t-input
                 v-model="scope.row.name"
                 size="small"
                 placeholder="请输入机器名称"
               >
-                <template #prefix>
-                  <el-icon><printer /></el-icon>
+                <template #prefixIcon>
+                  <span><printer /></span>
                 </template>
-              </el-input>
+              </t-input>
             </template>
-          </el-table-column>
+          </TdTableColumn>
 
-          <el-table-column label="建议名称" width="120" align="center">
+          <TdTableColumn label="建议名称" width="120" align="center">
             <template #default="scope">
               <span class="text-sm text-gray-600">{{ scope.row.suggestedName }}</span>
             </template>
-          </el-table-column>
-        </el-table>
+          </TdTableColumn>
+        </TdTable>
       </div>
 
       <!-- 空状态 -->
-      <el-empty
+      <t-empty
         v-else-if="hasScanned && !isScanning"
         description="该网段未发现设备"
-        :image-size="80"
+
       >
         <template #description>
           <p>该网段未发现设备</p>
           <p class="mt-2 text-sm text-gray-400">请检查网段是否正确或设备是否在线</p>
         </template>
-      </el-empty>
+      </t-empty>
 
       <template #footer>
         <div class="flex justify-end gap-3">
-          <el-button @click="scanDialogVisible = false">关闭</el-button>
-          <el-button
-            type="success"
+          <t-button @click="scanDialogVisible = false">关闭</t-button>
+          <t-button theme="success"
             :disabled="selectedDevices.length === 0"
             @click="handleBatchAdd"
             :loading="isBatchAdding"
           >
-            <el-icon><folder-add /></el-icon>
+            <span><folder-add /></span>
             批量导入/同步 ({{ selectedDevices.length }})
-          </el-button>
+          </t-button>
         </div>
       </template>
-    </el-dialog>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import {
-  Refresh,
-  Aim,
-  Plus,
-  Printer,
-  Edit,
-  Delete,
-  Check,
-  Search,
-  FolderAdd,
-  CircleCheck,
-  CircleClose
-} from '@element-plus/icons-vue'
+  RefreshIcon as Refresh,
+  MapAimingIcon as Aim,
+  AddIcon as Plus,
+  PrintIcon as Printer,
+  EditIcon as Edit,
+  DeleteIcon as Delete,
+  CheckIcon as Check,
+  SearchIcon as Search,
+  FolderAddIcon as FolderAdd,
+  CheckCircleIcon as CircleCheck,
+  CloseCircleIcon as CircleClose
+} from 'tdesign-icons-vue-next'
 import {
   getPrinterList,
   addPrinter,
@@ -396,8 +383,10 @@ import {
   confirmSafe
 } from '@/api/printer'
 import { startJob } from '@/api/job'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { message, confirmMessage } from '@/utils/message'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
+import TdTable from '@/components/TdTable.vue'
+import TdTableColumn from '@/components/TdTableColumn.vue'
 
 defineOptions({ name: 'PrinterManage' })
 
@@ -470,14 +459,14 @@ const getStatusColor = (status) => {
 
 // 获取状态标签类型
 const getStatusType = (status) => {
-  if (!status) return 'info'
+  if (!status) return 'default'
   const map = {
     'PRINTING': 'primary',
     'IDLE': 'success',
     'ERROR': 'danger',
-    'OFFLINE': 'info'
+    'OFFLINE': 'default'
   }
-  return map[status.toUpperCase()] || 'info'
+  return map[status.toUpperCase()] || 'default'
 }
 
 // 获取任务状态标签类型
@@ -486,10 +475,10 @@ const getJobStatusType = (status) => {
     'PENDING': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
-    'COMPLETED': 'info',
+    'COMPLETED': 'default',
     'FAILED': 'danger'
   }
-  return map[status] || 'info'
+  return map[status] || 'default'
 }
 
 // 判断是否应该显示"确认清理"按钮
@@ -505,7 +494,7 @@ const shouldShowStartButton = (printer) => {
 // 确认热床已清理
 const handleConfirmSafe = async (printer) => {
   try {
-    await ElMessageBox.confirm(
+    await confirmMessage(
       `确认 ${printer.name} 热床已清理完毕，可以开始打印了吗？`,
       '安全确认',
       {
@@ -517,7 +506,7 @@ const handleConfirmSafe = async (printer) => {
 
     confirmingSafeIds.value.push(printer.id)
     await confirmSafe(printer.id)
-    ElMessage.success('安全确认成功！')
+    message.success('安全确认成功！')
     fetchData()
   } catch (error) {
     if (error !== 'cancel') {
@@ -534,12 +523,12 @@ const handleConfirmSafe = async (printer) => {
 // 启动打印
 const handleStartJob = async (printer) => {
   if (!printer.currentJobId) {
-    ElMessage.warning('该设备没有分配的任务')
+    message.warning('该设备没有分配的任务')
     return
   }
 
   try {
-    await ElMessageBox.confirm(
+    await confirmMessage(
       `确认启动 ${printer.name} 的打印任务 #${printer.currentJobId}？`,
       '启动打印确认',
       {
@@ -551,7 +540,7 @@ const handleStartJob = async (printer) => {
 
     startingJobIds.value.push(printer.id)
     await startJob(printer.currentJobId)
-    ElMessage.success('打印任务已启动！')
+    message.success('打印任务已启动！')
     fetchData()
   } catch (error) {
     if (error !== 'cancel') {
@@ -632,10 +621,10 @@ const submitForm = async () => {
 
     if (isEdit.value) {
       await updatePrinter(payload)
-      ElMessage.success('修改成功')
+      message.success('修改成功')
     } else {
       await addPrinter(payload)
-      ElMessage.success('新增成功')
+      message.success('新增成功')
     }
     dialogVisible.value = false
     fetchData()
@@ -650,7 +639,7 @@ const submitForm = async () => {
 const handleDelete = async (id) => {
   try {
     await deletePrinter(id)
-    ElMessage.success('删除成功')
+    message.success('删除成功')
     if (tableData.value.length === 1 && queryParams.pageNum > 1) {
       queryParams.pageNum--
     }
@@ -675,7 +664,7 @@ const handleSelectionChange = (selection) => {
 
 const handleScan = async () => {
   if (!subnet.value) {
-    ElMessage.warning('请输入网段前缀')
+    message.warning('请输入网段前缀')
     return
   }
   isScanning.value = true
@@ -711,13 +700,13 @@ const handleBatchAdd = async () => {
     const res = await batchAddPrinters(devicesToSubmit)
     // 解析后端返回的 message
     const message = res.message || res.data?.message || '批量处理完成'
-    ElMessage.success(message)
+    message.success(message)
     scanDialogVisible.value = false
     fetchData() // 刷新设备列表
   } catch (error) {
     // 拦截器会处理错误，但如果有特定错误信息可以在这里显示
     const errorMsg = error.response?.data?.message || '批量处理失败'
-    ElMessage.error(errorMsg)
+    message.error(errorMsg)
   } finally {
     isBatchAdding.value = false
   }
@@ -730,21 +719,21 @@ onMounted(() => {
 
 <style scoped>
 /* 扫描结果表格输入框优化 */
-:deep(.el-table .el-input__wrapper) {
+:deep(.t-table .t-input__wrapper) {
   padding: 0 8px;
 }
 
-:deep(.el-table .el-input__inner) {
+:deep(.t-table .t-input__inner) {
   height: 28px;
   font-size: 14px;
 }
 
 /* 表格行可点击样式 */
-:deep(.el-table .cursor-pointer) {
+:deep(.t-table .cursor-pointer) {
   cursor: pointer;
 }
 
-:deep(.el-table .el-table__row:hover) {
+:deep(.t-table .t-table__row:hover) {
   background-color: #f3f4f6;
 }
 </style>

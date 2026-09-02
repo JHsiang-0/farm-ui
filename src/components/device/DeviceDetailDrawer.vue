@@ -5,9 +5,7 @@
       - 平板：70% 宽度
       - 桌面：固定最大宽度，防止大屏过度拉伸
     -->
-    <el-drawer
-        v-model="visible"
-        :title="drawerTitle"
+    <t-drawer v-model:visible="visible" :header="drawerTitle"
         :size="drawerSize"
         :destroy-on-close="true"
         class="printer-detail-drawer"
@@ -25,9 +23,9 @@
             ]">
                 <!-- 状态标签和进度 -->
                 <div class="flex items-center justify-between gap-3">
-                    <el-tag :type="currentStateConfig.type" size="large" effect="dark" class="text-fluid-sm font-semibold">
+                    <t-tag :theme="currentStateConfig.type" size="large" variant="dark" class="text-fluid-sm font-semibold">
                         {{ currentStateConfig.label }}
-                    </el-tag>
+                    </t-tag>
                     <span v-if="realTimeData?.progress !== undefined && isPrintingState"
                         class="text-fluid-2xl font-bold text-gray-700">
                         {{ realTimeData.progress }}%
@@ -37,9 +35,9 @@
                 <!-- 系统错误信息 -->
                 <div v-if="realTimeData?.systemMessage && isErrorState"
                     class="mt-3 p-fluid-sm bg-red-50 border border-red-300 rounded text-fluid-xs text-red-700 leading-tight flex items-start gap-2">
-                    <el-icon class="shrink-0 mt-0.5">
+                    <span class="shrink-0 mt-0.5">
                         <Warning />
-                    </el-icon>
+                    </span>
                     <span class="line-clamp-3">{{ realTimeData.systemMessage }}</span>
                 </div>
             </div>
@@ -78,18 +76,16 @@
             <!-- ASSIGNED 状态：待安全确认的任务信息 -->
             <div v-if="isAssignedState" class="flex flex-col gap-fluid-sm">
                 <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
-                    <el-icon class="text-yellow-600">
+                    <span class="text-yellow-600">
                         <Lock />
-                    </el-icon>
+                    </span>
                     待打印任务
                 </div>
                 <div class="p-fluid-md bg-yellow-50 border border-yellow-300 rounded-lg flex flex-col gap-fluid-sm">
                     <!-- 任务标题和图标 -->
                     <div class="flex items-start gap-3">
                         <div class="shrink-0 mt-0.5">
-                            <el-icon :size="24" class="text-yellow-600">
-                                <Lock />
-                            </el-icon>
+                            <Lock :size="24" class="text-yellow-600" />
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="font-semibold text-yellow-800 text-fluid-lg">
@@ -104,7 +100,7 @@
                     </div>
 
                     <!-- 任务详情网格 -->
-                    <el-divider class="my-2" />
+                    <t-divider class="my-2" />
                     <div class="grid grid-cols-2 gap-2 text-fluid-sm">
                         <div class="flex flex-col">
                             <span class="text-fluid-xs text-yellow-600">任务编号</span>
@@ -120,28 +116,28 @@
 
                     <!-- 操作按钮 -->
                     <div class="mt-2">
-                        <el-button v-if="!isSafetyConfirmed" type="warning" size="large"
+                        <t-button v-if="!isSafetyConfirmed" theme="warning" size="large"
                             class="w-full h-12 text-fluid-base font-semibold" @click="handleConfirmSafe" :loading="isLoading">
-                            <el-icon>
+                            <span>
                                 <Lock />
-                            </el-icon>
+                            </span>
                             确认现场安全
-                        </el-button>
+                        </t-button>
                         <div v-else class="flex gap-2">
-                            <el-button type="primary" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
+                            <t-button theme="primary" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
                                 @click="handleStartPrint('START_PRINT')" :loading="isLoading">
-                                <el-icon>
+                                <span>
                                     <VideoPlay />
-                                </el-icon>
+                                </span>
                                 下发并开始打印
-                            </el-button>
-                            <el-button type="default" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
+                            </t-button>
+                            <t-button theme="default" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
                                 @click="handleStartPrint('UPLOAD_ONLY')" :loading="isLoading">
-                                <el-icon>
+                                <span>
                                     <DocumentAdd />
-                                </el-icon>
+                                </span>
                                 仅下发文件
-                            </el-button>
+                            </t-button>
                         </div>
                     </div>
                 </div>
@@ -150,9 +146,9 @@
             <!-- 打印任务信息 -->
             <div v-if="isPrintingOrRelated" class="flex flex-col gap-fluid-sm">
                 <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
-                    <el-icon class="text-gray-600">
+                    <span class="text-gray-600">
                         <Printer />
-                    </el-icon>
+                    </span>
                     打印任务
                 </div>
                 <div class="grid grid-cols-2 gap-fluid-sm">
@@ -171,7 +167,7 @@
                     </div>
                     <div v-if="isPrintingState" class="p-fluid-sm bg-gray-100 rounded-lg flex flex-col gap-1 col-span-2">
                         <span class="text-fluid-xs text-gray-600">打印进度</span>
-                        <el-progress :percentage="realTimeData?.progress || 0" :status="progressStatus"
+                        <t-progress :percentage="realTimeData?.progress || 0" :status="progressStatus"
                             :stroke-width="10" class="mt-2" />
                     </div>
                 </div>
@@ -180,86 +176,86 @@
             <!-- 设备信息 -->
             <div class="flex flex-col gap-fluid-sm">
                 <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
-                    <el-icon class="text-gray-600">
+                    <span class="text-gray-600">
                         <InfoFilled />
-                    </el-icon>
+                    </span>
                     设备信息
                 </div>
-                <el-descriptions :column="descriptionColumn" size="small" border>
-                    <el-descriptions-item label="机器编号" :span="descriptionColumn">
+                <t-descriptions :column="descriptionColumn" size="small" bordered>
+                    <t-descriptions-item label="机器编号" :span="descriptionColumn">
                         {{ device.machineNumber || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="设备名称" :span="descriptionColumn">
+                    </t-descriptions-item>
+                    <t-descriptions-item label="设备名称" :span="descriptionColumn">
                         {{ device.name || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="IP 地址" :span="descriptionColumn">
+                    </t-descriptions-item>
+                    <t-descriptions-item label="IP 地址" :span="descriptionColumn">
                         {{ device.ipAddress || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="固件类型">
+                    </t-descriptions-item>
+                    <t-descriptions-item label="固件类型">
                         {{ device.firmwareType || '-' }}
-                    </el-descriptions-item>
-                    <el-descriptions-item label="喷头尺寸">
+                    </t-descriptions-item>
+                    <t-descriptions-item label="喷头尺寸">
                         {{ device.nozzleSize ? device.nozzleSize + 'mm' : '-' }}
-                    </el-descriptions-item>
-                </el-descriptions>
+                    </t-descriptions-item>
+                </t-descriptions>
             </div>
 
             <!-- Moonraker / Mainsail 快捷操作 -->
             <div class="flex flex-col gap-fluid-sm">
                 <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
-                    <el-icon class="text-gray-600">
+                    <span class="text-gray-600">
                         <Monitor />
-                    </el-icon>
+                    </span>
                     远程控制 (Moonraker / Mainsail)
                 </div>
                 <div class="flex flex-col gap-fluid-sm">
-                    <el-button v-if="device.ipAddress" type="primary" size="large" tag="a" :href="mainsailUrl"
+                    <t-button v-if="device.ipAddress" theme="primary" size="large" tag="a" :href="mainsailUrl"
                         target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-fluid-sm">
-                        <el-icon>
+                        <span>
                             <Monitor />
-                        </el-icon>
+                        </span>
                         打开 Mainsail 界面
-                    </el-button>
+                    </t-button>
 
                     <!-- 操作按钮网格 - 移动端 2列，桌面 4列 -->
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                        <el-button type="warning" :disabled="!canPause" @click="handleAction('pause')" class="h-10">
-                            <el-icon>
+                        <t-button theme="warning" :disabled="!canPause" @click="handleAction('pause')" class="h-10">
+                            <span>
                                 <VideoPause />
-                            </el-icon>
+                            </span>
                             暂停
-                        </el-button>
-                        <el-button type="success" :disabled="!canResume" @click="handleAction('resume')" class="h-10">
-                            <el-icon>
+                        </t-button>
+                        <t-button theme="success" :disabled="!canResume" @click="handleAction('resume')" class="h-10">
+                            <span>
                                 <VideoPlay />
-                            </el-icon>
+                            </span>
                             恢复
-                        </el-button>
-                        <el-button type="danger" :disabled="!canCancel" @click="handleAction('cancel')" class="h-10">
-                            <el-icon>
+                        </t-button>
+                        <t-button theme="danger" :disabled="!canCancel" @click="handleAction('cancel')" class="h-10">
+                            <span>
                                 <CircleClose />
-                            </el-icon>
+                            </span>
                             取消
-                        </el-button>
-                        <el-button type="info" @click="handleAction('reboot')" class="h-10">
-                            <el-icon>
+                        </t-button>
+                        <t-button theme="default" @click="handleAction('reboot')" class="h-10">
+                            <span>
                                 <Refresh />
-                            </el-icon>
+                            </span>
                             重启
-                        </el-button>
+                        </t-button>
                     </div>
 
                     <div v-if="isFatalError" class="mt-3">
-                        <el-divider>
-                            <el-tag type="danger" effect="dark">紧急操作</el-tag>
-                        </el-divider>
-                        <el-button type="danger" size="large" class="w-full h-12 text-fluid-base font-bold"
+                        <t-divider>
+                            <t-tag theme="danger" variant="dark">紧急操作</t-tag>
+                        </t-divider>
+                        <t-button theme="danger" size="large" class="w-full h-12 text-fluid-base font-bold"
                             @click="handleEmergencyStop">
-                            <el-icon>
+                            <span>
                                 <Warning />
-                            </el-icon>
+                            </span>
                             紧急停机 (ESTOP)
-                        </el-button>
+                        </t-button>
                     </div>
                 </div>
             </div>
@@ -268,37 +264,37 @@
         <!-- 抽屉底部操作区 -->
         <template #footer>
             <div class="flex justify-end p-fluid-md border-t border-gray-200">
-                <el-popconfirm title="确定要将此设备从该物理位置下架吗？" confirm-button-text="确认下架" cancel-button-text="取消"
-                    confirm-button-type="danger" @confirm="handleRemove">
-                    <template #reference>
-                        <el-button type="danger" plain>
-                            <el-icon>
+                <t-popconfirm content="确定要将此设备从该物理位置下架吗？" confirm-btn="确认下架" cancel-btn="取消"
+                    theme="danger" @confirm="handleRemove">
+                    <template>
+                        <t-button theme="danger" variant="outline">
+                            <span>
                                 <Delete />
-                            </el-icon>
+                            </span>
                             从看板下架
-                        </el-button>
+                        </t-button>
                     </template>
-                </el-popconfirm>
+                </t-popconfirm>
             </div>
         </template>
-    </el-drawer>
+    </t-drawer>
 </template>
 
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import {
-    Delete,
-    Printer,
-    InfoFilled,
-    Monitor,
-    VideoPause,
-    VideoPlay,
-    CircleClose,
-    Refresh,
-    Warning,
-    Lock,
-    DocumentAdd
-} from '@element-plus/icons-vue'
+    DeleteIcon as Delete,
+    PrintIcon as Printer,
+    InfoCircleFilledIcon as InfoFilled,
+    DesktopIcon as Monitor,
+    PauseIcon as VideoPause,
+    PlayIcon as VideoPlay,
+    CloseCircleIcon as CircleClose,
+    RefreshIcon as Refresh,
+    ErrorCircleFilledIcon as Warning,
+    LockOnIcon as Lock,
+    FileAddIcon as DocumentAdd
+} from 'tdesign-icons-vue-next'
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconBed from '../icons/IconBed.vue'
 import IconSpool from '../icons/IconSpool.vue'
@@ -306,7 +302,7 @@ import { PRINTER_STATE, PRINTER_STATE_MAP, PROGRESS_STATUS_MAP } from '@/utils/c
 import { formatTemp, formatDuration, formatFilament } from '@/utils/formatters'
 import { confirmSafe } from '@/api/printer'
 import { startJob } from '@/api/job'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
 
 defineOptions({ name: 'DeviceDetailDrawer' })
 
@@ -317,7 +313,6 @@ defineOptions({ name: 'DeviceDetailDrawer' })
 const windowWidth = ref(window.innerWidth)
 const isMobile = computed(() => windowWidth.value < 768)
 const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1280)
-const isDesktop = computed(() => windowWidth.value >= 1280)
 const isLargeScreen = computed(() => windowWidth.value >= 1920)
 
 // 响应式抽屉尺寸 - 使用响应式断点
@@ -530,7 +525,7 @@ async function handleConfirmSafe() {
     try {
         isLoading.value = true
         await confirmSafe(props.device.id)
-        ElMessage.success('现场安全确认成功！')
+        message.success('现场安全确认成功！')
         isSafetyConfirmed.value = true
     } catch {
         // 错误信息由拦截器处理
@@ -545,12 +540,12 @@ async function handleStartPrint(action) {
         isLoading.value = true
         const jobId = props.realTimeData?.currentJobId || props.device?.currentJobId
         if (!jobId) {
-            ElMessage.error('找不到任务ID')
+            message.error('找不到任务ID')
             return
         }
         await startJob(jobId, action)
         const successMsg = action === 'START_PRINT' ? '下发并开始打印成功！' : '仅下发文件成功！'
-        ElMessage.success(successMsg)
+        message.success(successMsg)
         // 关闭抽屉
         visible.value = false
     } catch {
@@ -565,7 +560,7 @@ async function handleStartPrint(action) {
 /* ============================================
    抽屉整体样式 - 响应式优化
    ============================================ */
-:deep(.el-drawer__body) {
+:deep(.t-drawer__body) {
     padding: 0;
     overflow-y: auto;
     /* 滚动条样式优化 */
@@ -573,22 +568,22 @@ async function handleStartPrint(action) {
     scrollbar-color: #d1d5db transparent;
 }
 
-:deep(.el-drawer__body::-webkit-scrollbar) {
+:deep(.t-drawer__body::-webkit-scrollbar) {
     width: 6px;
 }
 
-:deep(.el-drawer__body::-webkit-scrollbar-thumb) {
+:deep(.t-drawer__body::-webkit-scrollbar-thumb) {
     background: #d1d5db;
     border-radius: 3px;
 }
 
-:deep(.el-drawer__header) {
+:deep(.t-drawer__header) {
     margin-bottom: 0;
     padding: 1rem;
     border-bottom: 1px solid #e5e7eb;
 }
 
-:deep(.el-drawer__title) {
+:deep(.t-drawer__title) {
     font-size: 1rem;
     font-weight: 600;
 }
@@ -597,19 +592,19 @@ async function handleStartPrint(action) {
    移动端适配
    ============================================ */
 @media (max-width: 767px) {
-    :deep(.el-drawer) {
+    :deep(.t-drawer) {
         width: 100% !important;
     }
 
-    :deep(.el-drawer__header) {
+    :deep(.t-drawer__header) {
         padding: 0.75rem 1rem;
     }
 
-    :deep(.el-drawer__title) {
+    :deep(.t-drawer__title) {
         font-size: 0.9375rem;
     }
 
-    :deep(.el-drawer__footer) {
+    :deep(.t-drawer__footer) {
         padding: 0.75rem 1rem;
     }
 }
@@ -618,7 +613,7 @@ async function handleStartPrint(action) {
    平板适配
    ============================================ */
 @media (min-width: 768px) and (max-width: 1279px) {
-    :deep(.el-drawer) {
+    :deep(.t-drawer) {
         width: 70% !important;
     }
 }
@@ -627,7 +622,7 @@ async function handleStartPrint(action) {
    大屏适配（2.5K/4K）
    ============================================ */
 @media (min-width: 1920px) {
-    :deep(.el-drawer) {
+    :deep(.t-drawer) {
         max-width: 30rem;
     }
 }

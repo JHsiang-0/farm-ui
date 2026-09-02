@@ -1,7 +1,7 @@
 <template>
-  <el-container v-cloak class="h-full w-full overflow-hidden">
+  <t-layout v-cloak class="h-full w-full overflow-hidden">
     <!-- 侧边栏 -->
-    <el-aside :width="isCollapse ? '64px' : '220px'"
+    <t-aside :width="isCollapse ? '64px' : '220px'"
       class="bg-white relative z-10 flex flex-col transition-all duration-300" :class="{ 'is-collapse': isCollapse }">
       <!-- 右侧分隔线 -->
       <div class="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent">
@@ -14,167 +14,162 @@
           class="absolute left-0 right-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300 via-gray-600 via-gray-300 to-transparent opacity-60">
         </div>
 
-        <el-icon :size="32" class="text-primary shrink-0" style="filter: drop-shadow(0 2px 4px rgba(17, 24, 39, 0.2));">
-          <monitor />
-        </el-icon>
+        <monitor :size="32" class="text-primary shrink-0"
+          style="filter: drop-shadow(0 2px 4px rgba(17, 24, 39, 0.2));" />
         <span v-show="!isCollapse"
           class="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent tracking-wide">嘉东三维打印控制系统</span>
       </div>
 
-      <el-menu router :default-active="$route.path" :collapse="isCollapse" :collapse-transition="false"
-        background-color="transparent" text-color="var(--ep-text-color-regular)"
-        active-text-color="var(--el-color-primary)" class="custom-menu flex-1 pt-2 overflow-y-auto">
-        <el-sub-menu index="/dashboard">
+      <t-menu
+        :value="route.path"
+        :collapsed="isCollapse"
+        theme="light"
+        @change="handleMenuChange"
+        class="custom-menu flex-1 pt-2 overflow-y-auto"
+      >
+        <t-submenu value="/dashboard">
+          <template #icon><Odometer /></template>
           <template #title>
-            <el-icon>
-              <odometer />
-            </el-icon>
-            <span>车间监控</span>
+            车间监控
           </template>
-          <el-menu-item index="/" class="workshop-menu-item">
+          <t-menu-item value="/" to="/" class="workshop-menu-item">
             <span class="workshop-name">3F-一号车间</span>
-          </el-menu-item>
-          <el-menu-item index="/workshop-2" class="workshop-menu-item" disabled>
+          </t-menu-item>
+          <t-menu-item value="/workshop-2" class="workshop-menu-item" disabled>
             <span class="workshop-name">3F-二号车间</span>
-            <el-tag size="small" type="info" class="workshop-status">规划中</el-tag>
-          </el-menu-item>
-          <el-menu-item index="/workshop-3" class="workshop-menu-item" disabled>
+            <t-tag size="small" theme="default" variant="light" class="workshop-status">规划中</t-tag>
+          </t-menu-item>
+          <t-menu-item value="/workshop-3" class="workshop-menu-item" disabled>
             <span class="workshop-name">2F-原型车间</span>
-            <el-tag size="small" type="info" class="workshop-status">规划中</el-tag>
-          </el-menu-item>
-        </el-sub-menu>
+            <t-tag size="small" theme="default" variant="light" class="workshop-status">规划中</t-tag>
+          </t-menu-item>
+        </t-submenu>
 
-        <el-menu-item index="/printers">
-          <el-icon>
-            <printer />
-          </el-icon>
-          <template #title>机器管理</template>
-        </el-menu-item>
+        <t-menu-item value="/printers" to="/printers">
+          <template #icon><Printer /></template>
+          机器管理
+        </t-menu-item>
 
-        <el-menu-item index="/files">
-          <el-icon><folder-opened /></el-icon>
-          <template #title>文件库</template>
-        </el-menu-item>
+        <t-menu-item value="/files" to="/files">
+          <template #icon><FolderOpened /></template>
+          文件库
+        </t-menu-item>
 
-        <el-sub-menu index="/tasks">
+        <t-submenu value="/tasks">
+          <template #icon><List /></template>
           <template #title>
-            <el-icon>
-              <list />
-            </el-icon>
-            <span>任务</span>
+            任务
           </template>
-          <el-menu-item index="/tasks/queue">
-            <el-icon><list /></el-icon>
-            <span>任务队列</span>
-          </el-menu-item>
-          <el-menu-item index="/tasks/history">
-            <el-icon><document /></el-icon>
-            <span>打印记录</span>
-          </el-menu-item>
-        </el-sub-menu>
-      </el-menu>
-    </el-aside>
+          <t-menu-item value="/tasks/queue" to="/tasks/queue">
+            <template #icon><List /></template>
+            任务队列
+          </t-menu-item>
+          <t-menu-item value="/tasks/history" to="/tasks/history">
+            <template #icon><Document /></template>
+            打印记录
+          </t-menu-item>
+        </t-submenu>
+      </t-menu>
+    </t-aside>
 
-    <el-container class="bg-gray-50 flex flex-col h-full overflow-hidden">
+    <t-layout class="bg-gray-50 flex flex-col h-full overflow-hidden">
       <!-- 顶栏 -->
-      <el-header class="h-16 bg-white shadow-sm flex justify-between items-center px-6 z-5 shrink-0">
+      <t-header class="h-16 bg-white shadow-sm flex justify-between items-center px-6 z-5 shrink-0">
         <div class="flex items-center gap-4">
           <div
             class="w-9 h-9 flex items-center justify-center rounded hover:bg-gray-50 cursor-pointer transition-colors text-gray-600 hover:text-primary"
             @click="toggleCollapse" :title="isCollapse ? '展开菜单' : '收起菜单'">
-            <el-icon :size="18" :class="{ 'rotate-180 transition-transform duration-300': isCollapse }">
-              <fold v-if="!isCollapse" />
-              <expand v-else />
-            </el-icon>
+            <span :class="{ 'rotate-180 transition-transform duration-300': isCollapse }">
+              <fold v-if="!isCollapse" :size="18" />
+              <expand v-else :size="18" />
+            </span>
           </div>
 
-          <el-breadcrumb separator="/" class="text-sm">
-            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentRoute.name">{{ currentRoute.name }}</el-breadcrumb-item>
-          </el-breadcrumb>
+          <t-breadcrumb separator="/" class="text-sm">
+            <t-breadcrumb-item :to="{ path: '/' }">首页</t-breadcrumb-item>
+            <t-breadcrumb-item v-if="currentRoute.name">{{ currentRoute.name }}</t-breadcrumb-item>
+          </t-breadcrumb>
         </div>
 
         <div class="flex items-center gap-5">
           <!-- 消息通知 -->
           <div class="cursor-pointer p-2 rounded hover:bg-gray-50 transition-colors">
-            <el-badge :value="3" type="danger">
-              <el-icon :size="20" class="text-gray-600">
-                <bell />
-              </el-icon>
-            </el-badge>
+            <t-badge :count="3" color="#dc2626">
+              <bell :size="20" class="text-gray-600" />
+            </t-badge>
           </div>
 
           <!-- 用户下拉菜单 -->
-          <el-dropdown trigger="click" @command="handleCommand">
+          <t-dropdown trigger="click" @click="handleCommand">
             <div class="flex items-center gap-3 cursor-pointer px-3 py-1.5 rounded hover:bg-gray-50 transition-colors">
-              <el-avatar :size="36" :src="userStore.userInfo.avatar || defaultAvatar"
+              <t-avatar :size="36" :image="userStore.userInfo.avatar || defaultAvatar"
                 class="bg-gradient-to-r from-primary to-gray-700 text-white font-semibold">
                 {{ userStore.userInfo.username?.charAt(0).toUpperCase() || 'U' }}
-              </el-avatar>
+              </t-avatar>
               <span v-show="!isCollapse" class="text-sm text-gray-900 font-medium max-w-24 truncate">
                 {{ userStore.userInfo.username || '管理员' }}
               </span>
-              <el-icon class="text-gray-400 text-xs transition-transform duration-200 group-hover:rotate-180">
+              <span class="text-gray-400 text-xs transition-transform duration-200 group-hover:rotate-180">
                 <arrow-down />
-              </el-icon>
+              </span>
             </div>
 
             <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">
-                  <el-icon>
+              <t-dropdown-menu>
+                <t-dropdown-item value="profile">
+                  <span>
                     <user />
-                  </el-icon>
+                  </span>
                   个人中心
-                </el-dropdown-item>
-                <el-dropdown-item command="settings">
-                  <el-icon>
+                </t-dropdown-item>
+                <t-dropdown-item value="settings">
+                  <span>
                     <setting />
-                  </el-icon>
+                  </span>
                   系统设置
-                </el-dropdown-item>
-                <el-dropdown-item divided command="logout">
-                  <el-icon><switch-button /></el-icon>
+                </t-dropdown-item>
+                <t-dropdown-item value="logout" divider>
+                  <span><switch-button /></span>
                   退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
+                </t-dropdown-item>
+              </t-dropdown-menu>
             </template>
-          </el-dropdown>
+          </t-dropdown>
         </div>
-      </el-header>
+      </t-header>
 
       <!-- 主内容区 -->
-      <el-main class="overflow-hidden flex-1 p-0">
+      <t-content class="overflow-hidden flex-1 p-0">
         <router-view v-slot="{ Component }">
           <transition name="fade-transform" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
-      </el-main>
-    </el-container>
-  </el-container>
+      </t-content>
+    </t-layout>
+  </t-layout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { message, confirmMessage } from '@/utils/message'
 import {
-  Monitor,
-  Odometer,
-  Printer,
-  FolderOpened,
-  List,
-  Document,
-  Fold,
-  Expand,
-  Bell,
-  ArrowDown,
-  User,
-  Setting,
-  SwitchButton
-} from '@element-plus/icons-vue'
+  DesktopIcon as Monitor,
+  DashboardIcon as Odometer,
+  PrintIcon as Printer,
+  FolderOpenIcon as FolderOpened,
+  ListNumberedIcon as List,
+  FileIcon as Document,
+  MenuFoldIcon as Fold,
+  MenuUnfoldIcon as Expand,
+  NotificationIcon as Bell,
+  ChevronDownIcon as ArrowDown,
+  UserIcon as User,
+  SettingIcon as Setting,
+  PoweroffIcon as SwitchButton
+} from 'tdesign-icons-vue-next'
 
 defineOptions({ name: 'AppLayout' })
 
@@ -206,14 +201,23 @@ const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
 }
 
+// TDesign 菜单通过 value/to 与 Vue Router 联动。
+const handleMenuChange = (value) => {
+  const target = typeof value === 'string' ? value : value?.value
+  if (target && target !== route.path) {
+    router.push(target)
+  }
+}
+
 // 处理下拉菜单命令
-const handleCommand = (command) => {
+const handleCommand = (item) => {
+  const command = typeof item === 'string' ? item : item?.value
   switch (command) {
     case 'profile':
-      ElMessage.info('个人中心功能开发中...')
+      message.info('个人中心功能开发中...')
       break
     case 'settings':
-      ElMessage.info('系统设置功能开发中...')
+      message.info('系统设置功能开发中...')
       break
     case 'logout':
       handleLogout()
@@ -223,7 +227,7 @@ const handleCommand = (command) => {
 
 // 退出登录逻辑
 const handleLogout = () => {
-  ElMessageBox.confirm(
+  confirmMessage(
     '确定要退出登录吗？',
     '提示',
     {
@@ -234,7 +238,7 @@ const handleLogout = () => {
   ).then(() => {
     userStore.logout()
     router.push('/login')
-    ElMessage.success('已退出登录')
+    message.success('已退出登录')
   }).catch(() => { })
 }
 </script>
@@ -243,7 +247,7 @@ const handleLogout = () => {
 /* ============================================
    菜单项深度选择器样式
    ============================================ */
-:deep(.el-menu-item) {
+:deep(.t-menu__item) {
   height: 50px;
   line-height: 50px;
   margin: 4px 12px;
@@ -251,24 +255,24 @@ const handleLogout = () => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-menu-item:hover) {
+:deep(.t-menu__item:hover) {
   background-color: #f3f4f6;
   color: #111827;
 }
 
-:deep(.el-menu-item.is-active) {
+:deep(.t-menu__item.t-is-active) {
   background-color: #f3f4f6;
   color: #111827;
   margin-left: 12px;
   padding-left: 16px !important;
 }
 
-:deep(.el-menu-item .el-icon) {
+:deep(.t-menu__item .t-icon) {
   font-size: 18px;
   margin-right: 12px;
 }
 
-:deep(.el-sub-menu__title) {
+:deep(.t-submenu__title) {
   height: 50px;
   line-height: 50px;
   margin: 4px 12px;
@@ -276,12 +280,12 @@ const handleLogout = () => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-sub-menu__title:hover) {
+:deep(.t-submenu__title:hover) {
   background-color: #f3f4f6;
   color: #111827;
 }
 
-:deep(.el-sub-menu.is-active .el-sub-menu__title) {
+:deep(.t-submenu.t-is-active .t-submenu__title) {
   color: #111827;
   font-weight: 600;
 }
@@ -314,17 +318,17 @@ const handleLogout = () => {
   padding: 0 6px;
 }
 
-:deep(.el-menu--collapse) {
+:deep(.t-menu--collapse) {
   width: 64px;
 }
 
-:deep(.el-menu--collapse .el-menu-item) {
+:deep(.t-menu--collapse .t-menu__item) {
   margin: 4px 8px;
   padding: 0 16px !important;
   justify-content: center;
 }
 
-:deep(.el-menu--collapse .el-menu-item.is-active) {
+:deep(.t-menu--collapse .t-menu__item.t-is-active) {
   margin-left: 5px;
   padding-left: 13px !important;
 }

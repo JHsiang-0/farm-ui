@@ -1,4 +1,4 @@
-import { ref, computed, shallowRef, markRaw } from 'vue'
+import { computed, shallowRef, markRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { WebSocketClient } from '@/utils/websocket'
 import { PRINTER_STATE } from '@/utils/constants'

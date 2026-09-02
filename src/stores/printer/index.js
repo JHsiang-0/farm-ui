@@ -40,7 +40,6 @@ export function usePrinterStore() {
   } = storeToRefs(device)
 
   const {
-    realTimeStatus,
     wsConnectionState,
     isWsConnected,
   } = storeToRefs(realtime)

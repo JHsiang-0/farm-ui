@@ -1,26 +1,26 @@
 <template>
   <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
     <!-- 页面头部 -->
-    <el-card class="shadow-sm rounded-xl mb-6">
+    <t-card class="shadow-sm rounded-xl mb-6">
       <template #header>
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3 text-lg font-semibold text-gray-900">
-            <el-icon :size="20" class="text-gray-600"><list /></el-icon>
+            <list :size="20" class="text-gray-600" />
             <span>任务管理</span>
           </div>
         </div>
       </template>
-    </el-card>
+    </t-card>
 
     <!-- 导航标签 -->
-    <el-tabs v-model="activeTab" type="card" class="task-tabs mb-6">
-      <el-tab-pane label="任务队列" name="queue">
+    <t-tabs v-model="activeTab" theme="card" class="task-tabs mb-6">
+      <t-tab-panel label="任务队列" value="queue">
         <router-view v-if="activeTab === 'queue'" />
-      </el-tab-pane>
-      <el-tab-pane label="打印记录" name="history">
+      </t-tab-panel>
+      <t-tab-panel label="打印记录" value="history">
         <router-view v-if="activeTab === 'history'" />
-      </el-tab-pane>
-    </el-tabs>
+      </t-tab-panel>
+    </t-tabs>
 
     <!-- 内容区域 -->
     <div class="flex-1 overflow-hidden">
@@ -32,7 +32,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { List } from '@element-plus/icons-vue'
+import { ListNumberedIcon as List } from 'tdesign-icons-vue-next'
 
 defineOptions({ name: 'TaskManagement' })
 
@@ -68,24 +68,24 @@ if (route.path.includes('history')) {
 
 <style scoped>
 .task-tabs {
-  .el-tabs__nav-wrap {
+  .t-tabs__nav-wrap {
     background: transparent;
   }
 
-  .el-tabs__nav {
+  .t-tabs__nav {
     padding: 0;
   }
 
-  .el-tabs__item {
+  .t-tabs__item {
     font-weight: 500;
   }
 
-  .el-tabs__item.is-active {
-    color: var(--el-color-primary);
+  .t-tabs__item.is-active {
+    color: var(--farm-color-primary);
   }
 
-  .el-tabs__active-bar {
-    background-color: var(--el-color-primary);
+  .t-tabs__active-bar {
+    background-color: var(--farm-color-primary);
   }
 }
 </style>

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { message } from './message'
 import { useUserStore } from '@/stores/user'
 import router from '@/router'
 import { HTTP_STATUS, BUSINESS_CODE, REQUEST_TIMEOUT } from './constants'
@@ -44,7 +44,7 @@ service.interceptors.response.use(
 
     // 业务状态码校验
     if (res.code !== BUSINESS_CODE.SUCCESS) {
-      ElMessage.error(res.message || '系统异常')
+      message.error(res.message || '系统异常')
 
       // 401 身份过期处理
       if (res.code === BUSINESS_CODE.UNAUTHORIZED) {
@@ -78,7 +78,7 @@ service.interceptors.response.use(
       return error.message || '网络连接异常'
     }
 
-    ElMessage.error(getErrorMessage())
+    message.error(getErrorMessage())
     console.error('[Response Error]', error)
     
     return Promise.reject(error)

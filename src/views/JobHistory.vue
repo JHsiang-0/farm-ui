@@ -1,16 +1,16 @@
 <template>
   <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
-    <el-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
+    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
       <template #header>
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3 text-lg font-semibold text-gray-900">
-            <el-icon :size="20" class="text-gray-600"><document /></el-icon>
+            <document :size="20" class="text-gray-600" />
             <span>打印历史记录</span>
           </div>
-          <el-button type="default" @click="handleQuery" :loading="loading">
-            <el-icon><refresh /></el-icon>
+          <t-button theme="default" @click="handleQuery" :loading="loading">
+            <span><refresh /></span>
             刷新数据
-          </el-button>
+          </t-button>
         </div>
       </template>
 
@@ -19,180 +19,175 @@
         <div class="flex flex-wrap items-center gap-4">
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">任务状态</span>
-            <el-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 160px">
-              <el-option label="待分配" value="PENDING" />
-              <el-option label="排队中" value="QUEUED" />
-              <el-option label="已分配待确认" value="ASSIGNED" />
-              <el-option label="已上传待机" value="READY" />
-              <el-option label="打印中" value="PRINTING" />
-              <el-option label="已暂停" value="PAUSED" />
-              <el-option label="已完成" value="COMPLETED" />
-              <el-option label="失败" value="FAILED" />
-              <el-option label="已取消" value="CANCELLED" />
-            </el-select>
+            <t-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 160px">
+              <t-option label="待分配" value="PENDING" />
+              <t-option label="排队中" value="QUEUED" />
+              <t-option label="已分配待确认" value="ASSIGNED" />
+              <t-option label="已上传待机" value="READY" />
+              <t-option label="打印中" value="PRINTING" />
+              <t-option label="已暂停" value="PAUSED" />
+              <t-option label="已完成" value="COMPLETED" />
+              <t-option label="失败" value="FAILED" />
+              <t-option label="已取消" value="CANCELLED" />
+            </t-select>
           </div>
 
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">时间范围</span>
-            <el-date-picker
+            <t-date-range-picker
               v-model="queryForm.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              value-format="YYYY-MM-DD HH:mm:ss"
+              separator="至"
+              :placeholder="['开始日期', '结束日期']"
+              value-type="YYYY-MM-DD HH:mm:ss"
               style="width: 280px"
               :default-time="['00:00:00', '23:59:59']"
             />
           </div>
 
           <div class="flex items-center gap-2 ml-auto">
-            <el-button type="primary" @click="handleQuery" :loading="loading">
-              <el-icon><search /></el-icon>
+            <t-button theme="primary" @click="handleQuery" :loading="loading">
+              <span><search /></span>
               查询
-            </el-button>
-            <el-button @click="handleReset">
-              <el-icon><refresh /></el-icon>
+            </t-button>
+            <t-button @click="handleReset">
+              <span><refresh /></span>
               重置
-            </el-button>
+            </t-button>
           </div>
         </div>
       </div>
 
       <!-- 数据表格区 -->
-      <el-table
+      <TdTable
         :data="tableData"
-        v-loading="loading"
+        :loading="loading"
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
         height="calc(100vh - 480px)"
       >
-        <el-table-column prop="id" label="任务ID" width="100" align="center">
+        <TdTableColumn prop="id" label="任务ID" width="100" align="center">
           <template #default="scope">
             <span class="font-mono font-semibold text-gray-700">#{{ scope.row.id }}</span>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="fileId" label="关联文件ID" width="100" align="center">
+        <TdTableColumn prop="fileId" label="关联文件ID" width="100" align="center">
           <template #default="scope">
-            <el-tag size="small" effect="plain">{{ scope.row.fileId }}</el-tag>
+            <t-tag size="small" variant="light-outline">{{ scope.row.fileId }}</t-tag>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="printerId" label="分配设备ID" width="100" align="center">
+        <TdTableColumn prop="printerId" label="分配设备ID" width="100" align="center">
           <template #default="scope">
-            <el-tag size="small" effect="plain" v-if="scope.row.printerId">{{ scope.row.printerId }}</el-tag>
+            <t-tag size="small" variant="light-outline" v-if="scope.row.printerId">{{ scope.row.printerId }}</t-tag>
             <span v-else>-</span>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="status" label="状态" width="120" align="center">
+        <TdTableColumn prop="status" label="状态" width="120" align="center">
           <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)" effect="light" size="small">
+            <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
               {{ getStatusLabel(scope.row.status) }}
-            </el-tag>
+            </t-tag>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="progress" label="打印进度" width="140" align="center">
+        <TdTableColumn prop="progress" label="打印进度" width="140" align="center">
           <template #default="scope">
-            <el-progress
+            <t-progress
               :percentage="scope.row.progress"
               :status="getProgressStatus(scope.row.status, scope.row.progress)"
               :stroke-width="6"
-              :show-text="true"
+              :label="true"
             />
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column label="创建时间" min-width="160" prop="createdAt" align="center">
+        <TdTableColumn label="创建时间" min-width="160" prop="createdAt" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
-              <el-icon><clock /></el-icon>
+              <span><clock /></span>
               <span>{{ formatTime(scope.row.createdAt) }}</span>
             </div>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column label="结束时间" min-width="160" prop="endedAt" align="center">
+        <TdTableColumn label="结束时间" min-width="160" prop="endedAt" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
-              <el-icon><timer /></el-icon>
+              <span><timer /></span>
               <span>{{ scope.row.endedAt ? formatTime(scope.row.endedAt) : '-' }}</span>
             </div>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column prop="errorReason" label="报错原因" min-width="180" show-overflow-tooltip>
+        <TdTableColumn prop="errorReason" label="报错原因" min-width="180" show-overflow-tooltip>
           <template #default="scope">
             <span v-if="scope.row.errorReason" class="text-red-600 text-sm">{{ scope.row.errorReason }}</span>
             <span v-else>-</span>
           </template>
-        </el-table-column>
+        </TdTableColumn>
 
-        <el-table-column label="操作" width="120" align="center" fixed="right">
+        <TdTableColumn label="操作" width="120" align="center" fixed="right">
           <template #default="scope">
-            <el-popconfirm
-              title="确定要取消这个任务吗？"
-              confirm-button-type="danger"
+            <t-popconfirm content="确定要取消这个任务吗？"
+              theme="danger"
               @confirm="handleCancel(scope.row.id)"
               :disabled="!canCancel(scope.row.status)"
             >
-              <template #reference>
-                <el-button
-                  size="small"
-                  type="danger"
-                  plain
+              <template>
+                <t-button
+                  size="small" theme="danger" variant="outline"
                   :disabled="!canCancel(scope.row.status)"
                 >
-                  <el-icon><circle-close /></el-icon>
+                  <span><circle-close /></span>
                   取消
-                </el-button>
+                </t-button>
               </template>
-            </el-popconfirm>
+            </t-popconfirm>
           </template>
-        </el-table-column>
-      </el-table>
+        </TdTableColumn>
+      </TdTable>
 
       <!-- 空状态 -->
-      <el-empty
+      <t-empty
         v-if="tableData.length === 0 && !loading"
         description="暂无打印历史记录"
       >
         <template #image>
-          <el-icon :size="64" class="text-gray-400"><document /></el-icon>
+          <document :size="64" class="text-gray-400" />
         </template>
-      </el-empty>
+      </t-empty>
 
       <!-- 底部分页区 -->
       <div class="mt-4 flex justify-center px-4">
-        <el-pagination
-          v-model:current-page="pagination.pageNum"
-          v-model:page-size="pagination.pageSize"
-          background
+        <t-pagination
+          v-model:current="pagination.pageNum"
+          v-model:pageSize="pagination.pageSize"
           :total="pagination.total"
-          layout="total, prev, pager, next"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+          :show-page-size="false"
+          @change="handlePaginationChange"
         />
       </div>
-    </el-card>
+    </t-card>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue'
 import {
-  Document,
-  Refresh,
-  Search,
-  Clock,
-  Timer,
-  CircleClose
-} from '@element-plus/icons-vue'
+  FileIcon as Document,
+  RefreshIcon as Refresh,
+  SearchIcon as Search,
+  TimeIcon as Clock,
+  TaskTimeIcon as Timer,
+  CloseCircleIcon as CircleClose
+} from 'tdesign-icons-vue-next'
 import { getJobPage, cancelJob } from '@/api/job'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
+import TdTable from '@/components/TdTable.vue'
+import TdTableColumn from '@/components/TdTableColumn.vue'
 
 defineOptions({ name: 'JobHistory' })
 
@@ -219,14 +214,14 @@ const getStatusType = (status) => {
     'PENDING': 'primary',
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
-    'READY': 'info',
+    'READY': 'default',
     'PRINTING': 'success',
     'PAUSED': 'warning',
     'COMPLETED': 'success',
     'FAILED': 'danger',
-    'CANCELLED': 'info'
+    'CANCELLED': 'default'
   }
-  return map[status] || 'info'
+  return map[status] || 'default'
 }
 
 // 获取状态显示文本
@@ -264,11 +259,11 @@ const getProgressStatus = (status, progress) => {
 const handleCancel = async (id) => {
   try {
     await cancelJob(id)
-    ElMessage.success('任务已取消')
+    message.success('任务已取消')
     fetchData()
   } catch (error) {
     console.error('取消任务失败:', error)
-    ElMessage.error('取消任务失败')
+    message.error('取消任务失败')
   }
 }
 
@@ -322,16 +317,10 @@ const handleReset = () => {
   fetchData()
 }
 
-// 分页大小改变
-const handleSizeChange = (size) => {
-  pagination.pageSize = size
-  pagination.pageNum = 1
-  fetchData()
-}
-
-// 页码改变
-const handleCurrentChange = (page) => {
-  pagination.pageNum = page
+// TDesign 分页在页码或每页条数变化时统一返回分页信息。
+const handlePaginationChange = ({ current, pageSize }) => {
+  pagination.pageNum = current
+  pagination.pageSize = pageSize
   fetchData()
 }
 
@@ -345,11 +334,11 @@ const fetchData = async () => {
       tableData.value = res.data.records || []
       pagination.total = res.data.total || 0
     } else {
-      ElMessage.error(res.message || '获取数据失败')
+      message.error(res.message || '获取数据失败')
     }
   } catch (error) {
     console.error('获取打印历史记录失败:', error)
-    ElMessage.error('获取打印历史记录失败')
+    message.error('获取打印历史记录失败')
   } finally {
     loading.value = false
   }
@@ -358,4 +347,3 @@ const fetchData = async () => {
 // 初始化数据
 fetchData()
 </script>
-
