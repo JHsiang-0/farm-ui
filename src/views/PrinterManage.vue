@@ -17,11 +17,11 @@
           </t-button>
         </div>
         <div class="flex items-center gap-3">
-          <t-button theme="warning" @click="openScanDialog">
+          <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
             <span><aim /></span>
             扫描局域网设备
           </t-button>
-          <t-button theme="success" @click="handleAdd">
+          <t-button v-if="isAdmin" theme="success" @click="handleAdd">
             <span><plus /></span>
             新增打印机
           </t-button>
@@ -135,12 +135,12 @@
                 启动打印
               </t-button>
               <!-- 编辑按钮 -->
-              <t-button size="small" theme="primary" @click="handleEdit(scope.row)">
+              <t-button v-if="isAdmin" size="small" theme="primary" @click="handleEdit(scope.row)">
                 <span><edit /></span>
                 编辑
               </t-button>
               <!-- 删除按钮 -->
-              <t-popconfirm content="确定要删除这台机器吗？"
+              <t-popconfirm v-if="isAdmin" content="确定要删除这台机器吗？"
                 theme="danger"
                 @confirm="handleDelete(scope.row.id)"
               >
@@ -384,6 +384,7 @@ import {
 } from '@/api/printer'
 import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
+import { useUserStore } from '@/stores/user'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
@@ -392,6 +393,8 @@ defineOptions({ name: 'PrinterManage' })
 
 // ===== 列表与分页状态 =====
 const loading = ref(false)
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.isAdmin)
 const tableData = ref([])
 const total = ref(0)
 const queryParams = reactive({

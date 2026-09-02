@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { message } from '@/utils/message'
 import Layout from '@/layout/index.vue' // 引入刚写的布局组件
+
+const APP_ROLES = ['ADMIN', 'OPERATOR']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,12 +11,14 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('../views/Login.vue')
+      component: () => import('../views/Login.vue'),
+      meta: { requiresAuth: false }
     },
     // 将 Layout 设置为根路由
     {
       path: '/',
       component: Layout, 
+      meta: { requiresAuth: true, roles: APP_ROLES },
       children: [
         {
           // path 为空代表默认加载的子页面
@@ -58,18 +63,24 @@ const router = createRouter({
 })
 
 // 全局路由守卫（门禁系统）
-router.beforeEach((to, _from) => {
+router.beforeEach((to) => {
   const userStore = useUserStore()
-  
-  // 如果用户要去非登录页，但没有 token，一律踢回登录页
-  if (to.path !== '/login' && !userStore.token) {
-    return '/login'
-  } 
+
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  if (requiresAuth && !userStore.token) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
   // 如果用户已经登录了，还想去登录页，一律踢回大屏主页
   if (to.path === '/login' && userStore.token) {
-    return '/'
-  } 
-  // 其他情况，正常放行（不返回或返回 true/undefined）
+    return { name: 'dashboard' }
+  }
+
+  const requiredRoles = to.matched.flatMap(record => record.meta.roles || [])
+  if (requiredRoles.length > 0 && !userStore.hasRole(requiredRoles)) {
+    message.error('当前账号没有访问该页面的权限')
+    return { name: 'dashboard' }
+  }
 })
 
 export default router

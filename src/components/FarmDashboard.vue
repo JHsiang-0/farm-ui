@@ -6,10 +6,10 @@
         :last-update-time="lastUpdateTime" @refresh="handleRefresh">
       <!-- 布局锁定/编辑模式切换按钮 -->
       <template #actions>
-        <t-button v-if="!isEditMode" theme="default" :icon="renderIcon(Lock)" @click="toggleEditMode">
+        <t-button v-if="canManageLayout && !isEditMode" theme="default" :icon="renderIcon(Lock)" @click="toggleEditMode">
           解锁布局
         </t-button>
-        <t-button v-else theme="primary" :icon="renderIcon(Unlock)" @click="saveLayout">
+        <t-button v-else-if="canManageLayout" theme="primary" :icon="renderIcon(Unlock)" @click="saveLayout">
           保存布局
         </t-button>
       </template>
@@ -42,9 +42,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { message } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
+import { useUserStore } from '@/stores/user'
 import { LockOnIcon as Lock, LockOffIcon as Unlock } from 'tdesign-icons-vue-next'
 import { usePrinterStore } from '@/stores/printer'
 import DashboardHeader from './DashboardHeader.vue'
@@ -59,6 +60,7 @@ defineOptions({ name: 'FarmDashboard' })
 // ============================================
 
 const store = usePrinterStore()
+const userStore = useUserStore()
 
 // ============================================
 // Reactive State
@@ -66,6 +68,11 @@ const store = usePrinterStore()
 
 /** 编辑模式状态 - 默认锁定监控模式 */
 const isEditMode = ref(false)
+const canManageLayout = computed(() => userStore.isAdmin)
+
+watch(canManageLayout, canManage => {
+  if (!canManage) isEditMode.value = false
+})
 
 /** 拖拽相关状态 */
 const draggedDevice = ref(null)
@@ -298,6 +305,11 @@ function handleCellClick(device, rowIndex, colIndex) {
  * @param {number} deviceId - 设备ID
  */
 async function performBind(deviceId) {
+  if (!canManageLayout.value) {
+    message.error('当前账号没有绑定设备的权限')
+    return
+  }
+
   try {
     // 先调用位置更新 API
     const positionPayload = [{
@@ -388,6 +400,10 @@ function handleDrawerClosed() {
  * 切换编辑模式
  */
 function toggleEditMode() {
+  if (!canManageLayout.value) {
+    message.error('当前账号没有维护网格布局的权限')
+    return
+  }
   isEditMode.value = true
   message.info('已进入编辑模式，现在可以拖拽设备调整位置')
 }
@@ -397,6 +413,7 @@ function toggleEditMode() {
  * 预留函数桩，用于后续对接保存到数据库的 API
  */
 async function saveLayoutPositions() {
+  if (!canManageLayout.value) return
   // TODO: 实现保存布局到数据库的逻辑
   console.log('[saveLayoutPositions] 保存布局位置到数据库...')
 }
@@ -405,6 +422,11 @@ async function saveLayoutPositions() {
  * 保存布局并退出编辑模式
  */
 async function saveLayout() {
+  if (!canManageLayout.value) {
+    isEditMode.value = false
+    return
+  }
+
   try {
     await saveLayoutPositions()
     isEditMode.value = false

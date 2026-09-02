@@ -29,7 +29,7 @@ export function getJobQueue() {
 /**
  * 创建打印任务
  * @param {Object} data - 任务参数
- * @param {number} data.fileId - 文件ID
+ * @param {number|string} data.fileId - 文件ID
  * @param {string} [data.materialType] - 耗材类型
  * @param {string} [data.nozzleSize] - 喷头尺寸
  * @param {string} [data.priority='NORMAL'] - 优先级（HIGH/NORMAL/LOW）
@@ -59,8 +59,8 @@ export function createPrintJobLegacy(data) {
 
 /**
  * 指派任务给指定打印机（仅分配，不触发打印）- 安全模式第一步
- * @param {number} jobId - 任务ID
- * @param {number} printerId - 打印机ID
+ * @param {number|string} jobId - 任务ID
+ * @param {number|string} printerId - 打印机ID
  * @returns {Promise<{code: number, message: string, data: PrintJob}>} 指派结果
  */
 export function assignJobToPrinter(jobId, printerId) {
@@ -73,7 +73,7 @@ export function assignJobToPrinter(jobId, printerId) {
 
 /**
  * 启动任务打印（现场启动打印）- 安全模式第二步之二
- * @param {number} jobId - 任务ID
+ * @param {number|string} jobId - 任务ID
  * @param {string} [action='START_PRINT'] - 操作类型：'START_PRINT' 或 'UPLOAD_ONLY'
  * @returns {Promise<{code: number, message: string, data: PrintJob}>} 启动结果
  */
@@ -87,7 +87,7 @@ export function startJob(jobId, action = 'START_PRINT') {
 
 /**
  * 取消/删除打印任务
- * @param {number} id - 任务ID
+ * @param {number|string} id - 任务ID
  * @returns {Promise<{code: number, message: string}>} 取消结果
  */
 export function cancelJob(id) {

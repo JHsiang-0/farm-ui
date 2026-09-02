@@ -42,7 +42,7 @@
       <!-- 右侧表单区 -->
       <div class="form-panel">
         <!-- 登录表单 -->
-        <div v-if="isLogin" class="form-wrapper animate-fade-in">
+        <div class="form-wrapper animate-fade-in">
           <div class="form-header">
             <h2 class="form-title">欢迎回来</h2>
             <p class="form-desc">请登录您的账户以继续操作</p>
@@ -90,100 +90,6 @@
             </t-button>
           </t-form>
 
-          <div class="form-switch">
-            <span class="switch-text">还没有账户？</span>
-            <t-button variant="text" theme="primary" class="switch-btn" @click="isLogin = false">
-              立即注册
-            </t-button>
-          </div>
-        </div>
-
-        <!-- 注册表单 -->
-        <div v-else class="form-wrapper animate-fade-in">
-          <div class="form-header">
-            <h2 class="form-title">创建账户</h2>
-            <p class="form-desc">填写信息开始您的3D打印之旅</p>
-          </div>
-
-          <t-form :data="registerForm"
-            :rules="rules"
-            ref="registerFormRef"
-            size="large"
-            class="register-form"
-          >
-            <t-form-item name="username">
-              <t-input
-                v-model="registerForm.username"
-                placeholder="用户名（3-20个字符）"
-                :prefix-icon="renderIcon(User)"
-                clearable
-              />
-            </t-form-item>
-
-            <t-form-item name="email">
-              <t-input
-                v-model="registerForm.email"
-                placeholder="电子邮箱"
-                :prefix-icon="renderIcon(Message)"
-                clearable
-              />
-            </t-form-item>
-
-            <t-form-item name="phone">
-              <t-input
-                v-model="registerForm.phone"
-                placeholder="手机号码（选填）"
-                :prefix-icon="renderIcon(Phone)"
-                clearable
-              />
-            </t-form-item>
-
-            <t-form-item name="password">
-              <t-input
-                v-model="registerForm.password"
-                type="password"
-                placeholder="设置密码（至少6位）"
-                :prefix-icon="renderIcon(Lock)"
-              />
-            </t-form-item>
-
-            <t-form-item name="confirmPassword">
-              <t-input
-                v-model="registerForm.confirmPassword"
-                type="password"
-                placeholder="确认密码"
-                :prefix-icon="renderIcon(Check)"
-                @keyup.enter="handleRegister"
-              />
-            </t-form-item>
-
-            <t-form-item class="terms-item">
-              <t-checkbox v-model="agreeTerms">
-                <span class="terms-text">
-                  我已阅读并同意
-                  <t-link theme="primary">服务条款</t-link>
-                  和
-                  <t-link theme="primary">隐私政策</t-link>
-                </span>
-              </t-checkbox>
-            </t-form-item>
-
-            <t-button theme="primary"
-              size="large"
-              class="submit-btn"
-              :loading="loading"
-              @click="handleRegister"
-            >
-              注 册
-            </t-button>
-          </t-form>
-
-          <div class="form-switch">
-            <span class="switch-text">已有账户？</span>
-            <t-button variant="text" theme="primary" class="switch-btn" @click="isLogin = true">
-              立即登录
-            </t-button>
-          </div>
         </div>
       </div>
     </div>
@@ -198,17 +104,13 @@
 <script setup>
 defineOptions({ name: 'LoginView' })
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
-import { register } from '@/api/user'
 import {
   UserIcon as User,
   LockOnIcon as Lock,
-  CheckIcon as Check,
-  MailIcon as Message,
-  PhoneSearchIcon as Phone,
   DesktopIcon as Monitor,
   ViewImageIcon as View,
   ChartIcon as DataAnalysis,
@@ -216,42 +118,20 @@ import {
 } from 'tdesign-icons-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
-const isLogin = ref(true)
 const loading = ref(false)
 const rememberMe = ref(false)
 
 const loginForm = reactive({ username: '', password: '' })
-const registerForm = reactive({
-  username: '',
-  email: '',
-  phone: '',
-  password: '',
-  confirmPassword: ''
-})
-const agreeTerms = ref(false)
 
 const loginFormRef = ref(null)
-const registerFormRef = ref(null)
 
-// 校验规则
-const validateConfirm = (value) => {
-  if (!value) {
-    return { result: false, message: '请确认密码' }
-  }
-  if (value !== registerForm.password) {
-    return { result: false, message: '两次输入的密码不一致' }
-  }
-  return true
-}
-
-const validatePhone = (value) => {
-  if (!value) {
-    return true
-  }
-  if (!/^\d{11}$/.test(value)) {
-    return { result: false, message: '请输入有效的11位手机号' }
+const validatePassword = (value) => {
+  if (!value) return { result: false, message: '请输入密码' }
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(value)) {
+    return { result: false, message: '密码必须为6-20位且包含大小写字母和数字' }
   }
   return true
 }
@@ -262,26 +142,20 @@ const rules = {
     { min: 3, max: 20, message: '用户名长度应为3-20个字符', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度应为6-20位', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, validator: validateConfirm, trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ],
-  phone: [{ validator: validatePhone, trigger: 'blur' }]
+    { validator: validatePassword, trigger: 'blur' }
+  ]
 }
 
 const handleLogin = async () => {
   await loginFormRef.value.validate()
   loading.value = true
   try {
-    await userStore.userLogin(loginForm)
+    await userStore.userLogin(loginForm, { remember: rememberMe.value })
     message.success('登录成功')
-    router.push('/')
+    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
+      ? route.query.redirect
+      : '/'
+    router.push(redirect)
   } catch (e) {
     message.error(e.message || '登录失败')
   } finally {
@@ -289,32 +163,6 @@ const handleLogin = async () => {
   }
 }
 
-const handleRegister = async () => {
-  await registerFormRef.value.validate()
-  if (!agreeTerms.value) {
-    message.warning('请先同意服务条款和隐私政策')
-    return
-  }
-  loading.value = true
-  try {
-    await register({
-      username: registerForm.username,
-      password: registerForm.password,
-      email: registerForm.email,
-      phone: registerForm.phone
-    })
-    message.success('注册成功，正在为您登录')
-    await userStore.userLogin({
-      username: registerForm.username,
-      password: registerForm.password
-    })
-    router.push('/')
-  } catch (e) {
-    message.error(e.message || '注册失败')
-  } finally {
-    loading.value = false
-  }
-}
 </script>
 
 <style scoped>

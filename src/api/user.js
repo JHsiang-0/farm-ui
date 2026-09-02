@@ -11,7 +11,7 @@ import { mapResponseData, normalizeUser } from '@/utils/dataAdapters'
  * @param {Object} data - 登录参数
  * @param {string} data.username - 用户名
  * @param {string} data.password - 密码
- * @returns {Promise<{code: number, message: string, data: {token: string, user: UserInfo}}>} 登录结果
+ * @returns {Promise<{code: number, message: string, data: LoginResult}>} 登录结果
  */
 export function login(data) {
   return request({
@@ -28,7 +28,7 @@ export function login(data) {
  * @param {string} data.password - 密码
  * @param {string} [data.email] - 邮箱
  * @param {string} [data.phone] - 手机号
- * @returns {Promise<{code: number, message: string, data: UserInfo}>} 注册结果
+ * @returns {Promise<{code: number, message: string, data: string}>} 注册结果，data 为新用户 ID
  */
 export function register(data) {
   return request({
@@ -43,8 +43,17 @@ export function register(data) {
 // ============================================
 
 /**
+ * @typedef {Object} LoginResult
+ * @property {string} token - Bearer Token
+ * @property {number} expiresIn - 有效期（秒）
+ * @property {string} userId - 用户ID
+ * @property {string} username - 用户名
+ * @property {string} role - 用户角色（ADMIN/OPERATOR）
+ */
+
+/**
  * @typedef {Object} UserInfo
- * @property {number} id - 用户ID
+ * @property {string} id - 用户ID
  * @property {string} username - 用户名
  * @property {string} [email] - 邮箱
  * @property {string} [phone] - 手机号

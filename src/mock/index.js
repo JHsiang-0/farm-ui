@@ -125,6 +125,10 @@ const makeMockFileUrl = name => {
 
 const handleLogin = config => {
   const { username, password } = getBody(config)
+  if (username === 'disabled') {
+    fail(403, 403, '用户已被禁用')
+  }
+
   const user = mockState.users.find(item => item.username === username)
   if (!user || user.password !== password) {
     fail(401, 401, '用户名或密码错误')
