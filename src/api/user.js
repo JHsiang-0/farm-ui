@@ -1,5 +1,10 @@
 import request from '@/utils/request'
-import { mapResponseData, normalizeUser } from '@/utils/dataAdapters'
+import {
+  mapResponseData,
+  normalizePageParams,
+  normalizePageResponse,
+  normalizeUser
+} from '@/utils/dataAdapters'
 
 /**
  * 用户认证 API 模块
@@ -36,6 +41,42 @@ export function register(data) {
     method: 'post',
     data
   }).then(response => mapResponseData(response, normalizeUser))
+}
+
+export function getAdminUsers(params = {}) {
+  return request({
+    url: '/api/v1/auth/admin/users',
+    method: 'get',
+    params: normalizePageParams(params)
+  }).then(response => mapResponseData(response, data => normalizePageResponse(data, normalizeUser)))
+}
+
+export function createAdminUser(data) {
+  return request({ url: '/api/v1/auth/admin/users', method: 'post', data })
+}
+
+export function updateAdminUser(userId, data) {
+  return request({ url: `/api/v1/auth/admin/users/${userId}`, method: 'put', data })
+}
+
+export function setAdminUserEnabled(userId, enabled) {
+  return request({
+    url: `/api/v1/auth/admin/users/${userId}/${enabled ? 'enable' : 'disable'}`,
+    method: 'post'
+  })
+}
+
+export function getProfile(userId) {
+  return request({ url: `/api/v1/auth/${userId}/profile`, method: 'get' })
+    .then(response => mapResponseData(response, normalizeUser))
+}
+
+export function updateProfile(userId, data) {
+  return request({ url: `/api/v1/auth/${userId}/profile`, method: 'put', data })
+}
+
+export function changePassword(userId, data) {
+  return request({ url: `/api/v1/auth/${userId}/change-password`, method: 'post', data })
 }
 
 // ============================================

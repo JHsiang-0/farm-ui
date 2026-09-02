@@ -63,14 +63,15 @@ export function createFolder(data) {
  * @param {FormData} formData - 包含文件的 FormData 对象
  * @returns {Promise<{code: number, message: string, data: PrintFile}>} 上传结果
  */
-export function uploadFile(formData) {
+export function uploadFile(formData, onUploadProgress) {
   return request({
     url: '/api/v1/print-files/upload',
     method: 'post',
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    onUploadProgress
   }).then(response => mapResponseData(response, normalizePrintFile))
 }
 

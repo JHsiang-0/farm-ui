@@ -1,10 +1,12 @@
-import { computed, shallowRef, markRaw } from 'vue'
+import { computed, shallowRef, markRaw, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { WebSocketClient } from '@/utils/websocket'
 import { PRINTER_STATE } from '@/utils/constants'
 import { normalizeId } from '@/utils/dataAdapters'
 import { normalizeProgress } from '@/utils/formatters'
 import { isMockEnabled } from '@/mock'
+import { useUserStore } from '@/stores/user'
+import { createMockWebSocketStream } from '@/mock/websocket'
 import { mockState } from '@/mock/data'
 
 /**
@@ -26,6 +28,9 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
   /** WebSocket 客户端实例 - 使用 markRaw 避免响应式代理 */
   let wsClient = null
+  let mockStream = null
+  const mockConnectionState = ref('CLOSED')
+  const userStore = useUserStore()
 
   // ============================================
   // RAF 批量更新机制
@@ -47,7 +52,16 @@ export const useRealtimeStore = defineStore('realtime', () => {
   // 获取 WebSocket 地址：优先使用环境变量，否则使用当前页面 host
   const getWsUrl = () => {
     const envWsUrl = import.meta.env.VITE_WS_URL
-    if (envWsUrl) return envWsUrl
+    const baseUrl = envWsUrl || (() => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const host = window.location.host
+      return `${protocol}//${host}/ws/farm-status`
+    })()
+    if (userStore.token) {
+      const separator = baseUrl.includes('?') ? '&' : '?'
+      return `${baseUrl}${separator}token=${encodeURIComponent(userStore.token)}`
+    }
+    if (!userStore.token) return baseUrl
     // 降级：使用当前页面协议和 host，兼容局域网访问
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
@@ -74,7 +88,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * @returns {string}
    */
   const wsConnectionState = computed(() => {
-    return wsClient ? wsClient.getState() : 'CLOSED'
+    return isMockEnabled ? mockConnectionState.value : (wsClient ? wsClient.getState() : 'CLOSED')
   })
 
   /**
@@ -82,7 +96,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * @returns {boolean}
    */
   const isWsConnected = computed(() => {
-    return wsClient ? wsClient.isConnected() : false
+    return isMockEnabled ? mockConnectionState.value === 'OPEN' : (wsClient ? wsClient.isConnected() : false)
   })
 
   /**
@@ -153,8 +167,8 @@ export const useRealtimeStore = defineStore('realtime', () => {
       // 将后端数据格式转换为前端组件期望的格式
       newMap.set(idKey, {
         // 优先使用 unifiedState，这是后端融合后的最终状态
-        unifiedState: data.unifiedState || PRINTER_STATE.UNKNOWN,
-        state: data.unifiedState || data.state || PRINTER_STATE.UNKNOWN,
+        unifiedState: normalizeRealtimeState(data),
+        state: normalizeRealtimeState(data),
         progress: normalizeProgress(data.progress), // 契约统一为 0-100
         // 温度数据 - 兼容 extruder/heaterBed 嵌套格式
         extruder: {
@@ -207,8 +221,47 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * @param {Object} message - WebSocket 消息对象
    * @private
    */
+  function normalizeRealtimeState(data = {}) {
+    const state = String(data.unifiedState || data.state || PRINTER_STATE.UNKNOWN).toUpperCase()
+    if (state === 'IDLE') return PRINTER_STATE.STANDBY
+    if (state === 'ERROR') return PRINTER_STATE.FAULT
+    if (state === 'OFFLINE') return PRINTER_STATE.UNKNOWN
+    return state
+  }
+
+  function queueRealtimeUpdate(printerId, data, timestamp) {
+    if (printerId === undefined || printerId === null) return
+    const idKey = String(printerId)
+    const previous = pendingUpdates.get(idKey) || { data: statusMap.value.get(idKey) || {} }
+    pendingUpdates.set(idKey, {
+      data: { ...previous?.data, ...data },
+      timestamp: timestamp || Date.now()
+    })
+    scheduleBatchUpdate()
+  }
+
   function handleWebSocketMessage(message) {
-    const { printerId, data, timestamp } = message
+    const { type, printerId, data, timestamp } = message || {}
+
+    if (type === 'SNAPSHOT') {
+      const entries = Array.isArray(data) ? data : Object.entries(data || {}).map(([id, value]) => ({ printerId: id, data: value }))
+      entries.forEach(entry => queueRealtimeUpdate(entry.printerId ?? entry.id, entry.data, timestamp))
+      return
+    }
+
+    if (type === 'PRINTER_OFFLINE') {
+      queueRealtimeUpdate(printerId, { unifiedState: PRINTER_STATE.UNKNOWN, state: PRINTER_STATE.UNKNOWN, systemMessage: data?.message || '设备已离线' }, timestamp)
+      return
+    }
+
+    if (type === 'JOB_STATUS') {
+      queueRealtimeUpdate(printerId, {
+        currentJobId: data?.currentJobId ?? message.jobId,
+        currentJobStatus: data?.status ?? data?.currentJobStatus,
+        progress: data?.progress
+      }, timestamp)
+      return
+    }
 
     if (printerId === undefined || printerId === null || !data) {
       console.warn('[RealtimeStore] 收到无效的 WebSocket 消息:', message)
@@ -216,8 +269,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     }
 
     // 将消息加入待处理队列
-    const idKey = String(printerId)
-    pendingUpdates.set(idKey, { data, timestamp })
+    queueRealtimeUpdate(printerId, data, timestamp)
 
     // 调度批量更新
     scheduleBatchUpdate()
@@ -227,6 +279,16 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * 连接 WebSocket
    */
   function connectWs() {
+    if (isMockEnabled) {
+      if (mockStream) return
+      mockConnectionState.value = 'OPEN'
+      mockStream = createMockWebSocketStream({
+        onMessage: handleWebSocketMessage,
+        onClose: () => { mockConnectionState.value = 'CLOSED' }
+      })
+      return
+    }
+
     if (isMockEnabled) {
       const statusUpdates = mockState.printers.map(printer => {
         const state = printer.status === 'IDLE'
@@ -312,6 +374,12 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
     // 清空待处理队列
     pendingUpdates.clear()
+
+    if (mockStream) {
+      mockStream.close()
+      mockStream = null
+      mockConnectionState.value = 'CLOSED'
+    }
 
     if (wsClient) {
       // 清理所有事件监听器

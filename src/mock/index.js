@@ -1,4 +1,4 @@
-import { cloneMockData, mockState, nextMockId } from './data'
+import { cloneMockData, mockState, nextMockId, resetMockState } from './data'
 
 const MOCK_DELAY = 120
 
@@ -36,7 +36,8 @@ const fail = (status, code, message, data) => {
 const getBody = config => {
   if (config.data instanceof FormData) {
     return {
-      file: config.data.get('file')
+      file: config.data.get('file'),
+      parentId: config.data.get('parentId')
     }
   }
   return config.data || {}
@@ -45,6 +46,27 @@ const getBody = config => {
 const getHeader = (headers, name) => {
   if (!headers) return ''
   return headers[name] || headers[name.toLowerCase()] || ''
+}
+
+const getMockErrorScenario = config => {
+  const value = config.params?.mockError || getHeader(config.headers, 'X-Mock-Error')
+  return String(value || '').trim()
+}
+
+const throwMockErrorScenario = config => {
+  const scenario = getMockErrorScenario(config)
+  const scenarios = {
+    '401': [401, 401, '模拟未登录'],
+    '403': [403, 403, '模拟无权限'],
+    '404': [404, 404, '模拟资源不存在'],
+    '409': [409, 409, '模拟资源冲突'],
+    '422': [422, 422, '模拟业务校验失败'],
+    '10001': [400, 10001, '模拟参数错误'],
+    '10002': [409, 10002, '模拟设备忙碌'],
+    '5003': [500, 5003, '模拟设备执行失败'],
+    '5004': [503, 5004, '模拟服务维护中']
+  }
+  if (scenarios[scenario]) fail(...scenarios[scenario])
 }
 
 const getSession = config => {
@@ -118,6 +140,12 @@ const publicJob = job => {
   }
 }
 
+const publicUser = user => {
+  const data = cloneMockData(user)
+  delete data.password
+  return data
+}
+
 const makeMockFileUrl = name => {
   const content = `; Mock G-code: ${name}\nG28\nG1 X10 Y10 F3000\nM104 S0\n`
   return `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`
@@ -179,6 +207,80 @@ const handleRegister = config => {
   }
   mockState.users.push(user)
   return user.id
+}
+
+const handleAdminUserPage = config => {
+  requireSession(config, ['ADMIN'])
+  const params = getParams(config)
+  let records = mockState.users
+  if (params.username) records = records.filter(user => user.username.includes(String(params.username)))
+  if (params.role) records = records.filter(user => user.role === params.role)
+  if (params.email) records = records.filter(user => (user.email || '').includes(String(params.email)))
+  return getPageData(records.map(publicUser), params)
+}
+
+const handleAdminUserCreate = config => {
+  const id = handleRegister(config)
+  const user = mockState.users.find(item => item.id === id)
+  const role = getBody(config).role
+  if (user && ['ADMIN', 'OPERATOR'].includes(role)) user.role = role
+  return id
+}
+
+const handleAdminUserUpdate = config => {
+  const session = requireSession(config, ['ADMIN'])
+  const id = getPath(config.url).split('/').at(-1)
+  const user = mockState.users.find(item => String(item.id) === String(id))
+  if (!user) fail(404, 404, '鐢ㄦ埛涓嶅瓨鍦?')
+  const body = getBody(config)
+  if (body.email !== undefined) user.email = body.email || null
+  if (body.phone !== undefined) user.phone = body.phone || null
+  if (body.role && ['ADMIN', 'OPERATOR'].includes(body.role)) user.role = body.role
+  if (body.password) user.password = body.password
+  user.updatedAt = now()
+  if (session.userId === user.id && body.role) session.role = body.role
+  return null
+}
+
+const handleAdminUserToggle = config => {
+  requireSession(config, ['ADMIN'])
+  const parts = getPath(config.url).split('/')
+  const id = parts.at(-2)
+  const user = mockState.users.find(item => String(item.id) === String(id))
+  if (!user) fail(404, 404, '鐢ㄦ埛涓嶅瓨鍦?')
+  user.enabled = parts.at(-1) === 'enable'
+  user.updatedAt = now()
+  return null
+}
+
+const handleProfile = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  if (String(session.userId) !== String(id)) fail(403, 403, '鍙兘鏌ョ湅鑷繁鐨勮祫鏂?')
+  const user = mockState.users.find(item => item.id === session.userId)
+  if (!user) fail(404, 404, '鐢ㄦ埛涓嶅瓨鍦?')
+  if (config.method?.toLowerCase() === 'put') {
+    const body = getBody(config)
+    user.email = body.email ?? user.email
+    user.phone = body.phone ?? user.phone
+    user.updatedAt = now()
+  }
+  return publicUser(user)
+}
+
+const handleChangePassword = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  if (String(session.userId) !== String(id)) fail(403, 403, '鍙兘淇敼鑷繁鐨勫瘑鐮?')
+  const body = getBody(config)
+  const user = mockState.users.find(item => item.id === session.userId)
+  if (!user || user.password !== body.oldPassword) fail(422, 422, '鏃у瘑鐮侀敊璇?')
+  if (!body.newPassword || body.newPassword !== body.confirmPassword || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(body.newPassword)) {
+    fail(422, 422, '鏂板瘑鐮佹牸寮忔垨纭涓嶆纭?')
+  }
+  user.password = body.newPassword
+  user.updatedAt = now()
+  return null
 }
 
 const handlePrinterPage = config => {
@@ -327,14 +429,15 @@ const handleFilePage = config => {
 
 const handleUpload = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
-  const file = getBody(config).file
+  const body = getBody(config)
+  const file = body.file
   if (!file?.name) fail(400, 400, '请选择要上传的文件')
   if (!/\.(gcode|bgcode)$/i.test(file.name)) fail(400, 400, '仅支持 .gcode 或 .bgcode 文件')
 
   const createdAt = now()
   const printFile = {
     id: nextMockId('file'),
-    parentId: null,
+    parentId: body.parentId == null || body.parentId === '' ? null : Number(body.parentId),
     folder: false,
     isFolder: 0,
     originalName: file.name,
@@ -446,7 +549,7 @@ const handleJobQueue = config => {
     records = records.filter(item => String(item.userId) === String(session.userId))
   }
   return records
-    .sort((a, b) => b.priority - a.priority || a.id - b.id)
+    .sort((a, b) => b.priority - a.priority || new Date(b.createdAt) - new Date(a.createdAt))
     .map(publicJob)
 }
 
@@ -572,12 +675,19 @@ const handlePrinterControl = config => {
 }
 
 const route = async config => {
+  throwMockErrorScenario(config)
   const method = String(config.method || 'get').toUpperCase()
   const path = getPath(config.url)
   const key = `${method} ${path}`
 
   if (key === 'POST /api/v1/auth/login') return handleLogin(config)
   if (key === 'POST /api/v1/auth/register') return handleRegister(config)
+  if (key === 'GET /api/v1/auth/admin/users') return handleAdminUserPage(config)
+  if (key === 'POST /api/v1/auth/admin/users') return handleAdminUserCreate(config)
+  if (/^PUT \/api\/v1\/auth\/admin\/users\/[^/]+$/.test(key)) return handleAdminUserUpdate(config)
+  if (/^POST \/api\/v1\/auth\/admin\/users\/[^/]+\/(enable|disable)$/.test(key)) return handleAdminUserToggle(config)
+  if (/^(GET|PUT) \/api\/v1\/auth\/[^/]+\/profile$/.test(key)) return handleProfile(config)
+  if (/^POST \/api\/v1\/auth\/[^/]+\/change-password$/.test(key)) return handleChangePassword(config)
   if (key === 'GET /api/v1/printers/page') return handlePrinterPage(config)
   if (key === 'POST /api/v1/printers/add') return handleAddPrinter(config)
   if (key === 'PUT /api/v1/printers/update') return handleUpdatePrinter(config)
@@ -605,6 +715,10 @@ const route = async config => {
 }
 
 export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true'
+
+if (import.meta.env.DEV) {
+  window.__FARM_RESET_MOCK__ = resetMockState
+}
 
 export async function mockRequest(config) {
   await wait(MOCK_DELAY)

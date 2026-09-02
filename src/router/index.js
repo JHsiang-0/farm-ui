@@ -31,6 +31,12 @@ const router = createRouter({
           name: 'printers',
           component: () => import('../views/PrinterManage.vue') 
         },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('../views/UserManagement.vue'),
+          meta: { roles: ['ADMIN'] }
+        },
         { 
           path: 'files', 
           name: 'files',

@@ -36,12 +36,6 @@
           <t-option label="TPU" value="TPU" />
           <t-option label="尼龙" value="尼龙" />
         </t-select>
-        <t-select v-model="tagFilter" placeholder="标签筛选" clearable class="w-40" size="medium" @change="handleSearch">
-          <t-option label="常用模型" value="常用模型" />
-          <t-option label="测试件" value="测试件" />
-          <t-option label="原型件" value="原型件" />
-          <t-option label="量产件" value="量产件" />
-        </t-select>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <t-space class="border border-gray-300 rounded overflow-hidden">
@@ -343,6 +337,13 @@
           </div>
         </template>
       </t-upload>
+      <div v-if="uploadingFile" class="px-4 pb-4">
+        <div class="flex justify-between text-sm text-gray-600 mb-2">
+          <span>正在上传：{{ uploadingFile.name }}</span>
+          <span>{{ uploadProgress }}%</span>
+        </div>
+        <t-progress :percentage="uploadProgress" />
+      </div>
     </t-dialog>
 
     <!-- 新建文件夹对话框 -->
@@ -425,6 +426,19 @@
             </t-radio-group>
           </t-form-item>
 
+          <t-form-item label="打印机">
+            <t-select v-model="jobForm.printerId" placeholder="不指定，创建后进入队列" clearable :loading="loadingPrinters">
+              <t-option label="不指定（进入队列）" value="" />
+              <t-option
+                v-for="printer in availablePrinters"
+                :key="printer.id"
+                :label="`${printer.name}（${printer.machineNumber || `#${printer.id}`}）`"
+                :value="printer.id"
+              />
+            </t-select>
+            <div class="text-xs text-gray-500 mt-1">指定打印机只记录分配目标，不会跳过安全确认流程</div>
+          </t-form-item>
+
           <!-- 打印份数 -->
           <t-form-item label="打印份数">
             <t-input-number
@@ -481,6 +495,7 @@ import {
   createFolder
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
+import { getPrinterList } from '@/api/printer'
 import { formatDuration, formatFileSize } from '@/utils/formatters'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
@@ -495,16 +510,21 @@ const fileList = ref([])
 const selectedIds = ref([])
 const searchKeyword = ref('')
 const materialFilter = ref('')
-const tagFilter = ref('')
+// 后端当前不支持标签筛选，避免向接口发送未定义参数。
 const viewMode = ref('grid')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
+const uploadingFile = ref(null)
+const uploadProgress = ref(0)
 // 打印任务对话框状态
 const createJobDialogVisible = ref(false)
 const submittingJob = ref(false)
+const availablePrinters = ref([])
+const loadingPrinters = ref(false)
 const jobForm = reactive({
   file: null,
+  printerId: '',
   priority: 0, // 0-普通, 1-优先, 2-加急
   copies: 1
 })
@@ -562,7 +582,6 @@ const fetchData = async () => {
       pageSize: pagination.pageSize,
       keyword: searchKeyword.value || undefined,
       materialType: materialFilter.value || undefined,
-      tag: tagFilter.value || undefined,
       parentId: currentParentId.value
     }
     const res = await getFileList(params)
@@ -683,23 +702,36 @@ const handleSelectionChange = (selection) => {
  * 文件上传处理
  */
 const handleFileChange = async (files) => {
+  if (uploadingFile.value) return
   const latestFile = Array.isArray(files) ? files.at(-1) : files
   const file = latestFile?.raw || latestFile
   if (!file) return
 
   // 验证文件类型
-  if (!file.name.endsWith('.gcode') && !file.name.endsWith('.bgcode')) {
+  if (!/\.(gcode|bgcode)$/i.test(file.name)) {
     message.warning('请上传 .gcode 或 .bgcode 文件')
+    return
+  }
+
+  if (file.size > 100 * 1024 * 1024) {
+    message.warning('文件大小不能超过 100MB')
     return
   }
 
   const formData = new FormData()
   formData.append('file', file)
+  if (currentParentId.value !== null) formData.append('parentId', String(currentParentId.value))
 
+  uploadingFile.value = file
+  uploadProgress.value = 0
   try {
-    await uploadPrintFile(formData)
+    await uploadPrintFile(formData, event => {
+      if (event?.total) uploadProgress.value = Math.min(Math.round((event.loaded / event.total) * 100), 99)
+    })
     message.success('文件上传成功')
     uploadDialogVisible.value = false
+    uploadingFile.value = null
+    uploadProgress.value = 0
     fetchData()
   } catch (error) {
     console.error('上传失败:', error)
@@ -772,7 +804,9 @@ const handlePrint = (file) => {
   jobForm.file = file
   jobForm.priority = 0
   jobForm.copies = 1
+  jobForm.printerId = ''
   createJobDialogVisible.value = true
+  loadAssignablePrinters()
 }
 
 /**
@@ -782,12 +816,27 @@ const handlePrintFromDetail = (file) => {
   jobForm.file = file
   jobForm.priority = 0
   jobForm.copies = 1
+  jobForm.printerId = ''
   createJobDialogVisible.value = true
+  loadAssignablePrinters()
 }
 
 /**
  * 提交创建打印任务
  */
+const loadAssignablePrinters = async () => {
+  loadingPrinters.value = true
+  try {
+    const res = await getPrinterList({ pageNum: 1, pageSize: 100, status: 'IDLE' })
+    availablePrinters.value = (res.data?.records || []).filter(printer => printer.status === 'IDLE')
+  } catch (error) {
+    availablePrinters.value = []
+    console.error('获取可用打印机失败:', error)
+  } finally {
+    loadingPrinters.value = false
+  }
+}
+
 const handleSubmitCreateJob = async () => {
   if (!jobForm.file) {
     message.error('未选择文件')
@@ -799,13 +848,16 @@ const handleSubmitCreateJob = async () => {
     // 构建请求数据 - 直接使用数字优先级 (0-普通, 1-优先, 2-加急)
     const jobData = {
       fileId: jobForm.file.id,
-      priority: jobForm.priority
+      priority: jobForm.priority,
+      ...(jobForm.printerId ? { printerId: jobForm.printerId } : {})
     }
 
     // 根据打印份数创建任务
     const promises = []
     for (let i = 0; i < jobForm.copies; i++) {
-      promises.push(createPrintJob(jobData))
+      promises.push(createPrintJob(jobData, {
+        dedupeKey: `create-job-${jobForm.file.id}-${Date.now()}-${i}`
+      }))
     }
 
     // 并发执行所有请求
@@ -825,6 +877,8 @@ const handleSubmitCreateJob = async () => {
  * 打开上传对话框
  */
 const handleUpload = () => {
+  uploadingFile.value = null
+  uploadProgress.value = 0
   uploadDialogVisible.value = true
 }
 

@@ -36,11 +36,12 @@ export function getJobQueue() {
  * @param {boolean} [data.autoAssign=false] - 是否自动分配打印机
  * @returns {Promise<{code: number, message: string, data: string|Object}>} 创建结果，data 为新任务 ID
  */
-export function createPrintJob(data) {
+export function createPrintJob(data, options = {}) {
   return request({
     url: '/api/v1/print-jobs',
     method: 'post',
-    data
+    data,
+    ...options
   }).then(response => mapResponseData(response, normalizePrintJob))
 }
 

@@ -50,6 +50,11 @@
           机器管理
         </t-menu-item>
 
+        <t-menu-item v-if="userStore.isAdmin" value="/users" to="/users">
+          <template #icon><User /></template>
+          用户管理
+        </t-menu-item>
+
         <t-menu-item value="/files" to="/files">
           <template #icon><FolderOpened /></template>
           文件库

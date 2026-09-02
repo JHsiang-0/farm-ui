@@ -59,6 +59,7 @@
       <!-- 数据表格区 -->
       <TdTable
         :data="tableData"
+        @row-click="openTaskDetail"
         :loading="loading"
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
@@ -170,6 +171,7 @@
         />
       </div>
     </t-card>
+    <TaskDetailDrawer v-model="detailDrawerVisible" :task="selectedJob" />
   </div>
 </template>
 
@@ -188,11 +190,19 @@ import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 
 defineOptions({ name: 'JobHistory' })
 
 const loading = ref(false)
 const tableData = ref([])
+const detailDrawerVisible = ref(false)
+const selectedJob = ref(null)
+
+const openTaskDetail = job => {
+  selectedJob.value = job
+  detailDrawerVisible.value = true
+}
 
 // 查询表单
 const queryForm = reactive({

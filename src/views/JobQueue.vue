@@ -87,6 +87,7 @@
 
         <TdTableColumn label="调度操作" width="220" align="center" fixed="right">
           <template #default="scope">
+            <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
             <t-button
               size="small" theme="primary"
               @click="openAssignDialog(scope.row)"
@@ -178,6 +179,7 @@
         </div>
       </template>
     </t-dialog>
+    <TaskDetailDrawer v-model="detailDrawerVisible" :task="selectedJob" />
   </div>
 </template>
 
@@ -200,6 +202,7 @@ import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 
 defineOptions({ name: 'JobQueue' })
 
@@ -213,6 +216,13 @@ const currentJob = ref(null)
 const selectedPrinterId = ref(null)
 const idlePrinters = ref([])
 const loadingPrinters = ref(false)
+const detailDrawerVisible = ref(false)
+const selectedJob = ref(null)
+
+const openTaskDetail = job => {
+  selectedJob.value = job
+  detailDrawerVisible.value = true
+}
 
 // 获取优先级标签类型
 const getPriorityType = (priority) => {
