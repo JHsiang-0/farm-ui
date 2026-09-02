@@ -472,7 +472,7 @@ const getStatusType = (status) => {
 // 获取任务状态标签类型
 const getJobStatusType = (status) => {
   const map = {
-    'PENDING': 'primary',
+    'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
     'COMPLETED': 'default',
@@ -699,8 +699,8 @@ const handleBatchAdd = async () => {
   try {
     const res = await batchAddPrinters(devicesToSubmit)
     // 解析后端返回的 message
-    const message = res.message || res.data?.message || '批量处理完成'
-    message.success(message)
+    const resultMessage = res.message || res.data?.message || '批量处理完成'
+    message.success(resultMessage)
     scanDialogVisible.value = false
     fetchData() // 刷新设备列表
   } catch (error) {

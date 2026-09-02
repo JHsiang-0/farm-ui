@@ -2,6 +2,8 @@ import { computed, shallowRef, markRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { WebSocketClient } from '@/utils/websocket'
 import { PRINTER_STATE } from '@/utils/constants'
+import { isMockEnabled } from '@/mock'
+import { mockState } from '@/mock/data'
 
 /**
  * WebSocket 实时状态管理 Store
@@ -223,6 +225,45 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * 连接 WebSocket
    */
   function connectWs() {
+    if (isMockEnabled) {
+      const statusUpdates = mockState.printers.map(printer => {
+        const state = printer.status === 'IDLE'
+          ? PRINTER_STATE.STANDBY
+          : printer.status === 'ERROR'
+            ? PRINTER_STATE.FAULT
+            : printer.status === 'OFFLINE'
+              ? PRINTER_STATE.UNKNOWN
+              : printer.status
+
+        return {
+          printerId: printer.id,
+          data: {
+            unifiedState: state,
+            state,
+            currentJobId: printer.currentJobId,
+            currentJobFileName: printer.currentJobFileName,
+            progress: printer.id === 403 ? 35.5 : printer.currentJobId ? 62 : 0,
+            extruder: {
+              temperature: printer.status === 'PRINTING' ? 210 : 25,
+              target: printer.status === 'PRINTING' ? 210 : 0
+            },
+            heaterBed: {
+              temperature: printer.status === 'PRINTING' ? 60 : 25,
+              target: printer.status === 'PRINTING' ? 60 : 0
+            },
+            toolTemperature: printer.status === 'PRINTING' ? 210 : 25,
+            toolTarget: printer.status === 'PRINTING' ? 210 : 0,
+            bedTemperature: printer.status === 'PRINTING' ? 60 : 25,
+            bedTarget: printer.status === 'PRINTING' ? 60 : 0
+          },
+          timestamp: Date.now()
+        }
+      })
+
+      statusUpdates.forEach(handleWebSocketMessage)
+      return
+    }
+
     // 如果已存在连接，先关闭
     if (wsClient) {
       disconnectWs()

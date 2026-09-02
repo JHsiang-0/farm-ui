@@ -64,7 +64,7 @@
         <TdTableColumn prop="status" label="状态" width="140" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2">
-              <span v-if="scope.row.status === 'PENDING'" class="text-sm animate-spin"><loading /></span>
+              <span v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><loading /></span>
               <span v-else-if="scope.row.status === 'ASSIGNED'" class="text-sm text-yellow-600"><pointer /></span>
               <span v-else-if="scope.row.status === 'PRINTING'" class="text-sm text-gray-600"><printer /></span>
               <span v-else-if="scope.row.status === 'COMPLETED'" class="text-sm text-green-600"><check /></span>
@@ -90,7 +90,7 @@
             <t-button
               size="small" theme="primary"
               @click="openAssignDialog(scope.row)"
-              :disabled="scope.row.status !== 'PENDING'"
+              :disabled="scope.row.status !== 'QUEUED'"
             >
               <span><promotion /></span>
               分配机器
@@ -224,7 +224,7 @@ const getPriorityType = (priority) => {
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
-    'PENDING': 'primary',
+    'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
     'COMPLETED': 'default',
@@ -236,7 +236,6 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
-    'PENDING': '待分配',
     'QUEUED': '排队中',
     'ASSIGNED': '已分配待确认',
     'READY': '已上传待机',
@@ -251,7 +250,7 @@ const getStatusLabel = (status) => {
 
 // 判断任务是否可以取消
 const canCancel = (status) => {
-  const cancelableStatuses = ['PENDING', 'QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
   return cancelableStatuses.includes(status)
 }
 

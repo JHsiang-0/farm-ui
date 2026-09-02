@@ -20,7 +20,6 @@
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">任务状态</span>
             <t-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 160px">
-              <t-option label="待分配" value="PENDING" />
               <t-option label="排队中" value="QUEUED" />
               <t-option label="已分配待确认" value="ASSIGNED" />
               <t-option label="已上传待机" value="READY" />
@@ -211,7 +210,6 @@ const pagination = reactive({
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
-    'PENDING': 'primary',
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'READY': 'default',
@@ -227,7 +225,6 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
-    'PENDING': '待分配',
     'QUEUED': '排队中',
     'ASSIGNED': '已分配待确认',
     'READY': '已上传待机',
@@ -242,7 +239,7 @@ const getStatusLabel = (status) => {
 
 // 判断任务是否可以取消
 const canCancel = (status) => {
-  const cancelableStatuses = ['PENDING', 'QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
   return cancelableStatuses.includes(status)
 }
 

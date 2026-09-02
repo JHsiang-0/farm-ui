@@ -148,7 +148,7 @@ export function downloadPrintFile(id, fileName) {
  * @property {number} id - 任务ID
  * @property {number} fileId - 关联文件ID
  * @property {number} printerId - 关联打印机ID
- * @property {string} status - 任务状态（PENDING/PRINTING/COMPLETED/FAILED）
+ * @property {string} status - 任务状态（QUEUED/ASSIGNED/READY/PRINTING/PAUSED/COMPLETED/FAILED/CANCELLED）
  * @property {string} priority - 优先级
  * @property {string} createdAt - 创建时间
  * @property {string} updatedAt - 更新时间

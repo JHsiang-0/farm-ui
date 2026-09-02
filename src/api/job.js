@@ -7,7 +7,7 @@ import request from '@/utils/request'
 
 /**
  * 获取排队中的任务列表
- * 返回 QUEUED 和 MANUAL 状态的任务
+ * 返回 QUEUED、ASSIGNED、READY 和 PAUSED 状态的任务
  * @returns {Promise<{code: number, message: string, data: Array<PrintJob>}>} 任务队列
  */
 export function getJobQueue() {
@@ -105,7 +105,7 @@ export function getJobPage(params) {
  * @property {string} fileName - 文件名称
  * @property {number} [printerId] - 分配的打印机ID
  * @property {string} [printerName] - 打印机名称
- * @property {string} status - 任务状态（QUEUED/MANUAL/PRINTING/COMPLETED/FAILED/CANCELLED）
+ * @property {string} status - 任务状态（QUEUED/ASSIGNED/READY/PRINTING/PAUSED/COMPLETED/FAILED/CANCELLED）
  * @property {string} priority - 优先级（HIGH/NORMAL/LOW）
  * @property {string} [materialType] - 耗材类型
  * @property {string} [nozzleSize] - 喷头尺寸
