@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "tdesign-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "tdesign-mcp-server@latest"]
+    }
+  }
+}
