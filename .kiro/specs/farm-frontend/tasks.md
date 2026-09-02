@@ -1,91 +1,91 @@
-# Farm 前端 Kiro 任务清单
+# Farm Frontend Kiro Tasks
 
-状态说明：`[x]` 已完成，`[ ]` 待完成或等待后端契约。
+Status: `[x]` completed; `[ ]` pending or waiting for the backend contract.
 
-## Kiro 三阶段推进记录
+## Kiro three-stage progress
 
-- 需求阶段：已依据 `API_HANDOFF.md` 和 `FRONTEND_TODO.md` 冻结角色、状态、接口边界和错误处理规则。
-- 设计阶段：已确定 View → Store → API → request/mock 分层，以及打印机实时状态和安全打印流程。
-- 任务阶段：按 P0 → P1 逐阶段实现、执行 lint/build、更新清单并进行中文本地提交。
+- Requirements: frozen roles, states, API boundaries, and error rules from `API_HANDOFF.md` and `FRONTEND_TODO.md`.
+- Design: established the View -> Store -> API -> request/mock layers, realtime printer state, and the safe printing flow.
+- Tasks: implemented P0 and P1 incrementally, verified each stage, updated the checklists, and created local commits in Chinese.
 
-## P0：接口契约与基础层
+## P0: API contract and foundation
 
-- [x] P0.1 环境变量、请求封装、Bearer Token、统一响应和错误处理。
-- [x] P0.2 分页、Long ID、时间、文件大小和进度适配。
-- [x] P0.3 API 模块统一、预签名下载和规划接口隔离。
+- [x] P0.1 Environment variables, request wrapper, Bearer token, unified responses, and error handling.
+- [x] P0.2 Pagination, Long IDs, time, file-size, and progress adapters.
+- [x] P0.3 Unified API modules, presigned downloads, and planned-API isolation.
 
-## P1.1：登录与权限
+## P1.1: Login and permissions
 
-- [x] 登录、退出、记住我、账号禁用和服务异常提示。
-- [x] 路由 `requiresAuth` 和 `roles` 守卫。
-- [x] ADMIN/OPERATOR 菜单与操作权限控制。
-- [x] ADMIN 用户分页、新增、启用和停用。
-- [x] ADMIN 打印机配置权限与 OPERATOR 业务操作权限。
-- [x] 密码表单遵循后端 6–20 位且包含大小写字母和数字的规则。
+- [x] Login, logout, remember-me, disabled-account, and service-error feedback.
+- [x] `requiresAuth` and `roles` route guards.
+- [x] ADMIN/OPERATOR menu and operation permissions.
+- [x] ADMIN user pagination, creation, enable, and disable.
+- [x] ADMIN printer configuration permissions and OPERATOR business permissions.
+- [x] Backend password rule: 6-20 characters with uppercase, lowercase, and digits.
 
-## P1.2：打印机看板与管理
+## P1.2: Printer dashboard and management
 
-- [x] 打印机分页、看板静态信息和实时状态展示。
-- [x] ADMIN 新增、编辑、删除、局域网扫描、批量添加和网格位置维护。
-- [x] 扫描/批量添加结果展示成功或失败原因。
-- [x] 暂停、取消、急停和安全启动按状态限制，并提供确认和 loading。
-- [ ] 打印机详情、状态历史和统计，等待后端规划接口完成。
+- [x] Printer pagination, static dashboard information, and realtime state display.
+- [x] ADMIN add, edit, delete, LAN scan, batch add, and grid-position maintenance.
+- [x] Per-device success/failure reasons for scan and batch add.
+- [x] State-limited pause, cancel, emergency stop, and safe-start controls with confirmation/loading.
+- [ ] Printer detail, status history, and statistics; waiting for planned backend APIs.
 
-## P1.3：文件库
+## P1.3: File library
 
-- [x] 文件分页、名称搜索、`materialType` 筛选和当前目录查询。
-- [x] G-code/BGCODE 上传、进度、100MB 限制、扩展名和存储失败提示。
-- [x] 当前目录 `parentId` 上传、文件夹创建、目录进入和面包屑返回。
-- [x] 单个/批量删除确认，以及无权限、资源不存在和任务关联错误处理。
-- [x] 文件详情、切片参数、耗材、喷嘴、温度、预估时间、打印次数和成功率。
-- [x] 预签名 URL 下载、过期、文件不存在和跨域失败处理。
-- [ ] 文件关联任务、目录树和安全预览，等待后端规划接口完成。
+- [x] File pagination, name search, `materialType` filtering, and current-directory query.
+- [x] G-code/BGCODE upload, progress, 100MB limit, extension validation, and storage errors.
+- [x] Current-directory `parentId` upload, folder creation, navigation, and breadcrumb return.
+- [x] Single/batch delete confirmation and handling of permission, missing-resource, and related-task errors.
+- [x] File detail with slice parameters, material, nozzle, temperature, estimated time, print count, and success rate.
+- [x] Presigned-URL download with expired URL, missing file, and CORS failure handling.
+- [ ] File jobs, directory tree, and safe preview; waiting for planned backend APIs.
 
-## P1.4：任务队列与安全打印流程
+## P1.4: Job queue and safe printing
 
-- [x] 队列和历史接口、优先级/创建时间排序、状态/打印机/时间筛选。
-- [x] 创建任务支持可选打印机；未指定打印机时保持 `QUEUED`。
-- [x] 仅使用 `QUEUED`、`ASSIGNED`、`READY`、`PRINTING`、`PAUSED`、`COMPLETED`、`FAILED`、`CANCELLED` 八种状态。
-- [x] `QUEUED → ASSIGNED` 安全派发。
-- [x] `ASSIGNED → READY/PRINTING` 现场安全确认和启动。
-- [x] 取消、暂停、急停的状态限制和任务详情抽屉。
-- [ ] 重试、重新排队和优先级调整，等待后端规划接口完成。
+- [x] Queue/history APIs, priority and creation-time ordering, and status/printer/time filters.
+- [x] Job creation with an optional printer; no printer keeps the job in `QUEUED`.
+- [x] Only the eight frozen states: `QUEUED`, `ASSIGNED`, `READY`, `PRINTING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`.
+- [x] Safe dispatch: `QUEUED -> ASSIGNED`.
+- [x] On-site confirmation and start: `ASSIGNED -> READY/PRINTING`.
+- [x] State-limited cancel, pause, emergency stop, and task-detail drawer.
+- [ ] Retry, requeue, and priority adjustment; waiting for planned backend APIs.
 
-## P1.5：WebSocket 实时状态与 Mock
+## P1.5: WebSocket realtime state and Mock
 
-- [x] 使用 `/ws/farm-status`，携带当前 Token，并保留指数退避重连。
-- [x] 解析 `SNAPSHOT`、`PRINTER_STATUS`、`PRINTER_OFFLINE`、`JOB_STATUS`。
-- [x] 页面卸载、退出登录和切换看板时销毁连接与定时器。
-- [x] 断线显示“数据可能不是最新”，避免重复连接。
-- [x] Mock 提供快照、设备状态、离线和任务状态事件流。
-- [x] Mock 提供统一响应包装、错误码演示、状态重置和开发账号文档。
+- [x] `/ws/farm-status` with the current token and exponential-backoff reconnect.
+- [x] `SNAPSHOT`, `PRINTER_STATUS`, `PRINTER_OFFLINE`, and `JOB_STATUS` messages.
+- [x] Destroy connections and timers on unmount, logout, and dashboard switching.
+- [x] Show "data may not be up to date" on disconnect and prevent duplicate connections.
+- [x] Mock snapshot, device-status, offline, and job-status event stream.
+- [x] Mock response wrapper, error-code scenarios, state reset, and development-account documentation.
 
-## P2：体验、测试与生产加固
+## P2: Experience, tests, and production hardening
 
-### P2.1 交互体验
+### P2.1 Interaction experience
 
-- [ ] 完善加载、空数据、无权限、网络错误、服务维护和离线页面。
-- [ ] 文件上传取消、失败重试和重复文件名提示。
-- [ ] 任务状态变化提供明确操作反馈。
-- [ ] 刷新后保留打印机、文件和任务详情上下文。
-- [ ] 适配局域网大屏和窄屏。
+- [ ] Complete loading, empty, permission, network-error, maintenance, and offline pages.
+- [ ] Add upload cancellation, retry, and duplicate-name feedback.
+- [ ] Provide explicit feedback for job state changes.
+- [ ] Preserve printer, file, and job detail context after refresh.
+- [ ] Support LAN wall displays and narrow screens.
 
-### P2.2 验证与验收
+### P2.2 Verification and acceptance
 
-- [ ] 增加请求层、分页适配器、路由权限、任务按钮和 WebSocket 测试。
-- [ ] 完成端到端验收：登录 → 上传文件 → 创建任务 → 派发 → 安全确认 → 启动 → 暂停/恢复 → 完成或失败。
-- [x] 当前阶段执行 `npm run lint`。
-- [x] 当前阶段执行 `npm run build`。
-- [x] 当前阶段执行 `git diff --check`。
+- [ ] Add request-layer, pagination, route-permission, job-button, and WebSocket tests.
+- [ ] Complete E2E acceptance: login -> upload -> create job -> dispatch -> safety confirmation -> start -> pause/resume -> complete/fail.
+- [x] `npm run lint` passed for the current stage.
+- [x] `npm run build` passed for the current stage.
+- [x] `git diff --check` passed for the current stage.
 
-### P2.3 生产环境
+### P2.3 Production environment
 
-- [ ] 使用独立生产环境变量，不提交 `.env`、Token、密码或真实设备凭据。
-- [ ] 完成 CORS、预签名 URL 和 WebSocket 鉴权策略联调。
-- [ ] 统一处理 API、WebSocket、对象存储和设备网络异常。
-- [ ] 确认生产环境不会启用匿名 WebSocket 或 Mock 数据。
+- [ ] Use independent production environment variables; never commit `.env`, tokens, passwords, or real device credentials.
+- [ ] Complete CORS, presigned URL, and WebSocket-authentication integration.
+- [ ] Unify API, WebSocket, object-storage, and device-network error handling.
+- [ ] Confirm production never enables anonymous WebSocket or Mock data.
 
-## 当前阻塞与边界
+## Current blockers and boundaries
 
-- 打印机详情/历史/统计、文件树/关联任务/预览、任务重试/重新排队/优先级调整均属于 `API_HANDOFF.md` 规划接口，前端暂不调用。
-- 用户个人资料和修改密码页面仍属于基础清单待办，不在本轮已完成的 P1 直接联调范围内。
+- Printer detail/history/statistics, file tree/jobs/preview, and job retry/requeue/priority APIs are planned in `API_HANDOFF.md`; the frontend does not call them yet.
+- User profile and change-password pages remain in the baseline TODO and are outside the completed P1 direct-integration scope.
