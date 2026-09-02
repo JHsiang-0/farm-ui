@@ -138,6 +138,30 @@ export function batchUpdatePositions(positions) {
 }
 
 /**
+ * 暂停打印机当前任务。
+ * @param {number|string} printerId - 打印机ID
+ * @returns {Promise<{code: number, message: string, data: null}>} 操作结果
+ */
+export function pausePrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/pause`,
+    method: 'post'
+  })
+}
+
+/**
+ * 对打印机执行紧急停机。
+ * @param {number|string} printerId - 打印机ID
+ * @returns {Promise<{code: number, message: string, data: null}>} 操作结果
+ */
+export function emergencyStopPrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/emergency-stop`,
+    method: 'post'
+  })
+}
+
+/**
  * 确认打印机热床已清理完毕 - 安全模式第二步之一
  * @param {number} printerId - 打印机ID
  * @returns {Promise<{code: number, message: string, data: Printer}>} 更新结果

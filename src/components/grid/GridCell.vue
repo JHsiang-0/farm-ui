@@ -58,7 +58,7 @@
     >
         <!-- 卡片头部：设备编号 -->
         <div class="flex justify-between items-center mb-0.5 sm:mb-1">
-            <div class="text-xs sm:text-sm font-bold text-gray-900 truncate">{{ device.machineNumber }}</div>
+            <div class="text-xs sm:text-sm font-bold text-gray-900 truncate">{{ device.machineNumber || device.name || `#${device.id}` }}</div>
         </div>
 
         <!-- 错误提示 - 移动端精简显示 -->

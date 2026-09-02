@@ -56,6 +56,12 @@
           </template>
         </TdTableColumn>
 
+        <TdTableColumn prop="machineNumber" label="机器编号" width="110" align="center">
+          <template #default="scope">
+            <span class="font-mono text-sm">{{ scope.row.machineNumber || `#${scope.row.id}` }}</span>
+          </template>
+        </TdTableColumn>
+
         <TdTableColumn prop="ipAddress" label="IP 地址" width="160">
           <template #default="scope">
             <t-tag size="small" variant="light-outline" theme="default">{{ scope.row.ipAddress }}</t-tag>
@@ -65,9 +71,13 @@
         <TdTableColumn prop="status" label="当前状态" width="120" align="center">
           <template #default="scope">
             <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-              {{ scope.row.status || '未知' }}
+              {{ getStatusLabel(scope.row.status) }}
             </t-tag>
           </template>
+        </TdTableColumn>
+
+        <TdTableColumn prop="firmwareType" label="协议" width="100" align="center">
+          <template #default="scope">{{ scope.row.firmwareType || '-' }}</template>
         </TdTableColumn>
 
         <!-- 安全状态列 -->
@@ -472,6 +482,19 @@ const getStatusType = (status) => {
   return map[status.toUpperCase()] || 'default'
 }
 
+const getStatusLabel = (status) => {
+  const map = {
+    OFFLINE: '离线',
+    IDLE: '待机',
+    PREPARING: '准备中',
+    PRINTING: '打印中',
+    PAUSED: '已暂停',
+    ERROR: '错误',
+    UNKNOWN: '未知'
+  }
+  return map[String(status || '').toUpperCase()] || '未知'
+}
+
 // 获取任务状态标签类型
 const getJobStatusType = (status) => {
   const map = {
@@ -702,8 +725,13 @@ const handleBatchAdd = async () => {
   try {
     const res = await batchAddPrinters(devicesToSubmit)
     // 解析后端返回的 message
-    const resultMessage = res.message || res.data?.message || '批量处理完成'
-    message.success(resultMessage)
+    const result = res.data || {}
+    const resultMessage = res.message || result.message || '批量处理完成'
+    if (result.failedCount > 0) {
+      message.warning(`${resultMessage}：成功 ${result.successCount || 0} 台，失败 ${result.failedCount} 台`)
+    } else {
+      message.success(resultMessage)
+    }
     scanDialogVisible.value = false
     fetchData() // 刷新设备列表
   } catch (error) {
