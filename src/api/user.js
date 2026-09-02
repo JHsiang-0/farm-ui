@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { mapResponseData, normalizeUser } from '@/utils/dataAdapters'
 
 /**
  * 用户认证 API 模块
@@ -17,7 +18,7 @@ export function login(data) {
     url: '/api/v1/auth/login',
     method: 'post',
     data
-  })
+  }).then(response => mapResponseData(response, normalizeUser))
 }
 
 /**
@@ -34,7 +35,7 @@ export function register(data) {
     url: '/api/v1/auth/register',
     method: 'post',
     data
-  })
+  }).then(response => mapResponseData(response, normalizeUser))
 }
 
 // ============================================

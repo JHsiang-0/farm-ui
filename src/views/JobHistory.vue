@@ -107,7 +107,7 @@
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><clock /></span>
-              <span>{{ formatTime(scope.row.createdAt) }}</span>
+              <span>{{ formatDateTime(scope.row.createdAt) }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -116,7 +116,7 @@
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><timer /></span>
-              <span>{{ scope.row.endedAt ? formatTime(scope.row.endedAt) : '-' }}</span>
+              <span>{{ scope.row.endedAt ? formatDateTime(scope.row.endedAt) : '-' }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -185,6 +185,7 @@ import {
 } from 'tdesign-icons-vue-next'
 import { getJobPage, cancelJob } from '@/api/job'
 import { message } from '@/utils/message'
+import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 
@@ -262,18 +263,6 @@ const handleCancel = async (id) => {
     console.error('取消任务失败:', error)
     message.error('取消任务失败')
   }
-}
-
-// 格式化时间
-const formatTime = (timeStr) => {
-  if (!timeStr) return '-'
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 // 构建请求参数

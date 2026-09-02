@@ -1,4 +1,10 @@
 import request from '@/utils/request'
+import {
+  mapResponseData,
+  normalizePageParams,
+  normalizePageResponse,
+  normalizePrintFile
+} from '@/utils/dataAdapters'
 
 /**
  * 文件管理 API 模块
@@ -17,8 +23,11 @@ export function getFileList(data) {
   return request({
     url: '/api/v1/print-files/page',
     method: 'post',
-    data
-  })
+    data: normalizePageParams(data)
+  }).then(response => mapResponseData(
+    response,
+    value => normalizePageResponse(value, normalizePrintFile)
+  ))
 }
 
 /**
@@ -127,7 +136,6 @@ export function downloadPrintFile(id, fileName) {
  * @property {number} id - 文件ID
  * @property {string} name - 文件名称
  * @property {string} originalName - 原始文件名
- * @property {string} path - 文件存储路径
  * @property {number} fileSize - 文件大小（字节）
  * @property {string} type - 文件类型（GCODE/BGCODE）
  * @property {string} status - 文件状态

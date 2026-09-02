@@ -20,10 +20,13 @@ export function formatTemp(temp) {
  * @returns {string} 格式化后的时长字符串 (HH:MM:SS)
  */
 export function formatDuration(seconds) {
-  if (!seconds) return '00:00:00'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
+  const totalSeconds = Number(seconds)
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return '00:00:00'
+
+  const normalizedSeconds = Math.floor(totalSeconds)
+  const h = Math.floor(normalizedSeconds / 3600)
+  const m = Math.floor((normalizedSeconds % 3600) / 60)
+  const s = normalizedSeconds % 60
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
@@ -64,8 +67,69 @@ export function formatSlotLabel(row, col) {
  * @returns {string} 格式化后的百分比字符串
  */
 export function formatPercent(value, decimals = 0) {
-  if (value === undefined || value === null) return '--%'
-  return `${value.toFixed(decimals)}%`
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '--%'
+  const normalized = Math.min(Math.max(number, 0), 100)
+  return `${normalized.toFixed(decimals)}%`
+}
+
+/**
+ * 将进度限制在后端契约规定的 0-100 范围内。
+ * @param {number|string|null|undefined} value - 进度值
+ * @returns {number} 规范化后的进度值
+ */
+export function normalizeProgress(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return 0
+  return Math.min(Math.max(number, 0), 100)
+}
+
+/**
+ * 格式化文件大小。
+ * @param {number|string|null|undefined} bytes - 字节数
+ * @returns {string} 可读文件大小
+ */
+export function formatFileSize(bytes) {
+  const number = Number(bytes)
+  if (!Number.isFinite(number) || number < 0) return '-'
+  if (number === 0) return '0 B'
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const unitIndex = Math.min(Math.floor(Math.log(number) / Math.log(1024)), units.length - 1)
+  const size = number / 1024 ** unitIndex
+  const decimals = unitIndex === 0 ? 0 : size >= 10 ? 1 : 2
+  return `${size.toFixed(decimals)} ${units[unitIndex]}`
+}
+
+const DISPLAY_TIME_ZONE = 'Asia/Shanghai'
+
+const parseDate = date => {
+  if (date instanceof Date) return date
+  if (typeof date === 'string') {
+    // 后端 LocalDateTime 不带时区，按契约解释为 Asia/Shanghai。
+    if (/^\d{4}-\d{2}-\d{2}T/.test(date) && !/(Z|[+-]\d{2}:?\d{2})$/.test(date)) {
+      return new Date(`${date}+08:00`)
+    }
+  }
+  return new Date(date)
+}
+
+const getDateParts = date => {
+  const value = parseDate(date)
+  if (Number.isNaN(value.getTime())) return null
+
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: DISPLAY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(value)
+
+  return Object.fromEntries(parts.map(part => [part.type, part.value]))
 }
 
 /**
@@ -74,9 +138,18 @@ export function formatPercent(value, decimals = 0) {
  * @returns {string} 格式化后的时间字符串 (HH:MM:SS)
  */
 export function formatTime(date) {
-  const d = date instanceof Date ? date : new Date(date)
-  const hours = d.getHours().toString().padStart(2, '0')
-  const minutes = d.getMinutes().toString().padStart(2, '0')
-  const seconds = d.getSeconds().toString().padStart(2, '0')
-  return `${hours}:${minutes}:${seconds}`
+  const parts = getDateParts(date)
+  if (!parts) return '-'
+  return `${parts.hour}:${parts.minute}:${parts.second}`
+}
+
+/**
+ * 格式化完整日期时间，统一按 Asia/Shanghai 展示。
+ * @param {Date|string|number} date - 日期对象或时间戳
+ * @returns {string} 格式化后的日期时间
+ */
+export function formatDateTime(date) {
+  const parts = getDateParts(date)
+  if (!parts) return '-'
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`
 }

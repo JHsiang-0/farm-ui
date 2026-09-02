@@ -80,7 +80,7 @@
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><clock /></span>
-              <span>{{ formatTime(scope.row.createdAt) }}</span>
+              <span>{{ formatDateTime(scope.row.createdAt) }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -197,6 +197,7 @@ import {
 import { getJobQueue, cancelJob, assignJobToPrinter } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
 import { message } from '@/utils/message'
+import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 
@@ -254,18 +255,6 @@ const canCancel = (status) => {
   return cancelableStatuses.includes(status)
 }
 
-// 格式化时间
-const formatTime = (timeStr) => {
-  if (!timeStr) return '-'
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 const fetchQueue = async () => {
   loading.value = true
   try {
@@ -295,7 +284,7 @@ const openAssignDialog = async (job) => {
 
   loadingPrinters.value = true
   try {
-    const res = await getPrinterList({ pageNum: 1, pageSize: 500 })
+    const res = await getPrinterList({ pageNum: 1, pageSize: 100 })
     const allPrinters = res.data.records || []
     idlePrinters.value = allPrinters.filter(p => p.status === 'IDLE')
   } catch {

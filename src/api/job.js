@@ -1,4 +1,10 @@
 import request from '@/utils/request'
+import {
+  mapResponseData,
+  normalizePageParams,
+  normalizePageResponse,
+  normalizePrintJob
+} from '@/utils/dataAdapters'
 
 /**
  * 打印任务 API 模块
@@ -14,7 +20,10 @@ export function getJobQueue() {
   return request({
     url: '/api/v1/print-jobs/queue',
     method: 'get'
-  })
+  }).then(response => mapResponseData(
+    response,
+    data => Array.isArray(data) ? data.map(normalizePrintJob) : []
+  ))
 }
 
 /**
@@ -32,7 +41,7 @@ export function createPrintJob(data) {
     url: '/api/v1/print-jobs/create',
     method: 'post',
     data
-  })
+  }).then(response => mapResponseData(response, normalizePrintJob))
 }
 
 /**
@@ -46,7 +55,7 @@ export function assignJobToPrinter(jobId, printerId) {
     url: '/api/v1/print-jobs/safe/assign',
     method: 'post',
     data: { jobId, printerId }
-  })
+  }).then(response => mapResponseData(response, normalizePrintJob))
 }
 
 /**
@@ -60,7 +69,7 @@ export function startJob(jobId, action = 'START_PRINT') {
     url: '/api/v1/print-jobs/safe/start',
     method: 'post',
     data: { jobId, action }
-  })
+  }).then(response => mapResponseData(response, normalizePrintJob))
 }
 
 /**
@@ -86,12 +95,15 @@ export function cancelJob(id) {
  * @param {string} [params.endTime] - 结束时间（ISO格式）
  * @returns {Promise<{code: number, message: string, data: {records: Array<PrintJob>, total: number}}>} 分页结果
  */
-export function getJobPage(params) {
+export function getJobPage(params = {}) {
   return request({
     url: '/api/v1/print-jobs/page',
     method: 'post',
-    data: params
-  })
+    data: normalizePageParams(params)
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizePrintJob)
+  ))
 }
 
 // ============================================

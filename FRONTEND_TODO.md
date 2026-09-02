@@ -48,12 +48,12 @@
 
 ### P0.2 数据格式适配
 
-- [ ] 新增统一分页适配器，兼容后端迁移前的 `current/size` 和目标格式 `pageNum/pageSize`。
-- [ ] 所有列表请求统一传 `pageNum/pageSize`，默认 `pageSize` 不超过 100。
-- [ ] Long 类型 ID 在展示、路由参数和比较时按字符串安全处理。
-- [ ] ISO-8601 时间统一按 Asia/Shanghai 展示；WebSocket 时间戳按 Unix 毫秒转换。
-- [ ] 文件大小使用字节转换为可读单位，进度统一按 `0-100` 百分比处理。
-- [ ] 前端不读取或展示响应中的 `apiKey`、`rustfsKey`、内部存储路径等字段。
+- [x] 新增统一分页适配器，兼容后端迁移前的 `current/size` 和目标格式 `pageNum/pageSize`。
+- [x] 所有列表请求统一传 `pageNum/pageSize`，默认 `pageSize` 不超过 100。
+- [x] Long 类型 ID 在展示、路由参数和比较时按字符串安全处理。
+- [x] ISO-8601 时间统一按 Asia/Shanghai 展示；WebSocket 时间戳按 Unix 毫秒转换。
+- [x] 文件大小使用字节转换为可读单位，进度统一按 `0-100` 百分比处理。
+- [x] 前端不读取或展示响应中的 `apiKey`、`rustfsKey`、内部存储路径等字段。
 
 ### P0.3 API 模块统一
 

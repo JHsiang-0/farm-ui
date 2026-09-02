@@ -172,7 +172,7 @@
             <div class="flex gap-2 mb-2">
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <Clock :size="14" class="text-gray-600" />
-                <span>{{ formatTime(file.estTime) }}</span>
+                <span>{{ formatDuration(file.estTime) }}</span>
               </div>
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <ScaleToOriginal :size="14" class="text-gray-600" />
@@ -181,6 +181,9 @@
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <FullScreen :size="14" class="text-gray-600" />
                 <span>{{ file.filamentLength || 0 }}m</span>
+              </div>
+              <div class="flex items-center gap-1 text-xs text-gray-600">
+                <span>{{ formatFileSize(file.fileSize) }}</span>
               </div>
             </div>
 
@@ -245,8 +248,12 @@
             </template>
           </TdTableColumn>
 
+          <TdTableColumn prop="fileSize" label="文件大小" width="100" v-if="currentParentId">
+            <template #default="{ row }">{{ row.isFolder === 1 ? '-' : formatFileSize(row.fileSize) }}</template>
+          </TdTableColumn>
+
           <TdTableColumn prop="estTime" label="预计耗时" width="85" v-if="currentParentId">
-            <template #default="{ row }">{{ row.isFolder === 1 ? '文件夹' : formatTime(row.estTime) }}</template>
+            <template #default="{ row }">{{ row.isFolder === 1 ? '文件夹' : formatDuration(row.estTime) }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="filamentWeight" label="耗材重量" width="85" v-if="currentParentId">
@@ -474,6 +481,7 @@ import {
   createFolder
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
+import { formatDuration, formatFileSize } from '@/utils/formatters'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -821,19 +829,6 @@ const handleUpload = () => {
 }
 
 /**
- * 格式化时间
- */
-const formatTime = (seconds) => {
-  if (!seconds) return '未知'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) {
-    return `${h}h ${m}m`
-  }
-  return `${m}m`
-}
-
-/**
  * 获取材质标签类型
  */
 const getMaterialTagType = (materialType) => {
@@ -865,7 +860,6 @@ const openFileDetail = (file, event) => {
   selectedFile.value = {
     id: file.id,
     original_name: file.originalName,
-    safe_name: file.safeName || file.originalName,
     file_url: file.fileUrl,
     file_size: file.fileSize,
     user_id: file.userId,

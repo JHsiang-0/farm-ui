@@ -133,9 +133,6 @@
             <t-descriptions-item label="上传时间">
               {{ formatDateTime(file.created_at) }}
             </t-descriptions-item>
-            <t-descriptions-item label="系统存储名">
-              <span class="text-xs text-gray-600 font-mono">{{ file.safe_name }}</span>
-            </t-descriptions-item>
             <t-descriptions-item label="上传用户ID">
               {{ file.user_id || '-' }}
             </t-descriptions-item>
@@ -162,6 +159,7 @@ import IconLength from '../icons/IconLength.vue'
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconTemperature from '../icons/IconTemperature.vue'
 import IconInfo from '../icons/IconInfo.vue'
+import { formatDuration, formatFileSize, formatDateTime } from '@/utils/formatters'
 
 // Props
 const props = defineProps({
@@ -190,7 +188,6 @@ const handlePrint = () => {
   const fileData = {
     id: props.file.id,
     originalName: props.file.original_name,
-    safeName: props.file.safe_name,
     fileUrl: props.file.file_url,
     fileSize: props.file.file_size,
     userId: props.file.user_id,
@@ -220,13 +217,7 @@ const handleClosed = () => {
 }
 
 const formatEstTime = (seconds) => {
-  if (!seconds) return '未知'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) {
-    return `${h}h ${m}m`
-  }
-  return `${m}m`
+  return formatDuration(seconds)
 }
 
 const formatWeight = (grams) => {
@@ -253,23 +244,6 @@ const formatHeight = (millimeters) => {
 const formatTemperature = (celsius) => {
   if (celsius === undefined || celsius === null) return '-'
   return `${celsius.toFixed(0)}°C`
-}
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return '-'
-  const mb = bytes / (1024 * 1024)
-  return `${mb.toFixed(2)} MB`
-}
-
-const formatDateTime = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 const getMaterialTagType = (materialType) => {

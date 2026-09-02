@@ -1,4 +1,10 @@
 import request from '@/utils/request'
+import {
+  mapResponseData,
+  normalizePageParams,
+  normalizePageResponse,
+  normalizePrintFile
+} from '@/utils/dataAdapters'
 
 /**
  * 打印文件管理 API 模块
@@ -26,12 +32,15 @@ import request from '@/utils/request'
  * @property {number} nozzleSize - 喷嘴尺寸(mm)
  * @property {string} createdAt - 创建时间
  */
-export function getFileList(params) {
+export function getFileList(params = {}) {
   return request({
     url: '/api/v1/print-files/page',
     method: 'post',
-    data: params
-  })
+    data: normalizePageParams(params)
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizePrintFile)
+  ))
 }
 
 /**
@@ -46,7 +55,7 @@ export function createFolder(data) {
     url: '/api/v1/print-files/folder/create',
     method: 'post',
     data
-  })
+  }).then(response => mapResponseData(response, normalizePrintFile))
 }
 
 /**
@@ -62,7 +71,7 @@ export function uploadFile(formData) {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
-  })
+  }).then(response => mapResponseData(response, normalizePrintFile))
 }
 
 /**

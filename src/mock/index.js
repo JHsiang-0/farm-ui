@@ -76,7 +76,7 @@ const getParams = config => config.params || {}
 
 const getPage = (params = {}) => {
   const pageNum = Math.max(Number(params.pageNum) || 1, 1)
-  const pageSize = Math.min(Math.max(Number(params.pageSize) || 10, 1), 1000)
+  const pageSize = Math.min(Math.max(Number(params.pageSize) || 10, 1), 100)
   return { pageNum, pageSize }
 }
 
@@ -99,7 +99,11 @@ const findJob = id => mockState.jobs.find(item => String(item.id) === String(id)
 
 const canReadResource = (session, userId) => session.role === 'ADMIN' || String(session.userId) === String(userId)
 
-const publicFile = file => cloneMockData(file)
+const publicFile = file => {
+  const data = cloneMockData(file)
+  delete data.safeName
+  return data
+}
 
 const publicJob = job => {
   const file = findFile(job.fileId)

@@ -277,7 +277,7 @@ const bedTarget = computed(() => {
 /** 打印进度百分比 */
 const progressPercent = computed(() => {
     if (!props.realTimeData?.progress) return 0
-    return Math.round(props.realTimeData.progress * 100)
+    return Math.round(props.realTimeData.progress)
 })
 
 // ============================================

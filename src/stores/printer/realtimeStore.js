@@ -2,6 +2,8 @@ import { computed, shallowRef, markRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { WebSocketClient } from '@/utils/websocket'
 import { PRINTER_STATE } from '@/utils/constants'
+import { normalizeId } from '@/utils/dataAdapters'
+import { normalizeProgress } from '@/utils/formatters'
 import { isMockEnabled } from '@/mock'
 import { mockState } from '@/mock/data'
 
@@ -153,7 +155,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
         // 优先使用 unifiedState，这是后端融合后的最终状态
         unifiedState: data.unifiedState || PRINTER_STATE.UNKNOWN,
         state: data.unifiedState || data.state || PRINTER_STATE.UNKNOWN,
-        progress: (data.progress ?? 0) / 100, // 后端是 0-100，前端需要 0-1
+        progress: normalizeProgress(data.progress), // 契约统一为 0-100
         // 温度数据 - 兼容 extruder/heaterBed 嵌套格式
         extruder: {
           temperature: data.toolTemperature ?? 0,
@@ -173,7 +175,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
         systemMessage: data.systemMessage || '',
         lastUpdate: timestamp,
         // 任务相关字段
-        currentJobId: data.currentJobId,
+        currentJobId: normalizeId(data.currentJobId),
         currentJobFileName: data.currentJobFileName,
         currentJobStatus: data.currentJobStatus
       })
