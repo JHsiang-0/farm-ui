@@ -95,6 +95,9 @@ const validateResponse = res => {
 
 const handleRequestError = error => {
   const safeError = error instanceof Error ? error : new Error(String(error || '请求失败'))
+  if (safeError.code === 'ERR_CANCELED' || safeError.name === 'CanceledError') {
+    return Promise.reject(safeError)
+  }
   const responseData = safeError.response?.data
   const status = safeError.response?.status
   const code = responseData?.code ?? safeError.code ?? status

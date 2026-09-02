@@ -171,7 +171,11 @@
         />
       </div>
     </t-card>
-    <TaskDetailDrawer v-model="detailDrawerVisible" :task="selectedJob" />
+    <TaskDetailDrawer
+      v-model="detailDrawerVisible"
+      :task="selectedJob"
+      @update:model-value="handleTaskDetailVisibility"
+    />
   </div>
 </template>
 
@@ -198,10 +202,27 @@ const loading = ref(false)
 const tableData = ref([])
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
+const JOB_HISTORY_DETAIL_CONTEXT_KEY = 'farm-ui:job-history-detail'
 
 const openTaskDetail = job => {
   selectedJob.value = job
+  sessionStorage.setItem(JOB_HISTORY_DETAIL_CONTEXT_KEY, String(job.id))
   detailDrawerVisible.value = true
+}
+
+const handleTaskDetailVisibility = visible => {
+  if (!visible) {
+    selectedJob.value = null
+    sessionStorage.removeItem(JOB_HISTORY_DETAIL_CONTEXT_KEY)
+  }
+}
+
+const restoreTaskDetailContext = () => {
+  const jobId = sessionStorage.getItem(JOB_HISTORY_DETAIL_CONTEXT_KEY)
+  if (!jobId || selectedJob.value) return
+
+  const job = tableData.value.find(item => String(item.id) === jobId)
+  if (job) openTaskDetail(job)
 }
 
 // 查询表单
@@ -330,6 +351,7 @@ const fetchData = async () => {
       // 成功响应允许 data=null，按空结果处理，不提示接口异常。
       tableData.value = res.data?.records || []
       pagination.total = res.data?.total || 0
+      restoreTaskDetailContext()
     } else {
       message.error(res.message || '获取数据失败')
     }

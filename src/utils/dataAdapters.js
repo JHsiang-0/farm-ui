@@ -1,4 +1,4 @@
-import { PAGINATION } from './constants'
+import { PAGINATION } from './constants.js'
 
 const identity = value => value
 

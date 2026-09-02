@@ -179,7 +179,11 @@
         </div>
       </template>
     </t-dialog>
-    <TaskDetailDrawer v-model="detailDrawerVisible" :task="selectedJob" />
+    <TaskDetailDrawer
+      v-model="detailDrawerVisible"
+      :task="selectedJob"
+      @update:model-value="handleTaskDetailVisibility"
+    />
   </div>
 </template>
 
@@ -218,10 +222,27 @@ const idlePrinters = ref([])
 const loadingPrinters = ref(false)
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
+const JOB_QUEUE_DETAIL_CONTEXT_KEY = 'farm-ui:job-queue-detail'
 
 const openTaskDetail = job => {
   selectedJob.value = job
+  sessionStorage.setItem(JOB_QUEUE_DETAIL_CONTEXT_KEY, String(job.id))
   detailDrawerVisible.value = true
+}
+
+const handleTaskDetailVisibility = visible => {
+  if (!visible) {
+    selectedJob.value = null
+    sessionStorage.removeItem(JOB_QUEUE_DETAIL_CONTEXT_KEY)
+  }
+}
+
+const restoreTaskDetailContext = () => {
+  const jobId = sessionStorage.getItem(JOB_QUEUE_DETAIL_CONTEXT_KEY)
+  if (!jobId || selectedJob.value) return
+
+  const job = queueData.value.find(item => String(item.id) === jobId)
+  if (job) openTaskDetail(job)
 }
 
 // 获取优先级标签类型
@@ -270,6 +291,7 @@ const fetchQueue = async () => {
   try {
     const res = await getJobQueue()
     queueData.value = res.data || []
+    restoreTaskDetailContext()
   } catch {
     // 忽略
   } finally {

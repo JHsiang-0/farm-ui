@@ -5,6 +5,7 @@
       v-model="detailDrawerVisible"
       :device="selectedDevice"
       :real-time-data="selectedDeviceRealTimeData"
+      @closed="clearPrinterDetailContext"
     />
 
     <!-- 操作栏 -->
@@ -416,6 +417,7 @@ const queryParams = reactive({
 const detailDrawerVisible = ref(false)
 const selectedDevice = ref(null)
 const selectedDeviceRealTimeData = ref(null)
+const PRINTER_DETAIL_CONTEXT_KEY = 'farm-ui:printer-detail'
 
 // ===== 表单与弹窗状态 =====
 const dialogVisible = ref(false)
@@ -583,6 +585,7 @@ const handleStartJob = async (printer) => {
 // 表格行点击事件
 const handleRowClick = (row) => {
   selectedDevice.value = row
+  sessionStorage.setItem(PRINTER_DETAIL_CONTEXT_KEY, String(row.id))
   // 为设备添加实时数据（这里可以根据实际情况获取真实数据）
   selectedDeviceRealTimeData.value = {
     state: row.currentJobStatus === 'ASSIGNED' ? 'ASSIGNED' : (row.status || 'IDLE'),
@@ -598,6 +601,20 @@ const handleRowClick = (row) => {
   detailDrawerVisible.value = true
 }
 
+const clearPrinterDetailContext = () => {
+  sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
+  selectedDevice.value = null
+  selectedDeviceRealTimeData.value = null
+}
+
+const restorePrinterDetailContext = () => {
+  const printerId = sessionStorage.getItem(PRINTER_DETAIL_CONTEXT_KEY)
+  if (!printerId || selectedDevice.value) return
+
+  const printer = tableData.value.find(item => String(item.id) === printerId)
+  if (printer) handleRowClick(printer)
+}
+
 // 加载分页数据
 const fetchData = async () => {
   loading.value = true
@@ -605,6 +622,7 @@ const fetchData = async () => {
     const res = await getPrinterList(queryParams)
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
+    restorePrinterDetailContext()
   } catch {
     // 错误在拦截器处理
   } finally {

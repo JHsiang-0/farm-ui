@@ -343,6 +343,11 @@
           <span>{{ uploadProgress }}%</span>
         </div>
         <t-progress :percentage="uploadProgress" />
+        <t-button class="mt-3" variant="outline" size="small" @click="cancelUpload">取消上传</t-button>
+      </div>
+      <div v-if="uploadError" class="px-4 pb-4">
+        <t-alert theme="error" :title="uploadError" :closable="false" />
+        <t-button class="mt-3" size="small" theme="primary" @click="retryUpload">重新上传</t-button>
       </div>
     </t-dialog>
 
@@ -517,6 +522,9 @@ const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
 const uploadingFile = ref(null)
 const uploadProgress = ref(0)
+const uploadError = ref('')
+const lastUploadFile = ref(null)
+let uploadController = null
 // 打印任务对话框状态
 const createJobDialogVisible = ref(false)
 const submittingJob = ref(false)
@@ -532,6 +540,7 @@ const jobForm = reactive({
 // 文件详情抽屉状态
 const detailDrawerVisible = ref(false)
 const selectedFile = ref(null)
+const FILE_DETAIL_CONTEXT_KEY = 'farm-ui:file-detail'
 // 批量操作模式
 const isBatchMode = ref(false)
 
@@ -569,6 +578,14 @@ const fileItemsList = computed(() => {
   return fileList.value.filter(file => file.isFolder !== 1)
 })
 
+const restoreFileDetailContext = () => {
+  const fileId = sessionStorage.getItem(FILE_DETAIL_CONTEXT_KEY)
+  if (!fileId || selectedFile.value) return
+
+  const file = fileList.value.find(item => String(item.id) === fileId)
+  if (file) openFileDetail(file)
+}
+
 // ============ 方法定义 ============
 
 /**
@@ -590,6 +607,7 @@ const fetchData = async () => {
 
     // 清空选中状态（如果当前页数据变化）
     selectedIds.value = []
+    restoreFileDetailContext()
   } catch (error) {
     console.error('获取文件列表失败:', error)
     message.error('获取文件列表失败')
@@ -717,17 +735,24 @@ const handleFileChange = async (files) => {
     message.warning('文件大小不能超过 100MB')
     return
   }
+  if (fileList.value.some(item => item.isFolder !== 1 && item.originalName === file.name)) {
+    message.warning('当前目录已存在同名文件，请先重命名后再上传')
+    return
+  }
 
   const formData = new FormData()
   formData.append('file', file)
   if (currentParentId.value !== null) formData.append('parentId', String(currentParentId.value))
 
   uploadingFile.value = file
+  lastUploadFile.value = file
+  uploadError.value = ''
   uploadProgress.value = 0
+  uploadController = new AbortController()
   try {
     await uploadPrintFile(formData, event => {
       if (event?.total) uploadProgress.value = Math.min(Math.round((event.loaded / event.total) * 100), 99)
-    })
+    }, { signal: uploadController.signal })
     message.success('文件上传成功')
     uploadDialogVisible.value = false
     uploadingFile.value = null
@@ -735,8 +760,22 @@ const handleFileChange = async (files) => {
     fetchData()
   } catch (error) {
     console.error('上传失败:', error)
-    message.error('上传失败')
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+      message.info('上传已取消')
+    } else {
+      uploadError.value = error?.message || '上传失败，可重试'
+      message.error('上传失败，可点击重试')
+    }
   }
+  uploadController = null
+}
+
+const cancelUpload = () => {
+  uploadController?.abort()
+}
+
+const retryUpload = () => {
+  if (lastUploadFile.value) handleFileChange([lastUploadFile.value])
 }
 
 /**
@@ -879,6 +918,8 @@ const handleSubmitCreateJob = async () => {
 const handleUpload = () => {
   uploadingFile.value = null
   uploadProgress.value = 0
+  uploadError.value = ''
+  lastUploadFile.value = null
   uploadDialogVisible.value = true
 }
 
@@ -930,6 +971,7 @@ const openFileDetail = (file, event) => {
     first_layer_nozzle_temp: file.firstLayerNozzleTemp,
     first_layer_bed_temp: file.firstLayerBedTemp
   }
+  sessionStorage.setItem(FILE_DETAIL_CONTEXT_KEY, String(file.id))
   detailDrawerVisible.value = true
 }
 
@@ -938,6 +980,7 @@ const openFileDetail = (file, event) => {
  */
 const closeFileDetail = () => {
   selectedFile.value = null
+  sessionStorage.removeItem(FILE_DETAIL_CONTEXT_KEY)
 }
 
 /**

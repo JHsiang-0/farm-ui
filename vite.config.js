@@ -5,6 +5,10 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, fileURLToPath(new URL('.', import.meta.url)), '')
 
+  if (mode === 'production' && env.VITE_USE_MOCK === 'true') {
+    throw new Error('生产环境禁止启用 VITE_USE_MOCK，请检查环境变量配置')
+  }
+
   return {
     plugins: [vue()],
     resolve: {

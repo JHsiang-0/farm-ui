@@ -7,7 +7,6 @@ import { normalizeProgress } from '@/utils/formatters'
 import { isMockEnabled } from '@/mock'
 import { useUserStore } from '@/stores/user'
 import { createMockWebSocketStream } from '@/mock/websocket'
-import { mockState } from '@/mock/data'
 
 /**
  * WebSocket 实时状态管理 Store
@@ -69,7 +68,6 @@ export const useRealtimeStore = defineStore('realtime', () => {
   }
 
   const WS_CONFIG = {
-    url: getWsUrl(),
     reconnectDelay: 3000,
     maxReconnectDelay: 60000,
     reconnectBackoffMultiplier: 2,
@@ -289,42 +287,8 @@ export const useRealtimeStore = defineStore('realtime', () => {
       return
     }
 
-    if (isMockEnabled) {
-      const statusUpdates = mockState.printers.map(printer => {
-        const state = printer.status === 'IDLE'
-          ? PRINTER_STATE.STANDBY
-          : printer.status === 'ERROR'
-            ? PRINTER_STATE.FAULT
-            : printer.status === 'OFFLINE'
-              ? PRINTER_STATE.UNKNOWN
-              : printer.status
-
-        return {
-          printerId: printer.id,
-          data: {
-            unifiedState: state,
-            state,
-            currentJobId: printer.currentJobId,
-            currentJobFileName: printer.currentJobFileName,
-            progress: printer.id === 403 ? 35.5 : printer.currentJobId ? 62 : 0,
-            extruder: {
-              temperature: printer.status === 'PRINTING' ? 210 : 25,
-              target: printer.status === 'PRINTING' ? 210 : 0
-            },
-            heaterBed: {
-              temperature: printer.status === 'PRINTING' ? 60 : 25,
-              target: printer.status === 'PRINTING' ? 60 : 0
-            },
-            toolTemperature: printer.status === 'PRINTING' ? 210 : 25,
-            toolTarget: printer.status === 'PRINTING' ? 210 : 0,
-            bedTemperature: printer.status === 'PRINTING' ? 60 : 25,
-            bedTarget: printer.status === 'PRINTING' ? 60 : 0
-          },
-          timestamp: Date.now()
-        }
-      })
-
-      statusUpdates.forEach(handleWebSocketMessage)
+    if (!userStore.token) {
+      console.warn('未检测到登录令牌，跳过 WebSocket 连接')
       return
     }
 
@@ -334,7 +298,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     }
 
     // 创建新的 WebSocket 客户端 - 使用 markRaw 避免响应式代理
-    wsClient = markRaw(new WebSocketClient(WS_CONFIG.url, {
+    wsClient = markRaw(new WebSocketClient(getWsUrl(), {
       reconnectDelay: WS_CONFIG.reconnectDelay,
       maxReconnectDelay: WS_CONFIG.maxReconnectDelay,
       reconnectBackoffMultiplier: WS_CONFIG.reconnectBackoffMultiplier,

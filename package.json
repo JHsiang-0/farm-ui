@@ -8,6 +8,7 @@
     "dev:mock": "vite --mode mock",
     "build:mock": "vite build --mode mock",
     "build": "vite build",
+    "test": "node --test tests/utils.test.js",
     "preview": "vite preview",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",

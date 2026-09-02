@@ -721,7 +721,19 @@ if (import.meta.env.DEV) {
 }
 
 export async function mockRequest(config) {
+  if (config.signal?.aborted) {
+    const error = new Error('请求已取消')
+    error.name = 'CanceledError'
+    error.code = 'ERR_CANCELED'
+    throw error
+  }
   await wait(MOCK_DELAY)
+  if (config.signal?.aborted) {
+    const error = new Error('请求已取消')
+    error.name = 'CanceledError'
+    error.code = 'ERR_CANCELED'
+    throw error
+  }
   const data = await route(config)
   return success(data)
 }

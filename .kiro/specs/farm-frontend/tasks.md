@@ -65,14 +65,15 @@ Status: `[x]` completed; `[ ]` pending or waiting for the backend contract.
 ### P2.1 Interaction experience
 
 - [ ] Complete loading, empty, permission, network-error, maintenance, and offline pages.
-- [ ] Add upload cancellation, retry, and duplicate-name feedback.
-- [ ] Provide explicit feedback for job state changes.
-- [ ] Preserve printer, file, and job detail context after refresh.
-- [ ] Support LAN wall displays and narrow screens.
+- [x] Add upload cancellation, retry, and duplicate-name feedback.
+- [x] Provide explicit feedback for job state changes.
+- [x] Preserve printer, file, and job detail context after refresh.
+- [x] Support LAN wall displays and narrow screens.
 
 ### P2.2 Verification and acceptance
 
-- [ ] Add request-layer, pagination, route-permission, job-button, and WebSocket tests.
+- [x] Add pagination and data-adapter unit tests (`npm test`, 3 cases).
+- [ ] Add request-layer, route-permission, job-button, and WebSocket tests.
 - [ ] Complete E2E acceptance: login -> upload -> create job -> dispatch -> safety confirmation -> start -> pause/resume -> complete/fail.
 - [x] `npm run lint` passed for the current stage.
 - [x] `npm run build` passed for the current stage.
@@ -80,10 +81,17 @@ Status: `[x]` completed; `[ ]` pending or waiting for the backend contract.
 
 ### P2.3 Production environment
 
-- [ ] Use independent production environment variables; never commit `.env`, tokens, passwords, or real device credentials.
+- [x] Use independent production environment variables; never commit `.env`, tokens, passwords, or real device credentials.
 - [ ] Complete CORS, presigned URL, and WebSocket-authentication integration.
-- [ ] Unify API, WebSocket, object-storage, and device-network error handling.
-- [ ] Confirm production never enables anonymous WebSocket or Mock data.
+- [x] Unify API, WebSocket, object-storage, and device-network error handling on the frontend.
+- [x] Confirm production builds reject Mock data and anonymous WebSocket connections.
+
+## P2 current implementation notes
+
+- Upload now supports cancellation through `AbortController`, failure retry, progress feedback, and duplicate-name rejection in the current directory.
+- Node.js built-in tests cover pagination normalization, Long ID conversion, progress clamping, and file-size formatting.
+- Production Vite builds fail fast when `VITE_USE_MOCK=true`; realtime connections are skipped when no bearer token is available.
+- Backend-owned CORS, object-storage presigned URL policy, and WebSocket handshake authentication remain integration prerequisites.
 
 ## Current blockers and boundaries
 
