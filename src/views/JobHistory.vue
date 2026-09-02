@@ -316,9 +316,10 @@ const fetchData = async () => {
   try {
     const params = buildParams()
     const res = await getJobPage(params)
-    if (res.code === 200 && res.data) {
-      tableData.value = res.data.records || []
-      pagination.total = res.data.total || 0
+    if (res.code === 200) {
+      // 成功响应允许 data=null，按空结果处理，不提示接口异常。
+      tableData.value = res.data?.records || []
+      pagination.total = res.data?.total || 0
     } else {
       message.error(res.message || '获取数据失败')
     }

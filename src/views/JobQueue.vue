@@ -285,7 +285,7 @@ const openAssignDialog = async (job) => {
   loadingPrinters.value = true
   try {
     const res = await getPrinterList({ pageNum: 1, pageSize: 100 })
-    const allPrinters = res.data.records || []
+    const allPrinters = res.data?.records || []
     idlePrinters.value = allPrinters.filter(p => p.status === 'IDLE')
   } catch {
     message.error('获取打印机列表失败')

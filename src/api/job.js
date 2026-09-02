@@ -34,9 +34,22 @@ export function getJobQueue() {
  * @param {string} [data.nozzleSize] - 喷头尺寸
  * @param {string} [data.priority='NORMAL'] - 优先级（HIGH/NORMAL/LOW）
  * @param {boolean} [data.autoAssign=false] - 是否自动分配打印机
- * @returns {Promise<{code: number, message: string, data: PrintJob}>} 创建结果
+ * @returns {Promise<{code: number, message: string, data: string|Object}>} 创建结果，data 为新任务 ID
  */
 export function createPrintJob(data) {
+  return request({
+    url: '/api/v1/print-jobs',
+    method: 'post',
+    data
+  }).then(response => mapResponseData(response, normalizePrintJob))
+}
+
+/**
+ * 使用旧任务创建地址，仅用于兼容尚未迁移的后端服务。
+ * 新业务代码必须调用 createPrintJob。
+ * @deprecated
+ */
+export function createPrintJobLegacy(data) {
   return request({
     url: '/api/v1/print-jobs/create',
     method: 'post',

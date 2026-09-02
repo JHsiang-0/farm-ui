@@ -188,7 +188,6 @@ const handlePrint = () => {
   const fileData = {
     id: props.file.id,
     originalName: props.file.original_name,
-    fileUrl: props.file.file_url,
     fileSize: props.file.file_size,
     userId: props.file.user_id,
     createdAt: props.file.created_at,

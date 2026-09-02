@@ -860,7 +860,6 @@ const openFileDetail = (file, event) => {
   selectedFile.value = {
     id: file.id,
     original_name: file.originalName,
-    file_url: file.fileUrl,
     file_size: file.fileSize,
     user_id: file.userId,
     created_at: file.createdAt,
@@ -895,7 +894,14 @@ const handleFileDownload = async (file) => {
     message.error('文件信息不完整')
     return
   }
-  await downloadFile(file.id, file.original_name || file.originalName)
+  try {
+    await downloadFile(file.id, file.original_name || file.originalName)
+  } catch (error) {
+    // 下载接口本身的鉴权错误已由请求拦截器提示；这里处理预签名 URL 阶段的错误。
+    if (error?.name === 'DownloadFileError') {
+      message.error(error.message)
+    }
+  }
 }
 
 /**

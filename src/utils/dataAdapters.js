@@ -99,6 +99,8 @@ export function normalizePrintFile(record) {
 }
 
 export function normalizePrintJob(record) {
+  if (record !== null && typeof record !== 'object') return normalizeId(record)
+
   const normalized = normalizeIdFields(record, [
     'id',
     'fileId',

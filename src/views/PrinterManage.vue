@@ -577,8 +577,8 @@ const fetchData = async () => {
   loading.value = true
   try {
     const res = await getPrinterList(queryParams)
-    tableData.value = res.data.records || []
-    total.value = res.data.total || 0
+    tableData.value = res.data?.records || []
+    total.value = res.data?.total || 0
   } catch {
     // 错误在拦截器处理
   } finally {
