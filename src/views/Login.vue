@@ -1,121 +1,132 @@
 <template>
-  <div class="login-page">
-    <div class="login-container animate-slide-up">
-      <!-- 左侧品牌区 -->
-      <div class="brand-panel">
-        <div class="brand-content">
-          <div class="brand-icon">
-            <Monitor :size="64" stroke-color="#ffffff" />
-          </div>
-          <h1 class="brand-title">3D 打印农场</h1>
-          <p class="brand-subtitle">智能总控管理系统</p>
-
-          <div class="brand-divider"></div>
-
-          <div class="feature-list">
-            <div class="feature-item">
-              <div class="feature-icon">
-                <span><View /></span>
-              </div>
-              <span class="feature-text">实时监控设备状态</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-icon">
-                <span><DataAnalysis /></span>
-              </div>
-              <span class="feature-text">智能数据分析</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-icon">
-                <span><Connection /></span>
-              </div>
-              <span class="feature-text">远程批量控制</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 装饰圆圈 -->
-        <div class="decoration-circle circle-1"></div>
-        <div class="decoration-circle circle-2"></div>
+  <main class="login-page">
+    <section class="left-section" aria-label="系统介绍">
+      <div class="logo-section">
+        <a href="/" class="logo-link" @click.prevent>
+          <span class="logo-mark">3D</span>
+          <span>3D 打印农场</span>
+        </a>
       </div>
 
-      <!-- 右侧表单区 -->
-      <div class="form-panel">
-        <!-- 登录表单 -->
-        <div class="form-wrapper animate-fade-in">
-          <div class="form-header">
-            <h2 class="form-title">欢迎回来</h2>
-            <p class="form-desc">请登录您的账户以继续操作</p>
-          </div>
+      <div class="characters-section">
+        <AnimatedCharacters
+          :is-typing="isTyping"
+          :show-password="showPassword"
+          :password-length="loginForm.password.length"
+          :login-failed="loginFailed"
+          :login-success="loginSuccess"
+        />
+      </div>
 
-          <t-form :data="loginForm"
-            :rules="rules"
-            ref="loginFormRef"
-            size="large"
-            class="login-form"
-          >
-            <t-form-item name="username">
-              <t-input
-                v-model="loginForm.username"
-                placeholder="请输入用户名"
-                :prefix-icon="renderIcon(User)"
-                clearable
-              />
-            </t-form-item>
+      <div class="intro-content">
+        <h1>智能管理每一台打印机</h1>
+        <p>实时掌握设备、任务与文件，让打印农场运行更简单。</p>
+      </div>
 
-            <t-form-item name="password">
-              <t-input
-                v-model="loginForm.password"
-                type="password"
-                placeholder="请输入密码"
-                :prefix-icon="renderIcon(Lock)"
-                @keyup.enter="handleLogin"
-              />
-            </t-form-item>
+      <div class="grid-overlay" />
+      <div class="blur-circle blur-circle-1" />
+      <div class="blur-circle blur-circle-2" />
+    </section>
 
-            <div class="form-options">
-              <t-checkbox v-model="rememberMe">记住我</t-checkbox>
-              <t-link theme="primary" :underline="false" class="forgot-link">
-                忘记密码？
-              </t-link>
-            </div>
+    <section class="right-section">
+      <div class="form-wrapper">
+        <div class="mobile-logo">
+          <span class="logo-mark">3D</span>
+          <span>3D 打印农场</span>
+        </div>
 
-            <t-button theme="primary"
-              size="large"
-              class="submit-btn"
-              :loading="loading"
-              @click="handleLogin"
+        <header class="form-header">
+          <h2 class="form-title">欢迎回来</h2>
+          <p class="form-subtitle">请输入您的账户信息以继续操作</p>
+        </header>
+
+        <form class="login-form" @submit.prevent="handleLogin">
+          <div class="form-group">
+            <label class="form-label" for="username">用户名</label>
+            <input
+              id="username"
+              v-model="loginForm.username"
+              class="form-input"
+              type="text"
+              placeholder="请输入用户名"
+              autocomplete="username"
+              required
+              @focus="isTyping = true"
+              @blur="isTyping = false"
             >
-              登 录
-            </t-button>
-          </t-form>
+            <p v-if="errors.username" class="error-message">{{ errors.username }}</p>
+          </div>
 
-        </div>
+          <div class="form-group">
+            <label class="form-label" for="password">密码</label>
+            <div class="password-wrapper">
+              <input
+                id="password"
+                v-model="loginForm.password"
+                class="form-input"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="请输入密码"
+                autocomplete="current-password"
+                required
+                @focus="isTyping = true"
+                @blur="isTyping = false"
+              >
+              <button
+                class="password-toggle"
+                type="button"
+                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                @click="showPassword = !showPassword"
+              >
+                <svg v-if="showPassword" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                  <line x1="2" x2="22" y1="2" y2="22" />
+                </svg>
+              </button>
+            </div>
+            <p v-if="errors.password" class="error-message">{{ errors.password }}</p>
+          </div>
+
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input v-model="rememberMe" class="checkbox" type="checkbox">
+              <span>记住我</span>
+            </label>
+            <button class="text-link" type="button" @click="showForgotMessage">忘记密码？</button>
+          </div>
+
+          <div v-if="errorMessage" class="error-alert" role="alert">{{ errorMessage }}</div>
+
+          <button class="submit-button" type="submit" :disabled="loading">
+            <span>{{ loading ? '登录中…' : '登录' }}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </button>
+        </form>
+
+        <p class="login-tip">Mock 调试账号请使用系统中已有的用户名和密码</p>
       </div>
-    </div>
+    </section>
 
-    <!-- 页脚版权 -->
-    <div class="login-footer">
-      <p>&copy; 2024 3D打印农场管理系统. All rights reserved.</p>
-    </div>
-  </div>
+    <footer class="login-footer">© 2024 3D 打印农场管理系统</footer>
+  </main>
 </template>
 
 <script setup>
 defineOptions({ name: 'LoginView' })
+
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from '@/utils/message'
-import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
-import {
-  UserIcon as User,
-  LockOnIcon as Lock,
-  DesktopIcon as Monitor,
-  ViewImageIcon as View,
-  ChartIcon as DataAnalysis,
-  MapConnectionIcon as Connection
-} from 'tdesign-icons-vue-next'
+import AnimatedCharacters from '@/components/login/AnimatedCharacters.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -123,374 +134,458 @@ const userStore = useUserStore()
 
 const loading = ref(false)
 const rememberMe = ref(false)
-
+const showPassword = ref(false)
+const isTyping = ref(false)
+const loginFailed = ref(false)
+const loginSuccess = ref(false)
+const errorMessage = ref('')
 const loginForm = reactive({ username: '', password: '' })
+const errors = reactive({ username: '', password: '' })
 
-const loginFormRef = ref(null)
+let feedbackTimer
 
-const validatePassword = (value) => {
-  if (!value) return { result: false, message: '请输入密码' }
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(value)) {
-    return { result: false, message: '密码必须为6-20位且包含大小写字母和数字' }
+const validateForm = () => {
+  errors.username = ''
+  errors.password = ''
+  let valid = true
+
+  if (!loginForm.username.trim()) {
+    errors.username = '请输入用户名'
+    valid = false
+  } else if (loginForm.username.trim().length < 3 || loginForm.username.trim().length > 20) {
+    errors.username = '用户名长度应为 3-20 个字符'
+    valid = false
   }
-  return true
+
+  if (!loginForm.password) {
+    errors.password = '请输入密码'
+    valid = false
+  } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(loginForm.password)) {
+    errors.password = '密码必须为 6-20 位，且包含大小写字母和数字'
+    valid = false
+  }
+
+  return valid
 }
 
-const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度应为3-20个字符', trigger: 'blur' }
-  ],
-  password: [
-    { validator: validatePassword, trigger: 'blur' }
-  ]
+const showForgotMessage = () => {
+  message.info('请联系管理员重置密码')
 }
 
 const handleLogin = async () => {
-  await loginFormRef.value.validate()
+  if (!validateForm()) return
+
   loading.value = true
+  errorMessage.value = ''
+  loginFailed.value = false
+  loginSuccess.value = false
+
   try {
+    loginForm.username = loginForm.username.trim()
     await userStore.userLogin(loginForm, { remember: rememberMe.value })
+    loginSuccess.value = true
     message.success('登录成功')
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
       ? route.query.redirect
       : '/'
-    router.push(redirect)
-  } catch (e) {
-    message.error(e.message || '登录失败')
+    await router.push(redirect)
+  } catch (error) {
+    errorMessage.value = error.message || '登录失败，请检查用户名和密码'
+    loginFailed.value = true
+    clearTimeout(feedbackTimer)
+    feedbackTimer = setTimeout(() => {
+      loginFailed.value = false
+    }, 3000)
   } finally {
     loading.value = false
   }
 }
-
 </script>
 
 <style scoped>
-/* ============================================
-   Login Page Styles - Enterprise Theme
-   使用 CSS 变量确保兼容性
-   ============================================ */
-
-.login-page,
-.login-page * {
-  box-sizing: border-box;
-}
-
 .login-page {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   min-height: 100vh;
   min-height: 100dvh;
-  height: 100vh;
-  height: 100dvh;
+  max-height: 100vh;
+  overflow: hidden;
+  background: #fff;
+}
+
+.left-section {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1f2937 0%, #1e3a8a 50%, #1e40af 100%);
-  padding: clamp(12px, 2vw, 32px);
-  position: relative;
-  overflow-x: hidden;
-  overflow-y: hidden;
-  box-sizing: border-box;
-}
-
-/* 背景装饰 */
-.login-page::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 30% 70%, rgba(29, 78, 216, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
-  pointer-events: none;
-}
-
-.login-container {
-  display: flex;
-  width: 100%;
-  max-width: min(88vw, 1000px);
-  height: min(78dvh, 600px);
-  min-height: 0;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-  box-sizing: border-box;
-}
-
-/* ============================================
-   Brand Panel - 左侧品牌区
-   ============================================ */
-.brand-panel {
-  width: 42%;
-  background: linear-gradient(135deg, #1f2937 0%, #1e40af 60%, #1e3a8a 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  padding: clamp(20px, 3vw, 32px);
+  justify-content: space-between;
   min-width: 0;
-  box-sizing: border-box;
+  overflow: hidden;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  color: #fff;
+  background: linear-gradient(135deg, #111827, #3730a3 55%, #4f46e5);
 }
 
-.brand-content {
-  text-align: center;
+.logo-section,
+.intro-content,
+.characters-section {
   position: relative;
   z-index: 2;
-  width: 100%;
 }
 
-.brand-icon {
-  margin-bottom: clamp(12px, 2.5vh, 24px);
-  animation: float 3s ease-in-out infinite;
-}
-
-.brand-icon :deep(.t-icon) {
-  width: clamp(44px, 5vw, 64px);
-  height: clamp(44px, 5vw, 64px);
-  font-size: clamp(44px, 5vw, 64px);
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.brand-title {
-  font-size: clamp(22px, 2.4vw, 28px);
+.logo-link,
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: inherit;
+  font-size: 1.125rem;
   font-weight: 700;
-  margin: 0 0 8px;
-  letter-spacing: clamp(1px, 0.15vw, 2px);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
 }
 
-.brand-subtitle {
-  font-size: clamp(12px, 1.2vw, 14px);
+.logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #312e81;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #fff;
+  border-radius: 0.625rem;
+}
+
+.characters-section {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 400px;
+  margin: auto 0;
+}
+
+.intro-content {
+  max-width: 28rem;
+}
+
+.intro-content h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+  line-height: 1.2;
+}
+
+.intro-content p {
   margin: 0;
-  opacity: 0.85;
-  font-weight: 400;
-  letter-spacing: 1px;
+  color: rgb(255 255 255 / 78%);
+  font-size: clamp(0.875rem, 1.2vw, 1rem);
+  line-height: 1.7;
 }
 
-.brand-divider {
-  width: clamp(44px, 5vw, 60px);
-  height: clamp(2px, 0.25vw, 3px);
-  background: rgba(255, 255, 255, 0.3);
-  margin: clamp(16px, 3vh, 24px) auto;
-  border-radius: 2px;
-}
-
-.feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(8px, 2vh, 16px);
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(8px, 1vw, 12px);
-  font-size: clamp(11px, 1.1vw, 13px);
-  opacity: 0.9;
-}
-
-.feature-icon {
-  width: clamp(28px, 3vw, 32px);
-  height: clamp(28px, 3vw, 32px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-}
-
-.feature-icon .t-icon {
-  font-size: clamp(14px, 1.5vw, 16px);
-}
-
-.feature-text {
-  font-weight: 500;
-}
-
-/* 装饰圆圈 */
-.decoration-circle {
+.grid-overlay,
+.blur-circle {
   position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
   pointer-events: none;
 }
 
-.circle-1 {
-  width: clamp(180px, 25vw, 300px);
-  height: clamp(180px, 25vw, 300px);
-  top: -100px;
-  right: -100px;
+.grid-overlay {
+  inset: 0;
+  opacity: 0.25;
+  background-image: linear-gradient(rgb(255 255 255 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 6%) 1px, transparent 1px);
+  background-size: 1.25rem 1.25rem;
 }
 
-.circle-2 {
-  width: clamp(140px, 17vw, 200px);
-  height: clamp(140px, 17vw, 200px);
-  bottom: -60px;
-  left: -60px;
+.blur-circle {
+  border-radius: 9999px;
+  filter: blur(5rem);
 }
 
-/* ============================================
-   Form Panel - 右侧表单区
-   ============================================ */
-.form-panel {
-  width: 58%;
-  padding: clamp(24px, 5vh, 40px) clamp(24px, 4.5vw, 48px);
+.blur-circle-1 {
+  top: 20%;
+  right: 10%;
+  width: 14rem;
+  height: 14rem;
+  background: rgb(129 140 248 / 24%);
+}
+
+.blur-circle-2 {
+  bottom: 10%;
+  left: 15%;
+  width: 18rem;
+  height: 18rem;
+  background: rgb(192 132 252 / 18%);
+}
+
+.right-section {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  background: #ffffff;
   min-width: 0;
-  box-sizing: border-box;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  background: #fff;
 }
 
 .form-wrapper {
   width: 100%;
-  max-width: min(380px, 100%);
-  margin: 0 auto;
+  max-width: 26.25rem;
+}
+
+.mobile-logo {
+  display: none;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+  color: #111827;
+}
+
+.mobile-logo .logo-mark {
+  color: #fff;
+  background: #312e81;
 }
 
 .form-header {
+  margin-bottom: clamp(1.5rem, 4vh, 2.5rem);
   text-align: center;
-  margin-bottom: clamp(20px, 4vh, 32px);
 }
 
 .form-title {
-  font-size: clamp(20px, 2vw, 24px);
-  font-weight: 700;
-  margin: 0 0 8px;
+  margin: 0 0 0.5rem;
+  color: #111827;
+  font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+  line-height: 1.25;
 }
 
-.form-desc {
-  font-size: clamp(12px, 1.1vw, 14px);
+.form-subtitle,
+.login-tip {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.form-subtitle {
   margin: 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.form-input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+  color: #111827;
+  font: inherit;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 15%);
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper .form-input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: #9ca3af;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+  color: #4f46e5;
+}
+
+.password-toggle svg,
+.submit-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .form-options {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: clamp(16px, 3vh, 24px);
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.forgot-link {
-  font-size: clamp(12px, 1.1vw, 13px);
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+  cursor: pointer;
 }
 
-.submit-btn {
-  width: 100%;
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #4f46e5;
 }
 
-.terms-item {
-  margin-bottom: clamp(12px, 2vh, 16px) !important;
+.text-link {
+  padding: 0;
+  color: #4f46e5;
+  font: inherit;
+  font-size: 0.875rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
 }
 
-.terms-text {
-  font-size: clamp(12px, 1.1vw, 13px);
+.text-link:hover {
+  text-decoration: underline;
 }
 
-/* 切换区域 */
-.form-switch {
-  margin-top: clamp(20px, 4vh, 32px);
-  text-align: center;
-  display: flex;
+.error-message {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.8125rem;
+}
+
+.error-alert {
+  padding: 0.75rem;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+}
+
+.submit-button {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0.5rem;
+  width: 100%;
+  height: 3rem;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  background: #111827;
+  border: 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
 }
 
-.switch-text {
-  font-size: clamp(12px, 1.1vw, 13px);
+.submit-button:hover:not(:disabled) {
+  box-shadow: 0 0.625rem 1.5rem rgb(17 24 39 / 20%);
+  transform: translateY(-2px);
 }
 
-/* ============================================
-   Footer - 页脚
-   ============================================ */
+.submit-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.login-tip {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
 .login-footer {
   position: absolute;
-  left: 0;
   right: 0;
-  bottom: clamp(8px, 1.5dvh, 20px);
-  margin: 0;
+  bottom: 1rem;
+  left: 0;
+  color: rgb(255 255 255 / 62%);
+  font-size: 0.75rem;
   text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: clamp(11px, 1.1vw, 13px);
-  position: relative;
-  z-index: 1;
+  pointer-events: none;
 }
 
-.login-footer p {
-  margin: 0;
-}
-
-/* ============================================
-   Responsive - 响应式
-   ============================================ */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .login-page {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    grid-template-columns: 1fr;
     overflow-y: auto;
   }
 
-  .login-container {
-    flex-direction: column;
-    max-width: min(480px, 100%);
-    min-height: 0;
-    height: auto;
+  .left-section {
+    display: none;
   }
 
-  .brand-panel,
-  .form-panel {
-    width: 100%;
+  .right-section {
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
-  .brand-panel {
-    min-height: clamp(160px, 28dvh, 220px);
-    padding: clamp(20px, 4vw, 32px);
-  }
-
-  .form-panel {
-    padding: clamp(24px, 4vw, 32px);
+  .mobile-logo {
+    display: flex;
   }
 
   .login-footer {
-    position: static;
-  }
-
-  .circle-1,
-  .circle-2 {
-    display: none;
+    color: #9ca3af;
   }
 }
 
 @media (max-width: 480px) {
-  .login-page {
-    padding: 12px;
+  .right-section {
+    align-items: flex-start;
+    padding: 2rem 1.25rem 4rem;
   }
 
-  .form-panel {
-    padding: clamp(20px, 6vw, 24px);
+  .mobile-logo {
+    margin-bottom: 2rem;
   }
 
-  .brand-title {
-    font-size: clamp(20px, 6vw, 24px);
+  .form-options {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
   }
+}
 
-  .form-title {
-    font-size: clamp(18px, 5vw, 20px);
+@media (prefers-reduced-motion: reduce) {
+  .submit-button,
+  .form-input {
+    transition: none;
   }
 }
 </style>
