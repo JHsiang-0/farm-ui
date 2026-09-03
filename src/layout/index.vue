@@ -45,6 +45,11 @@
           </t-menu-item>
         </t-submenu>
 
+        <t-menu-item value="/dashboard/fullscreen">
+          <template #icon><Monitor /></template>
+          全屏看板
+        </t-menu-item>
+
         <t-menu-item value="/printers" to="/printers">
           <template #icon><Printer /></template>
           机器管理
@@ -160,6 +165,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { message, confirmMessage } from '@/utils/message'
+import { enterAppFullscreen } from '@/utils/fullscreen'
 import {
   DesktopIcon as Monitor,
   DashboardIcon as Odometer,
@@ -209,6 +215,12 @@ const toggleCollapse = () => {
 // TDesign 菜单通过 value/to 与 Vue Router 联动。
 const handleMenuChange = (value) => {
   const target = typeof value === 'string' ? value : value?.value
+  if (target === '/dashboard/fullscreen') {
+    void enterAppFullscreen()
+    router.push({ name: 'fullscreen-dashboard' })
+    return
+  }
+
   if (target && target !== route.path) {
     router.push(target)
   }

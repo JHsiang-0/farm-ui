@@ -1,5 +1,11 @@
-const { contextBridge } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('farmDesktop', Object.freeze({
-  isDesktop: true
+  isDesktop: true,
+  setFullscreen: fullscreen => ipcRenderer.invoke('farm-window:set-fullscreen', Boolean(fullscreen)),
+  onFullscreenChange: callback => {
+    const listener = (_event, fullscreen) => callback(Boolean(fullscreen))
+    ipcRenderer.on('farm-window:fullscreen-changed', listener)
+    return () => ipcRenderer.removeListener('farm-window:fullscreen-changed', listener)
+  }
 }))

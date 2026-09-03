@@ -1,5 +1,5 @@
 const path = require('node:path')
-const { app, BrowserWindow, screen, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
 
 const APP_ID = 'com.example.farmui'
 const DEV_SERVER_URL = 'http://127.0.0.1:5173'
@@ -14,6 +14,13 @@ const WINDOW_SIZE = {
 app.setAppUserModelId(APP_ID)
 
 let mainWindow = null
+
+ipcMain.handle('farm-window:set-fullscreen', (_event, fullscreen) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false
+
+  mainWindow.setFullScreen(Boolean(fullscreen))
+  return mainWindow.isFullScreen()
+})
 
 const getWindowSize = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
@@ -61,6 +68,14 @@ if (!hasSingleInstanceLock) {
     mainWindow.once('ready-to-show', () => {
       mainWindow.show()
     })
+
+    const notifyFullscreenChange = () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      mainWindow.webContents.send('farm-window:fullscreen-changed', mainWindow.isFullScreen())
+    }
+
+    mainWindow.on('enter-full-screen', notifyFullscreenChange)
+    mainWindow.on('leave-full-screen', notifyFullscreenChange)
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       if (/^https?:\/\//i.test(url)) {

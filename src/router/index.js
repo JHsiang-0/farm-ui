@@ -17,6 +17,12 @@ const router = createRouter({
       component: () => import('../views/Login.vue'),
       meta: { requiresAuth: false }
     },
+    {
+      path: '/dashboard/fullscreen',
+      name: 'fullscreen-dashboard',
+      component: () => import('../views/FullscreenDashboard.vue'),
+      meta: { requiresAuth: true, roles: APP_ROLES, fullscreen: true }
+    },
     // 将 Layout 设置为根路由
     {
       path: '/',
