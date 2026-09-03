@@ -104,6 +104,20 @@
               <span><promotion /></span>
               分配机器
             </t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
+              size="small" theme="warning" variant="outline"
+              @click="handleConfirmSafe(scope.row)"
+            >
+              确认安全
+            </t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
+              size="small" theme="success"
+              @click="handleStart(scope.row)"
+            >
+              启动打印
+            </t-button>
             <t-popconfirm content="确定要取消这个任务吗？"
               theme="danger"
               @confirm="handleCancel(scope.row.id)"
@@ -208,9 +222,9 @@ import {
   FileIcon as Coffee,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
-import { getJobQueue, cancelJob, assignJobToPrinter, requeueJob, updateJobPriority } from '@/api/job'
-import { getPrinterList } from '@/api/printer'
-import { message } from '@/utils/message'
+import { getJobQueue, cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob } from '@/api/job'
+import { confirmSafe, getPrinterList } from '@/api/printer'
+import { message, confirmMessage } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
@@ -371,6 +385,36 @@ const submitAssign = async () => {
     // 报错信息会被拦截器弹窗
   } finally {
     assigning.value = false
+  }
+}
+
+const handleConfirmSafe = async job => {
+  try {
+    await confirmMessage(
+      `请确认打印机 ${job.printerName || job.printerId} 的热床已清理且可以安全打印。`,
+      '现场安全确认',
+      { confirmButtonText: '确认安全', cancelButtonText: '返回检查', type: 'warning' }
+    )
+    await confirmSafe(job.printerId)
+    message.success('已确认安全，可以启动打印')
+    await fetchQueue()
+  } catch (error) {
+    if (error !== 'cancel') console.error('确认打印安全失败:', error)
+  }
+}
+
+const handleStart = async job => {
+  try {
+    await confirmMessage(
+      `确认启动任务 #${job.id}？这会向打印机发送上传并启动请求。`,
+      '启动打印确认',
+      { confirmButtonText: '启动打印', cancelButtonText: '取消', type: 'danger' }
+    )
+    await startJob(job.id, 'START_PRINT')
+    message.success('启动请求已发送，请观察设备状态')
+    await fetchQueue()
+  } catch (error) {
+    if (error !== 'cancel') console.error('启动打印失败:', error)
   }
 }
 
