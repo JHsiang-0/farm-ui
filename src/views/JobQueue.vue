@@ -50,7 +50,13 @@
 
         <TdTableColumn prop="priority" label="优先级" width="100" align="center">
           <template #default="scope">
-            <t-tag
+            <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
+              @change="value => handlePriority(scope.row, value)" style="width: 88px">
+              <t-option label="普通" :value="0" />
+              <t-option label="优先" :value="50" />
+              <t-option label="加急" :value="100" />
+            </t-select>
+            <t-tag v-else
               :theme="getPriorityType(scope.row.priority)"
               variant="dark"
               size="small"
@@ -85,9 +91,11 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="调度操作" width="220" align="center" fixed="right">
+        <TdTableColumn label="调度操作" width="300" align="center" fixed="right">
           <template #default="scope">
             <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" variant="text"
+              @click="handleRequeue(scope.row.id)">重新排队</t-button>
             <t-button
               size="small" theme="primary"
               @click="openAssignDialog(scope.row)"
@@ -200,7 +208,7 @@ import {
   FileIcon as Coffee,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
-import { getJobQueue, cancelJob, assignJobToPrinter } from '@/api/job'
+import { getJobQueue, cancelJob, assignJobToPrinter, requeueJob, updateJobPriority } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
 import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
@@ -306,6 +314,27 @@ const handleCancel = async (id) => {
     fetchQueue()
   } catch {
     // 错误在拦截器处理
+  }
+}
+
+const handleRequeue = async id => {
+  try {
+    await requeueJob(id)
+    message.success('任务已重新排队')
+    fetchQueue()
+  } catch {
+    // 错误在拦截器处理
+  }
+}
+
+const handlePriority = async (job, value) => {
+  const priority = Number(value)
+  try {
+    await updateJobPriority(job.id, priority)
+    job.priority = priority
+    message.success('优先级已更新')
+  } catch {
+    fetchQueue()
   }
 }
 

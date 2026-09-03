@@ -206,10 +206,10 @@
                     <span class="text-gray-600">
                         <Monitor />
                     </span>
-                    远程控制 (Moonraker / Mainsail)
+                    远程控制
                 </div>
                 <div class="flex flex-col gap-fluid-sm">
-                    <t-button v-if="device.ipAddress" theme="primary" size="large" tag="a" :href="mainsailUrl"
+                    <t-button v-if="device.ipAddress && device.firmwareType !== 'RRF'" theme="primary" size="large" tag="a" :href="mainsailUrl"
                         target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-fluid-sm">
                         <span>
                             <Monitor />
@@ -217,8 +217,8 @@
                         打开 Mainsail 界面
                     </t-button>
 
-                    <!-- 操作按钮网格 - 移动端 2列，桌面 4列 -->
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <!-- 操作按钮网格 - 移动端 2列，桌面 3列 -->
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
                         <t-button theme="warning" :disabled="actionLoading || !canPause" :loading="actionLoading" @click="handleAction('pause')" class="h-10">
                             <span>
                                 <VideoPause />
@@ -236,12 +236,6 @@
                                 <CircleClose />
                             </span>
                             取消
-                        </t-button>
-                        <t-button theme="default" :disabled="actionLoading" @click="handleAction('reboot')" class="h-10">
-                            <span>
-                                <Refresh />
-                            </span>
-                            重启
                         </t-button>
                     </div>
 
@@ -291,7 +285,6 @@ import {
     PauseIcon as VideoPause,
     PlayIcon as VideoPlay,
     CloseCircleIcon as CircleClose,
-    RefreshIcon as Refresh,
     ErrorCircleFilledIcon as Warning,
     LockOnIcon as Lock,
     FileAddIcon as DocumentAdd

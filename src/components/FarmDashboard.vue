@@ -56,8 +56,7 @@ import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
 import { LockOnIcon as Lock, LockOffIcon as Unlock } from 'tdesign-icons-vue-next'
 import { usePrinterStore } from '@/stores/printer'
-import { cancelJob } from '@/api/job'
-import { emergencyStopPrinter, pausePrinter } from '@/api/printer'
+import { emergencyStopPrinter, pausePrinter, resumePrinter, cancelPrinter } from '@/api/printer'
 import DashboardHeader from './DashboardHeader.vue'
 import GridMap from './grid/GridMap.vue'
 import BindDeviceDialog from './BindDeviceDialog.vue'
@@ -358,13 +357,7 @@ async function handlePrinterAction(action, device) {
   const actionMap = {
     pause: '暂停打印',
     resume: '恢复打印',
-    cancel: '取消任务',
-    reboot: '重启主机'
-  }
-
-  if (action === 'resume' || action === 'reboot') {
-    message.info(`${actionMap[action]}接口正在等待后端完成，当前暂不可用`)
-    return
+    cancel: '取消任务'
   }
 
   try {
@@ -377,12 +370,14 @@ async function handlePrinterAction(action, device) {
     controlLoading.value = true
     if (action === 'pause') {
       await pausePrinter(device.id)
+    } else if (action === 'resume') {
+      await resumePrinter(device.id)
     } else if (action === 'cancel') {
-      if (!device.currentJobId) {
+      if (!device.currentJobId && !store.realTimeStatus[device.id]?.currentJobId) {
         message.warning('该设备当前没有可取消的任务')
         return
       }
-      await cancelJob(device.currentJobId)
+      await cancelPrinter(device.id)
     }
 
     await store.fetchDeviceData()

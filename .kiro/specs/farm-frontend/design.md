@@ -36,6 +36,7 @@ src/utils/request.js（鉴权、错误、重复请求锁）
 
 - 任务创建正式方法调用 `POST /api/v1/print-jobs`。
 - 旧 `/api/v1/print-jobs/create` 只在 `createPrintJobLegacy` 中保留。
+- 任务队列和历史页面通过 API 模块调用 retry/requeue/priority；按钮只在后端允许的状态显示或启用，失败时重新拉取列表恢复服务端状态。
 - 文件下载先请求预签名 URL，再使用 Blob 或该 URL 完成下载；不直接把下载接口地址交给浏览器。
 - 文件列表和详情只使用后端 camelCase 契约；`folder` 是唯一目录标记。打开文件详情后调用 `GET /print-files/{id}/preview` 获取权威元数据，按需调用 `GET /print-files/{id}/thumbnail` 获取短期缩略图地址。
 - 成功的空响应由调用方按空结果处理，不视为异常。

@@ -98,6 +98,25 @@ export function cancelJob(id) {
   })
 }
 
+/** 将失败任务重新放回队列。 */
+export function retryJob(id) {
+  return request({ url: `/api/v1/print-jobs/${id}/retry`, method: 'post' })
+}
+
+/** 将已分配或待机任务重新放回队列。 */
+export function requeueJob(id) {
+  return request({ url: `/api/v1/print-jobs/${id}/requeue`, method: 'post' })
+}
+
+/** 调整排队任务优先级，范围 0-100。 */
+export function updateJobPriority(id, priority) {
+  return request({
+    url: `/api/v1/print-jobs/${id}/priority`,
+    method: 'put',
+    data: { priority }
+  })
+}
+
 /**
  * 获取打印任务分页列表（支持高级检索）
  * @param {Object} params - 查询参数

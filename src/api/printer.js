@@ -149,6 +149,22 @@ export function pausePrinter(printerId) {
   })
 }
 
+/** 恢复打印机当前暂停任务。 */
+export function resumePrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/resume`,
+    method: 'post'
+  })
+}
+
+/** 取消打印机当前任务。 */
+export function cancelPrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/cancel`,
+    method: 'post'
+  })
+}
+
 /**
  * 对打印机执行紧急停机。
  * @param {number|string} printerId - 打印机ID

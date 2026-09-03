@@ -129,8 +129,18 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="操作" width="120" align="center" fixed="right">
+        <TdTableColumn label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
+            <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
+              @click="handleRetry(scope.row.id)">重试</t-button>
+            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
+              @click="handleRequeue(scope.row.id)">重新排队</t-button>
+            <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
+              @change="value => handlePriority(scope.row, value)" style="width: 88px">
+              <t-option label="普通" :value="0" />
+              <t-option label="优先" :value="50" />
+              <t-option label="加急" :value="100" />
+            </t-select>
             <t-popconfirm content="确定要取消这个任务吗？"
               theme="danger"
               @confirm="handleCancel(scope.row.id)"
@@ -189,7 +199,7 @@ import {
   TaskTimeIcon as Timer,
   CloseCircleIcon as CircleClose
 } from 'tdesign-icons-vue-next'
-import { getJobPage, cancelJob } from '@/api/job'
+import { getJobPage, cancelJob, retryJob, requeueJob, updateJobPriority } from '@/api/job'
 import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
@@ -293,6 +303,38 @@ const handleCancel = async (id) => {
   } catch (error) {
     console.error('取消任务失败:', error)
     message.error('取消任务失败')
+  }
+}
+
+const handleRetry = async id => {
+  try {
+    await retryJob(id)
+    message.success('任务已重新加入队列')
+    fetchData()
+  } catch (error) {
+    console.error('重试任务失败:', error)
+  }
+}
+
+const handleRequeue = async id => {
+  try {
+    await requeueJob(id)
+    message.success('任务已重新排队')
+    fetchData()
+  } catch (error) {
+    console.error('重新排队失败:', error)
+  }
+}
+
+const handlePriority = async (job, value) => {
+  const priority = Number(value)
+  try {
+    await updateJobPriority(job.id, priority)
+    job.priority = priority
+    message.success('优先级已更新')
+  } catch (error) {
+    console.error('更新优先级失败:', error)
+    fetchData()
   }
 }
 
