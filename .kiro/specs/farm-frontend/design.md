@@ -30,6 +30,8 @@ src/utils/request.js（鉴权、错误、重复请求锁）
 
 布局通过同一份路由权限元数据过滤菜单，避免菜单规则和路由规则分叉。用户下拉菜单中的未实现个人中心/设置保留为明确的开发中状态。
 
+个人中心使用 `/profile` 受保护路由，页面通过 `src/api/user.js` 的 `getProfile`、`updateProfile` 和 `changePassword` 访问当前用户接口。更新资料不提交 `role`，修改密码成功后保留当前 JWT；后端返回 401 时仍由请求层统一清理登录态。
+
 ## API 与 Mock 设计
 
 - 任务创建正式方法调用 `POST /api/v1/print-jobs`。

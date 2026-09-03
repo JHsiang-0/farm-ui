@@ -193,6 +193,7 @@ const currentRoute = computed(() => {
   const map = {
     '/': { name: '监控大屏', icon: 'Odometer' },
     '/printers': { name: '机器管理', icon: 'Printer' },
+    '/profile': { name: '个人中心', icon: 'User' },
     '/files': { name: '切片文件库', icon: 'FolderOpened' },
     '/tasks': { name: '任务管理', icon: 'List' },
     '/tasks/queue': { name: '任务队列', icon: 'List' },
@@ -219,7 +220,7 @@ const handleCommand = (item) => {
   const command = typeof item === 'string' ? item : item?.value
   switch (command) {
     case 'profile':
-      message.info('个人中心功能开发中...')
+      router.push('/profile')
       break
     case 'settings':
       message.info('系统设置功能开发中...')
