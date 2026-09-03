@@ -23,7 +23,13 @@
         :key="stat.key"
         bordered
         class="stat-card"
-        :class="`stat-card--${stat.tone}`"
+        :class="[`stat-card--${stat.tone}`, { 'stat-card--interactive': stat.to }]"
+        :role="stat.to ? 'button' : undefined"
+        :tabindex="stat.to ? 0 : undefined"
+        :aria-label="stat.to ? `查看${stat.label}` : undefined"
+        @click="stat.to && goTo(stat.to)"
+        @keydown.enter.prevent="stat.to && goTo(stat.to)"
+        @keydown.space.prevent="stat.to && goTo(stat.to)"
       >
         <div class="stat-card__topline">
           <span class="stat-card__label">{{ stat.label }}</span>
@@ -174,10 +180,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronRightIcon,
+  CheckCircleIcon,
   DashboardIcon,
   ErrorCircleIcon,
   FileIcon,
-  ListNumberedIcon,
   PrintIcon,
   RefreshIcon
 } from 'tdesign-icons-vue-next'
@@ -201,9 +207,11 @@ const statusConfig = [
 
 const totalPrinters = computed(() => printers.value.length)
 const printingPrinters = computed(() => printers.value.filter(item => item.status === 'PRINTING').length)
+const idlePrinters = computed(() => printers.value.filter(item => item.status === 'IDLE').length)
 const onlinePrinters = computed(() => printers.value.filter(item => item.status !== 'OFFLINE').length)
-const errorPrinters = computed(() => printers.value.filter(item => item.status === 'ERROR').length)
-const queuedJobs = computed(() => jobs.value.filter(item => ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED'].includes(item.status)).length)
+const attentionStatuses = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
+const isAttentionPrinter = printer => attentionStatuses.includes(String(printer.status || '').toUpperCase())
+const attentionPrinterCount = computed(() => printers.value.filter(isAttentionPrinter).length)
 
 const statCards = computed(() => [
   {
@@ -212,7 +220,8 @@ const statCards = computed(() => [
     value: totalPrinters.value,
     description: `${onlinePrinters.value} 台设备在线`,
     icon: DashboardIcon,
-    tone: 'primary'
+    tone: 'primary',
+    to: '/printers'
   },
   {
     key: 'printing',
@@ -220,23 +229,26 @@ const statCards = computed(() => [
     value: printingPrinters.value,
     description: '实时打印中的设备',
     icon: PrintIcon,
-    tone: 'blue'
+    tone: 'blue',
+    to: { path: '/printers', query: { status: 'PRINTING' } }
   },
   {
-    key: 'jobs',
-    label: '待处理任务',
-    value: queuedJobs.value,
-    description: '等待分配或启动',
-    icon: ListNumberedIcon,
-    tone: 'orange'
+    key: 'idle',
+    label: '空闲打印机',
+    value: idlePrinters.value,
+    description: '当前可分配任务的设备',
+    icon: CheckCircleIcon,
+    tone: 'orange',
+    to: { path: '/printers', query: { status: 'IDLE' } }
   },
   {
     key: 'errors',
     label: '异常设备',
-    value: errorPrinters.value,
-    description: errorPrinters.value ? '请及时处理异常' : '当前运行正常',
+    value: attentionPrinterCount.value,
+    description: attentionPrinterCount.value ? '请及时处理异常' : '当前运行正常',
     icon: ErrorCircleIcon,
-    tone: errorPrinters.value ? 'red' : 'green'
+    tone: attentionPrinterCount.value ? 'red' : 'green',
+    to: { path: '/printers', query: { status: 'ATTENTION' } }
   }
 ])
 
@@ -313,7 +325,7 @@ const recentJobs = computed(() => [...jobs.value]
   .slice(0, 5))
 
 const attentionPrinters = computed(() => printers.value
-  .filter(item => ['ERROR', 'OFFLINE', 'PAUSED'].includes(item.status))
+  .filter(isAttentionPrinter)
   .slice(0, 5))
 
 const fetchOverview = async () => {
@@ -439,6 +451,21 @@ onMounted(fetchOverview)
 
 .stat-card {
   min-width: 0;
+}
+
+.stat-card--interactive {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card--interactive:hover {
+  box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
+  transform: translateY(-2px);
+}
+
+.stat-card--interactive:focus-visible {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
 }
 
 .stat-card :deep(.t-card__body) {

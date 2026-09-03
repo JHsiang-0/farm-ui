@@ -16,6 +16,12 @@
             <span><refresh /></span>
             刷新列表
           </t-button>
+          <div v-if="activeStatusFilter" class="flex items-center gap-2">
+            <t-tag :theme="activeStatusFilter.theme" variant="light">
+              当前筛选：{{ activeStatusFilter.label }}
+            </t-tag>
+            <t-button variant="text" size="small" @click="clearStatusFilter">显示全部</t-button>
+          </div>
         </div>
         <div class="flex items-center gap-3">
           <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
@@ -373,7 +379,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   RefreshIcon as Refresh,
   MapAimingIcon as Aim,
@@ -407,6 +414,8 @@ defineOptions({ name: 'PrinterManage' })
 
 // ===== 列表与分页状态 =====
 const loading = ref(false)
+const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.isAdmin)
 const tableData = ref([])
@@ -415,6 +424,18 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 20
 })
+
+const statusFilterConfig = {
+  PRINTING: { label: '打印中', theme: 'primary' },
+  IDLE: { label: '空闲打印机', theme: 'success' },
+  ATTENTION: { label: '异常设备', theme: 'danger' }
+}
+
+const activeStatusFilterKey = computed(() => {
+  const value = Array.isArray(route.query.status) ? route.query.status[0] : route.query.status
+  return statusFilterConfig[value] ? value : ''
+})
+const activeStatusFilter = computed(() => statusFilterConfig[activeStatusFilterKey.value] || null)
 
 // ===== 设备详情抽屉状态 =====
 const detailDrawerVisible = ref(false)
@@ -637,7 +658,10 @@ const restorePrinterDetailContext = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getPrinterList(queryParams)
+    const res = await getPrinterList({
+      ...queryParams,
+      ...(activeStatusFilterKey.value ? { status: activeStatusFilterKey.value } : {})
+    })
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
     restorePrinterDetailContext()
@@ -647,6 +671,18 @@ const fetchData = async () => {
     loading.value = false
   }
 }
+
+const clearStatusFilter = () => {
+  const query = { ...route.query }
+  delete query.status
+  queryParams.pageNum = 1
+  router.replace({ path: route.path, query })
+}
+
+watch(() => route.query.status, () => {
+  queryParams.pageNum = 1
+  fetchData()
+})
 
 // 点击新增按钮
 const handleAdd = () => {
