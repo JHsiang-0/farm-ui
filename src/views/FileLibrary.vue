@@ -1106,12 +1106,4 @@ onMounted(() => {
   }
 }
 
-/* 进度条样式 */
-.success-rate-success :deep(.t-progress__bar) {
-  background-color: #059669;
-}
-
-.success-rate-warning :deep(.t-progress__bar) {
-  background-color: #d97706;
-}
 </style>

@@ -271,64 +271,6 @@ const handleLogout = () => {
 /* ============================================
    菜单项深度选择器样式
    ============================================ */
-:deep(.t-menu__item) {
-  height: 50px;
-  line-height: 50px;
-  margin: 4px 12px;
-  border-radius: 6px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-:deep(.t-menu__item:hover) {
-  background-color: #f3f4f6;
-  color: #111827;
-}
-
-:deep(.t-menu__item.t-is-active) {
-  background-color: #f3f4f6;
-  color: #111827;
-  margin-left: 12px;
-  padding-left: 16px !important;
-}
-
-:deep(.t-menu__item .t-icon) {
-  font-size: 18px;
-  margin-right: 12px;
-}
-
-:deep(.t-submenu__title) {
-  height: 50px;
-  line-height: 50px;
-  margin: 4px 12px;
-  border-radius: 6px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-:deep(.t-submenu__title:hover) {
-  background-color: #f3f4f6;
-  color: #111827;
-}
-
-:deep(.t-submenu.t-is-active .t-submenu__title) {
-  color: #111827;
-  font-weight: 600;
-}
-
-:deep(.t-menu--collapse) {
-  width: 64px;
-}
-
-:deep(.t-menu--collapse .t-menu__item) {
-  margin: 4px 8px;
-  padding: 0 16px !important;
-  justify-content: center;
-}
-
-:deep(.t-menu--collapse .t-menu__item.t-is-active) {
-  margin-left: 5px;
-  padding-left: 13px !important;
-}
-
 /* ============================================
    路由过渡动画
    ============================================ */

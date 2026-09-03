@@ -117,21 +117,21 @@
                     <!-- 操作按钮 -->
                     <div class="mt-2">
                         <t-button v-if="!isSafetyConfirmed" theme="warning" size="large"
-                            class="w-full h-12 text-fluid-base font-semibold" @click="handleConfirmSafe" :loading="isLoading">
+                            class="w-full" @click="handleConfirmSafe" :loading="isLoading">
                             <span>
                                 <Lock />
                             </span>
                             确认现场安全
                         </t-button>
                         <div v-else class="flex gap-2">
-                            <t-button theme="primary" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
+                            <t-button theme="primary" size="large" class="flex-1"
                                 @click="handleStartPrint('START_PRINT')" :loading="isLoading">
                                 <span>
                                     <VideoPlay />
                                 </span>
                                 下发并开始打印
                             </t-button>
-                            <t-button theme="default" size="large" class="flex-1 h-12 text-fluid-base font-semibold"
+                            <t-button theme="default" size="large" class="flex-1"
                                 @click="handleStartPrint('UPLOAD_ONLY')" :loading="isLoading">
                                 <span>
                                     <DocumentAdd />
@@ -210,7 +210,7 @@
                 </div>
                 <div class="flex flex-col gap-fluid-sm">
                     <t-button v-if="device.ipAddress" theme="primary" size="large" tag="a" :href="mainsailUrl"
-                        target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-fluid-sm">
+                        target="_blank" rel="noopener noreferrer" class="w-full justify-center">
                         <span>
                             <Monitor />
                         </span>
@@ -219,25 +219,25 @@
 
                     <!-- 操作按钮网格 - 移动端 2列，桌面 4列 -->
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                        <t-button theme="warning" :disabled="actionLoading || !canPause" :loading="actionLoading" @click="handleAction('pause')" class="h-10">
+                        <t-button theme="warning" :disabled="actionLoading || !canPause" :loading="actionLoading" @click="handleAction('pause')">
                             <span>
                                 <VideoPause />
                             </span>
                             暂停
                         </t-button>
-                        <t-button theme="success" :disabled="actionLoading || !canResume" :loading="actionLoading" @click="handleAction('resume')" class="h-10">
+                        <t-button theme="success" :disabled="actionLoading || !canResume" :loading="actionLoading" @click="handleAction('resume')">
                             <span>
                                 <VideoPlay />
                             </span>
                             恢复
                         </t-button>
-                        <t-button theme="danger" :disabled="actionLoading || !canCancel" :loading="actionLoading" @click="handleAction('cancel')" class="h-10">
+                        <t-button theme="danger" :disabled="actionLoading || !canCancel" :loading="actionLoading" @click="handleAction('cancel')">
                             <span>
                                 <CircleClose />
                             </span>
                             取消
                         </t-button>
-                        <t-button theme="default" :disabled="actionLoading" @click="handleAction('reboot')" class="h-10">
+                        <t-button theme="default" :disabled="actionLoading" @click="handleAction('reboot')">
                             <span>
                                 <Refresh />
                             </span>
@@ -249,7 +249,7 @@
                         <t-divider>
                             <t-tag theme="danger" variant="dark">紧急操作</t-tag>
                         </t-divider>
-                        <t-button theme="danger" size="large" class="w-full h-12 text-fluid-base font-bold"
+                        <t-button theme="danger" size="large" class="w-full"
                             :disabled="actionLoading" :loading="actionLoading"
                             @click="handleEmergencyStop">
                             <span>
@@ -565,34 +565,6 @@ async function handleStartPrint(action) {
 /* ============================================
    抽屉整体样式 - 响应式优化
    ============================================ */
-:deep(.t-drawer__body) {
-    padding: 0;
-    overflow-y: auto;
-    /* 滚动条样式优化 */
-    scrollbar-width: thin;
-    scrollbar-color: #d1d5db transparent;
-}
-
-:deep(.t-drawer__body::-webkit-scrollbar) {
-    width: 6px;
-}
-
-:deep(.t-drawer__body::-webkit-scrollbar-thumb) {
-    background: #d1d5db;
-    border-radius: 3px;
-}
-
-:deep(.t-drawer__header) {
-    margin-bottom: 0;
-    padding: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-:deep(.t-drawer__title) {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
 /* ============================================
    移动端适配
    ============================================ */
@@ -601,17 +573,6 @@ async function handleStartPrint(action) {
         width: 100% !important;
     }
 
-    :deep(.t-drawer__header) {
-        padding: 0.75rem 1rem;
-    }
-
-    :deep(.t-drawer__title) {
-        font-size: 0.9375rem;
-    }
-
-    :deep(.t-drawer__footer) {
-        padding: 0.75rem 1rem;
-    }
 }
 
 /* ============================================
@@ -623,12 +584,4 @@ async function handleStartPrint(action) {
     }
 }
 
-/* ============================================
-   大屏适配（2.5K/4K）
-   ============================================ */
-@media (min-width: 1920px) {
-    :deep(.t-drawer) {
-        max-width: 30rem;
-    }
-}
 </style>

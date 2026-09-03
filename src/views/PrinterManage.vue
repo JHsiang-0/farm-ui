@@ -783,24 +783,3 @@ onMounted(() => {
   fetchData()
 })
 </script>
-
-<style scoped>
-/* 扫描结果表格输入框优化 */
-:deep(.t-table .t-input__wrapper) {
-  padding: 0 8px;
-}
-
-:deep(.t-table .t-input__inner) {
-  height: 28px;
-  font-size: 14px;
-}
-
-/* 表格行可点击样式 */
-:deep(.t-table .cursor-pointer) {
-  cursor: pointer;
-}
-
-:deep(.t-table .t-table__row:hover) {
-  background-color: #f3f4f6;
-}
-</style>

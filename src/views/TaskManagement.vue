@@ -65,27 +65,3 @@ if (route.path.includes('history')) {
   activeTab.value = 'queue'
 }
 </script>
-
-<style scoped>
-.task-tabs {
-  .t-tabs__nav-wrap {
-    background: transparent;
-  }
-
-  .t-tabs__nav {
-    padding: 0;
-  }
-
-  .t-tabs__item {
-    font-weight: 500;
-  }
-
-  .t-tabs__item.is-active {
-    color: var(--farm-color-primary);
-  }
-
-  .t-tabs__active-bar {
-    background-color: var(--farm-color-primary);
-  }
-}
-</style>

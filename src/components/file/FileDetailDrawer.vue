@@ -251,20 +251,3 @@ const getMaterialTagType = (materialType) => {
   return types[materialType] || 'default'
 }
 </script>
-
-<style scoped>
-:deep(.t-drawer__body) {
-  padding: 0;
-  overflow-y: auto;
-}
-
-:deep(.t-drawer__header) {
-  margin-bottom: 0;
-  padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.file-detail-drawer {
-  padding: 0;
-}
-</style>

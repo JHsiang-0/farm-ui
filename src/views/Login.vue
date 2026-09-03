@@ -226,7 +226,7 @@ const handleLogin = async () => {
    ============================================ */
 .brand-panel {
   width: 42%;
-  background: linear-gradient(135deg, var(--farm-color-primary) 0%, #1e40af 60%, #1e3a8a 100%);
+  background: linear-gradient(135deg, #1f2937 0%, #1e40af 60%, #1e3a8a 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -369,38 +369,12 @@ const handleLogin = async () => {
 .form-title {
   font-size: clamp(20px, 2vw, 24px);
   font-weight: 700;
-  color: var(--farm-text-color-primary);
   margin: 0 0 8px;
 }
 
 .form-desc {
   font-size: clamp(12px, 1.1vw, 14px);
-  color: var(--farm-text-color-secondary);
   margin: 0;
-}
-
-/* 表单样式 */
-.login-form :deep(.t-form-item),
-.register-form :deep(.t-form-item) {
-  margin-bottom: clamp(12px, 2.5vh, 20px);
-}
-
-.login-form :deep(.t-form-item:last-child),
-.register-form :deep(.t-form-item:last-child) {
-  margin-bottom: 0;
-}
-
-.login-form :deep(.t-input__wrapper),
-.register-form :deep(.t-input__wrapper) {
-  height: clamp(40px, 5vh, 48px) !important;
-  min-height: clamp(40px, 5vh, 48px) !important;
-  padding: 1px clamp(10px, 1.5vw, 16px);
-}
-
-.login-form :deep(.t-input__inner),
-.register-form :deep(.t-input__inner) {
-  height: clamp(40px, 5vh, 48px) !important;
-  line-height: clamp(40px, 5vh, 48px) !important;
 }
 
 .form-options {
@@ -410,21 +384,12 @@ const handleLogin = async () => {
   margin-bottom: clamp(16px, 3vh, 24px);
 }
 
-.form-options :deep(.t-checkbox__label) {
-  font-size: clamp(12px, 1.1vw, 13px);
-  color: var(--farm-text-color-regular);
-}
-
 .forgot-link {
   font-size: clamp(12px, 1.1vw, 13px);
 }
 
 .submit-btn {
   width: 100%;
-  height: clamp(40px, 5vh, 48px);
-  font-size: clamp(14px, 1.4vw, 16px);
-  font-weight: 600;
-  border-radius: 6px;
 }
 
 .terms-item {
@@ -433,12 +398,6 @@ const handleLogin = async () => {
 
 .terms-text {
   font-size: clamp(12px, 1.1vw, 13px);
-  color: var(--farm-text-color-regular);
-}
-
-.terms-text :deep(.t-link) {
-  font-size: clamp(12px, 1.1vw, 13px);
-  vertical-align: baseline;
 }
 
 /* 切换区域 */
@@ -453,12 +412,6 @@ const handleLogin = async () => {
 
 .switch-text {
   font-size: clamp(12px, 1.1vw, 13px);
-  color: var(--farm-text-color-secondary);
-}
-
-.switch-btn {
-  font-size: clamp(12px, 1.1vw, 13px);
-  font-weight: 600;
 }
 
 /* ============================================
