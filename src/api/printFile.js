@@ -43,6 +43,23 @@ export function getFileList(params = {}) {
   ))
 }
 
+/** 获取文件的安全预览元数据，不返回文件内容或存储内部字段。 */
+export function getFilePreview(id) {
+  return request({
+    url: `/api/v1/print-files/${id}/preview`,
+    method: 'get'
+  }).then(response => mapResponseData(response, normalizePrintFile))
+}
+
+/** 获取短期缩略图预签名 URL；没有缩略图时 data 为 null。 */
+export function getThumbnailUrl(id, expires = 60) {
+  return request({
+    url: `/api/v1/print-files/${id}/thumbnail`,
+    method: 'get',
+    params: { expires }
+  }).then(response => mapResponseData(response, data => typeof data === 'string' ? data : null))
+}
+
 /**
  * 创建文件夹
  * @param {Object} data - 文件夹参数

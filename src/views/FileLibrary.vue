@@ -220,7 +220,7 @@
             <template #default="{ row }">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                  <span v-if="row.isFolder === 1" class="text-blue-500">
+                  <span v-if="row.folder" class="text-blue-500">
                     <IconFolder />
                   </span>
                   <t-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="w-full h-full" />
@@ -232,7 +232,7 @@
                   :title="row.originalName">{{
                     row.originalName
                   }}</span>
-                <t-tag v-if="row.isFolder === 1" size="small" class="flex-shrink-0">
+                <t-tag v-if="row.folder" size="small" class="flex-shrink-0">
                   文件夹
                 </t-tag>
                 <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
@@ -243,22 +243,22 @@
           </TdTableColumn>
 
           <TdTableColumn prop="fileSize" label="文件大小" width="100" v-if="currentParentId">
-            <template #default="{ row }">{{ row.isFolder === 1 ? '-' : formatFileSize(row.fileSize) }}</template>
+            <template #default="{ row }">{{ row.folder ? '-' : formatFileSize(row.fileSize) }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="estTime" label="预计耗时" width="85" v-if="currentParentId">
-            <template #default="{ row }">{{ row.isFolder === 1 ? '文件夹' : formatDuration(row.estTime) }}</template>
+            <template #default="{ row }">{{ row.folder ? '文件夹' : formatDuration(row.estTime) }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="filamentWeight" label="耗材重量" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.isFolder === 1 ? '-' : (row.filamentWeight || 0) + 'g'
+              row.folder ? '-' : (row.filamentWeight || 0) + 'g'
               }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="filamentLength" label="所需线长" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.isFolder === 1 ? '-' : (row.filamentLength || 0) + 'm'
+              row.folder ? '-' : (row.filamentLength || 0) + 'm'
               }}</template>
           </TdTableColumn>
 
@@ -266,7 +266,7 @@
 
           <TdTableColumn prop="successRate" label="成功率" width="100" v-if="currentParentId">
             <template #default="{ row }">
-              <div class="flex items-center gap-2" v-if="row.isFolder !== 1">
+              <div class="flex items-center gap-2" v-if="!row.folder">
                 <t-progress :percentage="row.successRate || 0" :stroke-width="6" :label="false"
                   :class="getSuccessRateClass(row.successRate)" class="w-16" />
                 <span class="text-sm">{{ row.successRate || 0 }}%</span>
@@ -278,7 +278,7 @@
           <TdTableColumn label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="flex items-center gap-1">
-                <t-button v-if="row.isFolder === 1" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
+                <t-button v-if="row.folder" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
                   打开
                 </t-button>
                 <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
@@ -390,8 +390,8 @@
           <div class="flex items-start gap-3">
             <div class="w-12 h-12 rounded border border-gray-200 overflow-hidden bg-white flex-shrink-0">
               <t-image
-                v-if="jobForm.file?.thumbnailUrl || jobForm.file?.thumbnail_url"
-                :src="jobForm.file?.thumbnailUrl || jobForm.file?.thumbnail_url"
+                v-if="jobForm.file?.thumbnailUrl"
+                :src="jobForm.file?.thumbnailUrl"
                 fit="cover"
                 class="w-full h-full"
               >
@@ -407,8 +407,8 @@
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-sm text-gray-500 mb-1">当前选中文件</div>
-              <div class="text-base font-semibold text-gray-900 truncate" :title="jobForm.file?.originalName || jobForm.file?.original_name">
-                {{ jobForm.file?.originalName || jobForm.file?.original_name }}
+              <div class="text-base font-semibold text-gray-900 truncate" :title="jobForm.file?.originalName">
+                {{ jobForm.file?.originalName }}
               </div>
             </div>
           </div>
@@ -497,7 +497,9 @@ import {
   deleteFile,
   deleteBatchFiles,
   downloadFile,
-  createFolder
+  createFolder,
+  getFilePreview,
+  getThumbnailUrl
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
@@ -571,11 +573,11 @@ const pagination = reactive({
 
 // 计算文件夹和文件列表
 const folderList = computed(() => {
-  return fileList.value.filter(file => file.isFolder === 1)
+  return fileList.value.filter(file => file.folder)
 })
 
 const fileItemsList = computed(() => {
-  return fileList.value.filter(file => file.isFolder !== 1)
+  return fileList.value.filter(file => !file.folder)
 })
 
 const restoreFileDetailContext = () => {
@@ -735,7 +737,7 @@ const handleFileChange = async (files) => {
     message.warning('文件大小不能超过 100MB')
     return
   }
-  if (fileList.value.some(item => item.isFolder !== 1 && item.originalName === file.name)) {
+  if (fileList.value.some(item => !item.folder && item.originalName === file.name)) {
     message.warning('当前目录已存在同名文件，请先重命名后再上传')
     return
   }
@@ -951,28 +953,24 @@ const getSuccessRateClass = (successRate) => {
  */
 const openFileDetail = (file, event) => {
   if (event) event.stopPropagation()
-  // 将 camelCase 转换为 snake_case 以适配详情组件
-  selectedFile.value = {
-    id: file.id,
-    original_name: file.originalName,
-    file_size: file.fileSize,
-    user_id: file.userId,
-    created_at: file.createdAt,
-    thumbnail_url: file.thumbnailUrl,
-    est_time: file.estTime,
-    material_type: file.materialType,
-    filament_weight: file.filamentWeight,
-    filament_length: file.filamentLength,
-    nozzle_size: file.nozzleSize,
-    layer_height: file.layerHeight,
-    first_layer_height: file.firstLayerHeight,
-    bed_temp: file.bedTemp,
-    nozzle_temp: file.nozzleTemp,
-    first_layer_nozzle_temp: file.firstLayerNozzleTemp,
-    first_layer_bed_temp: file.firstLayerBedTemp
-  }
+  selectedFile.value = { ...file, thumbnailUrl: null }
   sessionStorage.setItem(FILE_DETAIL_CONTEXT_KEY, String(file.id))
   detailDrawerVisible.value = true
+
+  Promise.all([
+    getFilePreview(file.id),
+    getThumbnailUrl(file.id).catch(() => ({ data: null }))
+  ]).then(([preview, thumbnail]) => {
+    if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
+      selectedFile.value = {
+        ...selectedFile.value,
+        ...preview.data,
+        thumbnailUrl: thumbnail.data || null
+      }
+    }
+  }).catch(() => {
+    // 列表数据仍可用于展示，详情接口错误由请求层统一提示。
+  })
 }
 
 /**
@@ -992,7 +990,7 @@ const handleFileDownload = async (file) => {
     return
   }
   try {
-    await downloadFile(file.id, file.original_name || file.originalName)
+    await downloadFile(file.id, file.originalName)
   } catch (error) {
     // 下载接口本身的鉴权错误已由请求拦截器提示；这里处理预签名 URL 阶段的错误。
     if (error?.name === 'DownloadFileError') {
@@ -1010,7 +1008,7 @@ const handleFileClick = (file) => {
     toggleSelection(file.id)
   } else {
     // 详情查看模式：如果是文件夹则打开，否则显示详情
-    if (file.isFolder === 1) {
+    if (file.folder) {
       navigateToFolder(file)
     } else {
       openFileDetail(file)
@@ -1026,7 +1024,7 @@ const handleTableRowClick = (row) => {
     // 批量操作模式：表格有内置的选择功能，不额外处理
   } else {
     // 详情查看模式：如果是文件夹则打开，否则显示详情
-    if (row.isFolder === 1) {
+    if (row.folder) {
       navigateToFolder(row)
     } else {
       openFileDetail(row)

@@ -28,7 +28,7 @@ src/utils/request.js（鉴权、错误、重复请求锁）
 
 路由在 `meta.requiresAuth` 和 `meta.roles` 上声明访问要求。全局守卫先判断认证，再判断角色；权限不足时跳转到安全的默认页面并提示无权限。
 
-布局通过同一份路由权限元数据过滤菜单，避免菜单规则和路由规则分叉。用户下拉菜单中的未实现个人中心/设置保留为明确的开发中状态。
+布局通过同一份路由权限元数据过滤菜单，避免菜单规则和路由规则分叉。用户下拉菜单中的系统设置仍保留为明确的开发中状态，个人中心已接入真实路由。
 
 个人中心使用 `/profile` 受保护路由，页面通过 `src/api/user.js` 的 `getProfile`、`updateProfile` 和 `changePassword` 访问当前用户接口。更新资料不提交 `role`，修改密码成功后保留当前 JWT；后端返回 401 时仍由请求层统一清理登录态。
 
@@ -37,6 +37,7 @@ src/utils/request.js（鉴权、错误、重复请求锁）
 - 任务创建正式方法调用 `POST /api/v1/print-jobs`。
 - 旧 `/api/v1/print-jobs/create` 只在 `createPrintJobLegacy` 中保留。
 - 文件下载先请求预签名 URL，再使用 Blob 或该 URL 完成下载；不直接把下载接口地址交给浏览器。
+- 文件列表和详情只使用后端 camelCase 契约；`folder` 是唯一目录标记。打开文件详情后调用 `GET /print-files/{id}/preview` 获取权威元数据，按需调用 `GET /print-files/{id}/thumbnail` 获取短期缩略图地址。
 - 成功的空响应由调用方按空结果处理，不视为异常。
 - 规划接口不在 API 模块中新增可调用方法，页面只显示占位或禁用入口。
 - Mock 登录保留 `disabled` 用户名作为账号禁用演示场景，不记录或要求真实凭据。

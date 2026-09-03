@@ -4,7 +4,8 @@ import {
   normalizeId,
   normalizePageParams,
   normalizePageResponse,
-  normalizePrintJob
+  normalizePrintJob,
+  normalizePrintFile
 } from '../src/utils/dataAdapters.js'
 import { formatFileSize, normalizeProgress } from '../src/utils/formatters.js'
 
@@ -34,4 +35,12 @@ test('normalizes progress and formats file sizes safely', () => {
   assert.equal(normalizeProgress(120), 100)
   assert.equal(formatFileSize(1024), '1.00 KB')
   assert.equal(formatFileSize(-1), '-')
+})
+
+test('normalizes the unified folder flag and removes the legacy field', () => {
+  assert.deepEqual(normalizePrintFile({ id: 9, isFolder: 1 }), {
+    id: '9',
+    folder: true
+  })
+  assert.equal(normalizePrintFile({ id: 10, folder: false }).folder, false)
 })

@@ -88,6 +88,13 @@ export function normalizePrinter(record) {
 export function normalizePrintFile(record) {
   const normalized = normalizeIdFields(record, ['id', 'parentId', 'userId'])
 
+  if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'folder')) {
+    normalized.folder = normalized.folder === true || normalized.folder === 1
+  } else if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'isFolder')) {
+    normalized.folder = normalized.isFolder === true || normalized.isFolder === 1
+    delete normalized.isFolder
+  }
+
   if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'successRate')) {
     const successRate = Number(normalized.successRate)
     normalized.successRate = Number.isFinite(successRate)
