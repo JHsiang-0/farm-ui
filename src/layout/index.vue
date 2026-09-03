@@ -30,7 +30,7 @@
       >
         <t-menu-item value="/printers" to="/printers">
           <template #icon><Printer /></template>
-          机器管理
+          打印机
         </t-menu-item>
 
         <t-submenu value="/tasks">

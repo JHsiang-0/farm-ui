@@ -714,7 +714,7 @@ const route = async config => {
   fail(404, 404, `Mock 未实现接口：${method} ${path}`)
 }
 
-export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true'
+export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.MODE === 'desktop-mock'
 
 if (import.meta.env.DEV) {
   window.__FARM_RESET_MOCK__ = resetMockState

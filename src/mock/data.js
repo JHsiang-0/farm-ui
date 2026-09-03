@@ -34,12 +34,14 @@ const createSeedData = () => ({
     {
       id: 403,
       name: 'Printer_C0DA',
+      machineNumber: 'A-01',
       ipAddress: '192.168.1.80',
       macAddress: 'AA:BB:CC:DD:EE:01',
       firmwareType: 'KLIPPER',
       status: 'PRINTING',
       isSafeToPrint: true,
       currentJobId: 1001,
+      currentJobStatus: 'PRINTING',
       currentJobFileName: 'gearbox.gcode',
       currentMaterial: 'PLA',
       nozzleSize: 0.4,
@@ -51,6 +53,7 @@ const createSeedData = () => ({
     {
       id: 404,
       name: 'Printer_A12F',
+      machineNumber: 'A-02',
       ipAddress: '192.168.1.81',
       macAddress: 'AA:BB:CC:DD:EE:02',
       firmwareType: 'KLIPPER',
@@ -67,12 +70,14 @@ const createSeedData = () => ({
     {
       id: 405,
       name: 'Printer_B07E',
+      machineNumber: 'A-03',
       ipAddress: '192.168.1.82',
       macAddress: 'AA:BB:CC:DD:EE:03',
       firmwareType: 'RRF',
       status: 'PAUSED',
       isSafeToPrint: true,
       currentJobId: 1002,
+      currentJobStatus: 'PAUSED',
       currentJobFileName: 'enclosure.gcode',
       currentMaterial: 'ABS',
       nozzleSize: 0.6,
@@ -84,6 +89,7 @@ const createSeedData = () => ({
     {
       id: 406,
       name: 'Printer_OFFLINE',
+      machineNumber: 'B-01',
       ipAddress: '192.168.1.83',
       macAddress: 'AA:BB:CC:DD:EE:04',
       firmwareType: 'KLIPPER',
@@ -100,6 +106,7 @@ const createSeedData = () => ({
     {
       id: 407,
       name: 'Printer_ERROR',
+      machineNumber: 'B-02',
       ipAddress: '192.168.1.84',
       macAddress: 'AA:BB:CC:DD:EE:05',
       firmwareType: 'RRF',
@@ -116,6 +123,7 @@ const createSeedData = () => ({
     {
       id: 408,
       name: 'Printer_CLEAN',
+      machineNumber: 'B-03',
       ipAddress: '192.168.1.85',
       macAddress: 'AA:BB:CC:DD:EE:06',
       firmwareType: 'KLIPPER',

@@ -112,9 +112,12 @@
           <template #default="scope">
             <div class="text-center">
               <span v-if="scope.row.currentJobId" class="text-sm">
-                #{{ scope.row.currentJobId }}
-                <t-tag v-if="scope.row.currentJobStatus" size="small" :theme="getJobStatusType(scope.row.currentJobStatus)" class="ml-1">
-                  {{ scope.row.currentJobStatus }}
+                <span class="block truncate" :title="scope.row.currentJobFileName || `任务 #${scope.row.currentJobId}`">
+                  {{ scope.row.currentJobFileName || `任务 #${scope.row.currentJobId}` }}
+                </span>
+                <span class="text-xs text-gray-500">任务 #{{ scope.row.currentJobId }}</span>
+                <t-tag size="small" :theme="getJobStatusType(scope.row.currentJobStatus || scope.row.status)" class="ml-1">
+                  {{ getJobStatusLabel(scope.row.currentJobStatus || scope.row.status) }}
                 </t-tag>
               </span>
               <span v-else class="text-gray-400 text-sm">无</span>
@@ -503,10 +506,24 @@ const getJobStatusType = (status) => {
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
+    'PAUSED': 'warning',
     'COMPLETED': 'default',
     'FAILED': 'danger'
   }
   return map[status] || 'default'
+}
+
+const getJobStatusLabel = (status) => {
+  const map = {
+    QUEUED: '排队中',
+    ASSIGNED: '已分配',
+    PRINTING: '打印中',
+    PAUSED: '已暂停',
+    COMPLETED: '已完成',
+    FAILED: '失败',
+    CANCELLED: '已取消'
+  }
+  return map[String(status || '').toUpperCase()] || '未知'
 }
 
 // 判断是否应该显示"确认清理"按钮

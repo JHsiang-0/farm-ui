@@ -4,7 +4,7 @@ import { message } from '@/utils/message'
 import Layout from '@/layout/index.vue' // 引入刚写的布局组件
 
 const APP_ROLES = ['ADMIN', 'OPERATOR']
-const isDesktop = import.meta.env.MODE === 'desktop'
+const isDesktop = import.meta.env.MODE.startsWith('desktop')
 
 const router = createRouter({
   history: isDesktop
@@ -33,7 +33,7 @@ const router = createRouter({
           // path 为空代表默认加载的子页面
           path: '', 
           name: 'dashboard',
-          redirect: { name: 'fullscreen-dashboard' }
+          redirect: { name: 'printers' }
         },
         { 
           path: 'printers', 
@@ -86,15 +86,15 @@ router.beforeEach((to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // 如果用户已经登录了，还想去登录页，一律踢回大屏主页
+  // 如果用户已经登录了，还想去登录页，一律踢回打印机主页
   if (to.path === '/login' && userStore.token) {
-    return { name: 'dashboard' }
+    return { name: 'printers' }
   }
 
   const requiredRoles = to.matched.flatMap(record => record.meta.roles || [])
   if (requiredRoles.length > 0 && !userStore.hasRole(requiredRoles)) {
     message.error('当前账号没有访问该页面的权限')
-    return { name: 'dashboard' }
+    return { name: 'printers' }
   }
 })
 

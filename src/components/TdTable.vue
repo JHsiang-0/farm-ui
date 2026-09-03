@@ -34,7 +34,7 @@ const columns = computed(() => registeredColumns.value.map((column, index) => {
     fixed: column.fixed,
     ellipsis: column.showOverflowTooltip,
     cell: column.slot
-      ? ({ row, rowIndex }) => column.slot({ row, $index: rowIndex, rowIndex })
+      ? (_h, { row, rowIndex }) => column.slot({ row, $index: rowIndex, rowIndex })
       : undefined
   }
 }))
@@ -77,4 +77,6 @@ const tableAttrs = computed(() => {
 
 <template>
   <Table v-bind="tableAttrs" />
+  <!-- 保留列组件插槽，确保 TdTableColumn 能完成列注册。 -->
+  <slot />
 </template>
