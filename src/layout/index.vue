@@ -22,35 +22,21 @@
 
       <t-menu
         :value="route.path"
+        v-model:expanded="expandedMenus"
         :collapsed="isCollapse"
         theme="light"
         @change="handleMenuChange"
         class="custom-menu flex-1 pt-2 overflow-y-auto"
       >
-        <t-menu-item value="/dashboard/fullscreen">
-          <template #icon><Monitor /></template>
-          全屏看板
-        </t-menu-item>
-
         <t-menu-item value="/printers" to="/printers">
           <template #icon><Printer /></template>
           机器管理
         </t-menu-item>
 
-        <t-menu-item v-if="userStore.isAdmin" value="/users" to="/users">
-          <template #icon><User /></template>
-          用户管理
-        </t-menu-item>
-
-        <t-menu-item value="/files" to="/files">
-          <template #icon><FolderOpened /></template>
-          文件库
-        </t-menu-item>
-
         <t-submenu value="/tasks">
           <template #icon><List /></template>
           <template #title>
-            任务
+            任务进度
           </template>
           <t-menu-item value="/tasks/queue" to="/tasks/queue">
             <template #icon><List /></template>
@@ -61,6 +47,21 @@
             打印记录
           </t-menu-item>
         </t-submenu>
+
+        <t-menu-item value="/files" to="/files">
+          <template #icon><FolderOpened /></template>
+          文件管理
+        </t-menu-item>
+
+        <t-menu-item v-if="userStore.isAdmin" value="/users" to="/users">
+          <template #icon><User /></template>
+          用户管理
+        </t-menu-item>
+
+        <t-menu-item value="/dashboard/fullscreen">
+          <template #icon><Monitor /></template>
+          全屏看板
+        </t-menu-item>
       </t-menu>
     </t-aside>
 
@@ -143,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { message, confirmMessage } from '@/utils/message'
@@ -171,6 +172,7 @@ const userStore = useUserStore()
 
 // 侧边栏折叠状态
 const isCollapse = ref(false)
+const expandedMenus = ref([])
 
 // 默认头像（当没有头像时使用）
 const defaultAvatar = ''
@@ -178,15 +180,23 @@ const defaultAvatar = ''
 // 当前路由信息
 const currentRoute = computed(() => {
   const map = {
-    '/': { name: '监控大屏', icon: 'Odometer' },
     '/printers': { name: '机器管理', icon: 'Printer' },
-    '/files': { name: '切片文件库', icon: 'FolderOpened' },
-    '/tasks': { name: '任务管理', icon: 'List' },
+    '/files': { name: '文件管理', icon: 'FolderOpened' },
+    '/tasks': { name: '任务进度', icon: 'List' },
     '/tasks/queue': { name: '任务队列', icon: 'List' },
     '/tasks/history': { name: '打印记录', icon: 'Document' }
   }
   return map[route.path] || { name: '', icon: '' }
 })
+
+watch(() => route.path, path => {
+  if (path.startsWith('/tasks')) {
+    if (!expandedMenus.value.includes('/tasks')) expandedMenus.value.push('/tasks')
+    return
+  }
+
+  expandedMenus.value = expandedMenus.value.filter(value => value !== '/tasks')
+}, { immediate: true })
 
 // 切换侧边栏折叠
 const toggleCollapse = () => {
