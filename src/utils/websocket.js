@@ -311,7 +311,7 @@ export class WebSocketClient {
    * @returns {boolean}
    */
   isConnected() {
-    return this.ws && this.ws.readyState === WS_STATE.OPEN
+    return Boolean(this.ws && this.ws.readyState === WS_STATE.OPEN)
   }
 
   /**

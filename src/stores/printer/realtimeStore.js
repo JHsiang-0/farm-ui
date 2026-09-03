@@ -7,6 +7,11 @@ import { normalizeProgress } from '@/utils/formatters'
 import { isMockEnabled } from '@/mock'
 import { useUserStore } from '@/stores/user'
 import { createMockWebSocketStream } from '@/mock/websocket'
+import {
+  getRealtimeAlertClearId,
+  toRealtimeAlert,
+  toRealtimeSnapshotEntries
+} from '@/utils/realtimeAlerts'
 
 /**
  * WebSocket 实时状态管理 Store
@@ -24,6 +29,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * @type {ShallowRef<Map<string, Object>>}
    */
   const statusMap = shallowRef(new Map())
+  const alerts = ref([])
 
   /** WebSocket 客户端实例 - 使用 markRaw 避免响应式代理 */
   let wsClient = null
@@ -241,14 +247,28 @@ export const useRealtimeStore = defineStore('realtime', () => {
   function handleWebSocketMessage(message) {
     const { type, printerId, data, timestamp } = message || {}
 
+    const alert = toRealtimeAlert(message)
+    if (alert) {
+      const nextAlerts = alerts.value.filter(item => item.id !== alert.id)
+      alerts.value = [alert, ...nextAlerts].slice(0, 20)
+    }
+
+    const clearAlertId = getRealtimeAlertClearId(message)
+    if (clearAlertId) {
+      alerts.value = alerts.value.filter(item => item.id !== clearAlertId)
+    }
+
     if (type === 'SNAPSHOT') {
-      const entries = Array.isArray(data) ? data : Object.entries(data || {}).map(([id, value]) => ({ printerId: id, data: value }))
-      entries.forEach(entry => queueRealtimeUpdate(entry.printerId ?? entry.id, entry.data, timestamp))
+      toRealtimeSnapshotEntries(data).forEach(entry => queueRealtimeUpdate(entry.printerId, entry.data, timestamp))
       return
     }
 
     if (type === 'PRINTER_OFFLINE') {
-      queueRealtimeUpdate(printerId, { unifiedState: PRINTER_STATE.UNKNOWN, state: PRINTER_STATE.UNKNOWN, systemMessage: data?.message || '设备已离线' }, timestamp)
+      queueRealtimeUpdate(printerId, {
+        unifiedState: PRINTER_STATE.UNKNOWN,
+        state: PRINTER_STATE.UNKNOWN,
+        systemMessage: data?.reason || data?.message || data?.systemMessage || '设备已离线'
+      }, timestamp)
       return
     }
 
@@ -305,7 +325,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
       maxReconnectAttempts: WS_CONFIG.maxReconnectAttempts,
       heartbeatInterval: WS_CONFIG.heartbeatInterval,
       heartbeatTimeout: WS_CONFIG.heartbeatTimeout,
-      autoConnect: true
+      autoConnect: false
     }))
 
     // 订阅消息事件
@@ -326,6 +346,10 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
     wsClient.on('heartbeatTimeout', () => {
       console.warn('[RealtimeStore] WebSocket 心跳超时')
+    })
+
+    wsClient.connect().catch(error => {
+      console.error('[RealtimeStore] WebSocket 初次连接失败:', error)
     })
   }
 
@@ -353,6 +377,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
     // 清空实时状态数据
     statusMap.value = new Map()
+    alerts.value = []
   }
 
   /**
@@ -364,6 +389,10 @@ export const useRealtimeStore = defineStore('realtime', () => {
     statusMap.value = new Map()
   }
 
+  function dismissAlert(alertId) {
+    alerts.value = alerts.value.filter(item => item.id !== alertId)
+  }
+
   // ============================================
   // Return
   // ============================================
@@ -372,6 +401,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     // State (兼容原有 API)
     realTimeStatus,
     statusMap,
+    alerts,
 
     // Getters
     wsConnectionState,
@@ -381,6 +411,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     connectWs,
     disconnectWs,
     getDeviceRealTimeStatus,
-    clearRealTimeStatus
+    clearRealTimeStatus,
+    dismissAlert
   }
 })

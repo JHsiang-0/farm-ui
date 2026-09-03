@@ -21,6 +21,17 @@
         title="实时连接未建立，当前看板数据可能不是最新"
         :closable="false"
       />
+      <div v-if="store.alerts.length" class="mt-2 space-y-2" aria-live="polite">
+        <t-alert
+          v-for="alert in store.alerts"
+          :key="alert.id"
+          :theme="alert.theme"
+          :title="alert.title"
+          :message="alert.message"
+          closable
+          @close="store.dismissAlert(alert.id)"
+        />
+      </div>
     </div>
 
     <!-- 独立车间看板容器 - 响应式布局，与状态栏对齐 -->
