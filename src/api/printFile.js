@@ -16,7 +16,7 @@ import {
  * @param {Object} params - 查询参数
  * @param {number} [params.pageNum=1] - 页码
  * @param {number} [params.pageSize=10] - 每页条数
- * @param {string} [params.keyword] - 搜索关键词
+ * @param {string} [params.fileName] - 文件名搜索关键词
  * @returns {Promise<{code: number, message: string, data: {records: Array<PrintFile>, total: number}}>} 文件列表
  *
  * @typedef {Object} PrintFile

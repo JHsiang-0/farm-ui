@@ -200,6 +200,13 @@
           </t-input>
         </t-form-item>
 
+        <t-form-item label="设备协议" name="firmwareType">
+          <t-select v-model="form.firmwareType" placeholder="请选择设备协议" style="width: 100%">
+            <t-option label="RRF 3.7" value="RRF" />
+            <t-option label="Klipper / Moonraker" value="KLIPPER" />
+          </t-select>
+        </t-form-item>
+
         <t-form-item label="当前耗材" name="currentMaterial">
           <t-select v-model="form.currentMaterial" placeholder="请选择装载耗材" style="width: 100%">
             <t-option label="PLA" value="PLA" />
@@ -429,6 +436,7 @@ const defaultForm = {
   id: null,
   name: '',
   ipAddress: '',
+  firmwareType: 'KLIPPER',
   currentMaterial: 'ABS',
   nozzleSize: 1.2
 }
@@ -644,6 +652,7 @@ const handleEdit = (row) => {
     id: row.id,
     name: row.name,
     ipAddress: row.ipAddress,
+    firmwareType: row.firmwareType || 'KLIPPER',
     currentMaterial: row.currentMaterial,
     nozzleSize: row.nozzleSize
   })
@@ -659,6 +668,7 @@ const submitForm = async () => {
       id: form.id,
       name: form.name,
       ipAddress: form.ipAddress,
+      firmwareType: form.firmwareType,
       currentMaterial: form.currentMaterial,
       nozzleSize: form.nozzleSize
     }

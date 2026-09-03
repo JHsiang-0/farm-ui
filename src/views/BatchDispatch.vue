@@ -10,8 +10,8 @@
 
     <section class="panel">
       <h2>批量上传</h2>
-      <p class="hint">支持多个 .gcode/.bgcode 文件；上传结果按文件分别返回。</p>
-      <input ref="uploadInput" type="file" multiple accept=".gcode,.bgcode" @change="handleFileChange">
+      <p class="hint">支持多个 .gcode、.g、.3mf、.stl 文件；上传结果按文件分别返回。</p>
+      <input ref="uploadInput" type="file" multiple accept=".gcode,.g,.3mf,.stl" @change="handleFileChange">
       <button class="primary-button" type="button" :disabled="uploading || !uploadFiles.length" @click="uploadSelected">
         {{ uploading ? '上传中…' : '批量上传' }}
       </button>

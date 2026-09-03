@@ -323,7 +323,7 @@
 
     <!-- 文件上传对话框 -->
     <t-dialog v-model:visible="uploadDialogVisible" header="上传 G-Code 文件" width="500px" :footer="false">
-      <t-upload theme="custom" draggable :auto-upload="false" accept=".gcode,.bgcode"
+      <t-upload theme="custom" draggable :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
         @change="handleFileChange" class="p-4">
         <span class="farm-icon--upload">
           <UploadFilled />
@@ -333,7 +333,7 @@
         </div>
         <template #tips>
           <div class="farm-upload__tip">
-            支持 .gcode 和 .bgcode 格式文件，文件大小不超过 100MB
+            支持 .gcode、.g、.3mf、.stl 格式文件，文件大小不超过 200MB
           </div>
         </template>
       </t-upload>
@@ -599,7 +599,7 @@ const fetchData = async () => {
     const params = {
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize,
-      keyword: searchKeyword.value || undefined,
+      fileName: searchKeyword.value || undefined,
       materialType: materialFilter.value || undefined,
       parentId: currentParentId.value
     }
@@ -728,13 +728,13 @@ const handleFileChange = async (files) => {
   if (!file) return
 
   // 验证文件类型
-  if (!/\.(gcode|bgcode)$/i.test(file.name)) {
-    message.warning('请上传 .gcode 或 .bgcode 文件')
+  if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) {
+    message.warning('请上传 .gcode、.g、.3mf 或 .stl 文件')
     return
   }
 
-  if (file.size > 100 * 1024 * 1024) {
-    message.warning('文件大小不能超过 100MB')
+  if (file.size > 200 * 1024 * 1024) {
+    message.warning('文件大小不能超过 200MB')
     return
   }
   if (fileList.value.some(item => !item.folder && item.originalName === file.name)) {
@@ -887,7 +887,7 @@ const handleSubmitCreateJob = async () => {
   submittingJob.value = true
   try {
     // 构建请求数据 - 直接使用数字优先级 (0-普通, 1-优先, 2-加急)
-    const jobData = {
+    const baseJobData = {
       fileId: jobForm.file.id,
       priority: jobForm.priority,
       ...(jobForm.printerId ? { printerId: jobForm.printerId } : {})
@@ -896,8 +896,9 @@ const handleSubmitCreateJob = async () => {
     // 根据打印份数创建任务
     const promises = []
     for (let i = 0; i < jobForm.copies; i++) {
-      promises.push(createPrintJob(jobData, {
-        dedupeKey: `create-job-${jobForm.file.id}-${Date.now()}-${i}`
+      const idempotencyKey = `file-${jobForm.file.id}-${Date.now()}-${i}`
+      promises.push(createPrintJob({ ...baseJobData, idempotencyKey }, {
+        dedupeKey: idempotencyKey
       }))
     }
 
