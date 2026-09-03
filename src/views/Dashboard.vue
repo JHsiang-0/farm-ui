@@ -6,9 +6,8 @@
         <p class="dashboard-heading__description">设备、任务与打印机状态一览</p>
       </div>
       <div class="dashboard-heading__actions">
-        <t-button variant="outline" :loading="loading" @click="fetchOverview">
-          <template #icon><RefreshIcon /></template>
-          刷新数据
+        <t-button :icon="renderIcon(RefreshIcon)" :loading="loading" @click="fetchOverview" size="medium">
+          刷新
         </t-button>
         <t-button theme="primary" @click="goTo('/printers')">
           <template #icon><PrintIcon /></template>
@@ -189,6 +188,7 @@ import {
 } from 'tdesign-icons-vue-next'
 import { getPrinterList } from '@/api/printer'
 import { getJobPage } from '@/api/job'
+import { renderIcon } from '@/utils/tdesign'
 
 defineOptions({ name: 'DashboardView' })
 

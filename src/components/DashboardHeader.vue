@@ -123,17 +123,15 @@
       <slot name="actions"></slot>
 
       <!-- 刷新按钮 - 移动端全宽 -->
-      <t-button theme="default"
-        class="h-9 px-4 flex items-center justify-center gap-1.5"
+      <t-button
+        :icon="renderIcon(Refresh)"
+        size="medium"
         :class="{ 'w-full sm:w-auto': isMobile }"
-        :disabled="isRefreshing"
+        :loading="isRefreshing"
         @click="handleRefresh"
       >
-        <span :class="{ 'animate-spin': isRefreshing }">
-          <refresh />
-        </span>
         <span class="hidden sm:inline">{{ isRefreshing ? labels.refreshing : labels.refresh }}</span>
-        <span class="sm:hidden">{{ isRefreshing ? '更新中...' : '刷新' }}</span>
+        <span class="sm:hidden">{{ isRefreshing ? '刷新中...' : '刷新' }}</span>
       </t-button>
 
       <!-- 最后更新时间 - 移动端隐藏，平板显示 -->
@@ -158,6 +156,7 @@ import {
 } from 'tdesign-icons-vue-next'
 import IconNozzle from './icons/IconNozzle.vue'
 import { PRINTER_STATE } from '@/utils/constants'
+import { renderIcon } from '@/utils/tdesign'
 import StatBadge from './StatBadge.vue'
 
 defineOptions({ name: 'DashboardHeader' })
@@ -197,8 +196,8 @@ const labels = {
   paused: '已暂停',
   fatal: '致命错误',
   printError: '打印中断',
-  refresh: '刷新状态',
-  refreshing: '更新中...',
+  refresh: '刷新',
+  refreshing: '刷新中...',
   updatedAt: '更新于',
   unknown: '离线/未知'
 }

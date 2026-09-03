@@ -12,9 +12,8 @@
     <t-card class="shadow-none rounded-lg bg-white m-6">
       <div class="flex flex-wrap justify-between items-center gap-3">
         <div class="flex items-center gap-3">
-          <t-button theme="default" @click="fetchData">
-            <span><refresh /></span>
-            刷新列表
+          <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
+            刷新
           </t-button>
           <div v-if="activeStatusFilter" class="flex items-center gap-2">
             <t-tag :theme="activeStatusFilter.theme" variant="light">
@@ -405,6 +404,7 @@ import {
 } from '@/api/printer'
 import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
+import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import TdTable from '@/components/TdTable.vue'

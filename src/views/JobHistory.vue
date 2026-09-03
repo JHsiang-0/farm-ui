@@ -7,9 +7,8 @@
             <document :size="20" class="text-gray-600" />
             <span>打印历史记录</span>
           </div>
-          <t-button theme="default" @click="handleQuery" :loading="loading">
-            <span><refresh /></span>
-            刷新数据
+          <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="handleQuery" size="medium">
+            刷新
           </t-button>
         </div>
       </template>
@@ -192,6 +191,7 @@ import {
 import { getJobPage, cancelJob } from '@/api/job'
 import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
+import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'

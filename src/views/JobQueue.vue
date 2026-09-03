@@ -7,9 +7,8 @@
             <list :size="20" class="text-gray-600" />
             <span>生产调度队列</span>
           </div>
-          <t-button theme="default" @click="fetchQueue" :loading="loading">
-            <span><refresh /></span>
-            刷新队列
+          <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchQueue" size="medium">
+            刷新
           </t-button>
         </div>
       </template>
@@ -204,6 +203,7 @@ import { getJobQueue, cancelJob, assignJobToPrinter } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
 import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
+import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
