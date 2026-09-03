@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/',
       component: Layout, 
-      meta: { title: '首页', requiresAuth: true, roles: APP_ROLES },
+      meta: { requiresAuth: true, roles: APP_ROLES },
       children: [
         {
           path: '',
@@ -62,7 +62,6 @@ const router = createRouter({
           path: 'tasks',
           name: 'tasks',
           component: () => import('../views/TaskManagement.vue'),
-          meta: { title: '任务管理' },
           redirect: '/tasks/queue',
           children: [
             {

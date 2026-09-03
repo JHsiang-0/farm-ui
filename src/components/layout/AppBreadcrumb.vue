@@ -1,7 +1,7 @@
 <template>
   <div class="app-breadcrumb">
     <t-breadcrumb separator="/">
-      <t-breadcrumb-item v-for="(item, index) in breadcrumbs" :key="item.key" :to="index === 0 ? '/dashboard' : undefined">
+      <t-breadcrumb-item v-for="item in breadcrumbs" :key="item.key">
         {{ item.title }}
       </t-breadcrumb-item>
     </t-breadcrumb>
