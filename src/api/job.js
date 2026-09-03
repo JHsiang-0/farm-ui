@@ -168,7 +168,7 @@ export function getJobPage(params = {}) {
  * @property {string} fileName - 文件名称
  * @property {number} [printerId] - 分配的打印机ID
  * @property {string} [printerName] - 打印机名称
- * @property {string} status - 任务状态（QUEUED/ASSIGNED/READY/PRINTING/PAUSED/COMPLETED/FAILED/CANCELLED）
+ * @property {string} status - 任务状态（UPLOADING/QUEUED/ASSIGNED/READY/PRINTING/PAUSED/COMPLETED/RECONCILING/FAILED/CANCELLED）
  * @property {string} priority - 优先级（HIGH/NORMAL/LOW）
  * @property {string} [materialType] - 耗材类型
  * @property {string} [nozzleSize] - 喷头尺寸

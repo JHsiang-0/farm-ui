@@ -21,12 +21,14 @@
             <span class="text-sm text-gray-700 whitespace-nowrap">任务状态</span>
             <t-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 160px">
               <t-option label="排队中" value="QUEUED" />
+              <t-option label="上传中" value="UPLOADING" />
               <t-option label="已分配待确认" value="ASSIGNED" />
               <t-option label="已上传待机" value="READY" />
               <t-option label="打印中" value="PRINTING" />
               <t-option label="已暂停" value="PAUSED" />
               <t-option label="已完成" value="COMPLETED" />
               <t-option label="失败" value="FAILED" />
+              <t-option label="状态核对中" value="RECONCILING" />
               <t-option label="已取消" value="CANCELLED" />
             </t-select>
           </div>
@@ -252,6 +254,7 @@ const pagination = reactive({
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
+    'UPLOADING': 'warning',
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'READY': 'default',
@@ -259,7 +262,8 @@ const getStatusType = (status) => {
     'PAUSED': 'warning',
     'COMPLETED': 'success',
     'FAILED': 'danger',
-    'CANCELLED': 'default'
+    'CANCELLED': 'default',
+    'RECONCILING': 'warning'
   }
   return map[status] || 'default'
 }
@@ -267,6 +271,7 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
+    'UPLOADING': '上传中',
     'QUEUED': '排队中',
     'ASSIGNED': '已分配待确认',
     'READY': '已上传待机',
@@ -274,7 +279,8 @@ const getStatusLabel = (status) => {
     'PAUSED': '已暂停',
     'COMPLETED': '已完成',
     'FAILED': '失败',
-    'CANCELLED': '已取消'
+    'CANCELLED': '已取消',
+    'RECONCILING': '状态核对中'
   }
   return map[status] || status
 }

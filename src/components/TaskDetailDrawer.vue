@@ -38,12 +38,12 @@ const visible = computed({
 })
 
 const statusLabels = {
-  QUEUED: '排队中', ASSIGNED: '已分配', READY: '待启动', PRINTING: '打印中',
-  PAUSED: '已暂停', COMPLETED: '已完成', FAILED: '失败', CANCELLED: '已取消'
+  UPLOADING: '上传中', QUEUED: '排队中', ASSIGNED: '已分配', READY: '待启动', PRINTING: '打印中',
+  PAUSED: '已暂停', COMPLETED: '已完成', FAILED: '失败', RECONCILING: '状态核对中', CANCELLED: '已取消'
 }
 
 const statusLabel = status => statusLabels[status] || status || '未知'
-const statusTheme = status => ({ PRINTING: 'success', FAILED: 'danger', PAUSED: 'warning' }[status] || 'default')
+const statusTheme = status => ({ PRINTING: 'success', FAILED: 'danger', PAUSED: 'warning', RECONCILING: 'warning' }[status] || 'default')
 const priorityLabel = priority => ({ 0: '普通', 1: '优先', 2: '加急' }[priority] || String(priority ?? '普通'))
 const close = () => emit('update:modelValue', false)
 </script>

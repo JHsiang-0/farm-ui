@@ -264,11 +264,13 @@ const getPriorityType = (priority) => {
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
+    'UPLOADING': 'warning',
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
     'COMPLETED': 'default',
-    'FAILED': 'danger'
+    'FAILED': 'danger',
+    'RECONCILING': 'warning'
   }
   return map[status] || 'default'
 }
@@ -276,6 +278,7 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
+    'UPLOADING': '上传中',
     'QUEUED': '排队中',
     'ASSIGNED': '已分配待确认',
     'READY': '已上传待机',
@@ -283,7 +286,8 @@ const getStatusLabel = (status) => {
     'PAUSED': '已暂停',
     'COMPLETED': '已完成',
     'FAILED': '失败',
-    'CANCELLED': '已取消'
+    'CANCELLED': '已取消',
+    'RECONCILING': '状态核对中'
   }
   return map[status] || status
 }
