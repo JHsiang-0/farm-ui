@@ -58,7 +58,7 @@
           用户管理
         </t-menu-item>
 
-        <t-menu-item value="/dashboard/fullscreen">
+        <t-menu-item value="/dashboard/fullscreen" @click="handleFullscreenMenuClick">
           <template #icon><Monitor /></template>
           全屏看板
         </t-menu-item>
@@ -207,13 +207,29 @@ const toggleCollapse = () => {
 const handleMenuChange = (value) => {
   const target = typeof value === 'string' ? value : value?.value
   if (target === '/dashboard/fullscreen') {
-    void enterAppFullscreen()
-    router.push({ name: 'fullscreen-dashboard' })
+    // 全屏菜单由自身 click 事件处理，避免和菜单 change 事件重复触发。
     return
   }
 
   if (target && target !== route.path) {
     router.push(target)
+  }
+}
+
+const handleFullscreenMenuClick = async () => {
+  if (route.name === 'fullscreen-dashboard') return
+
+  try {
+    // 在用户点击事件中调用，确保浏览器允许 requestFullscreen。
+    await enterAppFullscreen()
+  } catch (error) {
+    console.warn('进入原生全屏失败，将继续打开无导航栏看板:', error)
+  }
+
+  try {
+    await router.push({ name: 'fullscreen-dashboard' })
+  } catch (error) {
+    console.error('打开全屏看板失败:', error)
   }
 }
 

@@ -19,7 +19,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FarmDashboard from '@/components/FarmDashboard.vue'
-import { enterAppFullscreen, exitAppFullscreen } from '@/utils/fullscreen'
+import { exitAppFullscreen } from '@/utils/fullscreen'
 
 defineOptions({ name: 'FullscreenDashboard' })
 
@@ -55,9 +55,6 @@ const handleDesktopFullscreenChange = isFullscreen => {
 onMounted(() => {
   document.addEventListener('fullscreenchange', handleBrowserFullscreenChange)
   removeDesktopFullscreenListener = window.farmDesktop?.onFullscreenChange?.(handleDesktopFullscreenChange) || null
-
-  // 直接访问该路由时可能没有浏览器用户手势，失败时仍保留无导航栏的大屏页面。
-  void enterAppFullscreen().catch(() => {})
 })
 
 onUnmounted(() => {
