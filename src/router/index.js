@@ -33,7 +33,7 @@ const router = createRouter({
           // path 为空代表默认加载的子页面
           path: '', 
           name: 'dashboard',
-          component: () => import('../components/FarmDashboard.vue')
+          redirect: { name: 'fullscreen-dashboard' }
         },
         { 
           path: 'printers', 

@@ -35,7 +35,7 @@ const leaveFullscreenDashboard = () => {
   void exitAppFullscreen().catch(error => {
     console.warn('退出全屏失败，将继续返回普通监控页:', error)
   })
-  void router.replace({ name: 'dashboard' })
+  void router.replace({ name: 'printers' })
 }
 
 const handleBrowserFullscreenChange = () => {

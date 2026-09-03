@@ -27,24 +27,6 @@
         @change="handleMenuChange"
         class="custom-menu flex-1 pt-2 overflow-y-auto"
       >
-        <t-submenu value="/dashboard">
-          <template #icon><Odometer /></template>
-          <template #title>
-            车间监控
-          </template>
-          <t-menu-item value="/" to="/" class="workshop-menu-item">
-            <span class="workshop-name">3F-一号车间</span>
-          </t-menu-item>
-          <t-menu-item value="/workshop-2" class="workshop-menu-item" disabled>
-            <span class="workshop-name">3F-二号车间</span>
-            <t-tag size="small" theme="default" variant="light" class="workshop-status">规划中</t-tag>
-          </t-menu-item>
-          <t-menu-item value="/workshop-3" class="workshop-menu-item" disabled>
-            <span class="workshop-name">2F-原型车间</span>
-            <t-tag size="small" theme="default" variant="light" class="workshop-status">规划中</t-tag>
-          </t-menu-item>
-        </t-submenu>
-
         <t-menu-item value="/dashboard/fullscreen">
           <template #icon><Monitor /></template>
           全屏看板
@@ -168,7 +150,6 @@ import { message, confirmMessage } from '@/utils/message'
 import { enterAppFullscreen } from '@/utils/fullscreen'
 import {
   DesktopIcon as Monitor,
-  DashboardIcon as Odometer,
   PrintIcon as Printer,
   FolderOpenIcon as FolderOpened,
   ListNumberedIcon as List,
@@ -305,34 +286,6 @@ const handleLogout = () => {
 :deep(.t-submenu.t-is-active .t-submenu__title) {
   color: #111827;
   font-weight: 600;
-}
-
-:deep(.workshop-menu-item) {
-  height: 44px;
-  line-height: 44px;
-  margin: 2px 12px 2px 24px;
-  padding-left: 12px !important;
-  border-radius: 6px;
-}
-
-:deep(.workshop-menu-item.is-active) {
-  background-color: #f3f4f6;
-  border-left: none;
-  margin-left: 24px;
-  padding-left: 12px !important;
-}
-
-:deep(.workshop-menu-item .workshop-name) {
-  font-size: 13px;
-  flex: 1;
-}
-
-:deep(.workshop-menu-item .workshop-status) {
-  margin-left: 8px;
-  font-size: 11px;
-  height: 20px;
-  line-height: 18px;
-  padding: 0 6px;
 }
 
 :deep(.t-menu--collapse) {
