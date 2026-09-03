@@ -602,6 +602,7 @@ const handleRowClick = (row) => {
 }
 
 const clearPrinterDetailContext = () => {
+  detailDrawerVisible.value = false
   sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
   selectedDevice.value = null
   selectedDeviceRealTimeData.value = null

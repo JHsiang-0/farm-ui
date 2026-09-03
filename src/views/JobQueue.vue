@@ -232,6 +232,7 @@ const openTaskDetail = job => {
 
 const handleTaskDetailVisibility = visible => {
   if (!visible) {
+    detailDrawerVisible.value = false
     selectedJob.value = null
     sessionStorage.removeItem(JOB_QUEUE_DETAIL_CONTEXT_KEY)
   }

@@ -1,5 +1,5 @@
 <template>
-  <t-drawer v-model:visible="visible" header="任务详情" size="420px" @close="close">
+  <t-drawer :visible="modelValue" header="任务详情" size="420px" @update:visible="handleVisibleChange">
     <template v-if="task">
       <t-descriptions bordered :column="1" size="small">
         <t-descriptions-item label="任务 ID">#{{ task.id }}</t-descriptions-item>
@@ -23,19 +23,15 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { formatDateTime } from '@/utils/formatters'
 
-const props = defineProps({
+defineProps({
   modelValue: { type: Boolean, default: false },
   task: { type: Object, default: null }
 })
 
 const emit = defineEmits(['update:modelValue'])
-const visible = computed({
-  get: () => props.modelValue,
-  set: value => emit('update:modelValue', value)
-})
+const handleVisibleChange = value => emit('update:modelValue', value)
 
 const statusLabels = {
   QUEUED: '排队中', ASSIGNED: '已分配', READY: '待启动', PRINTING: '打印中',
@@ -45,5 +41,4 @@ const statusLabels = {
 const statusLabel = status => statusLabels[status] || status || '未知'
 const statusTheme = status => ({ PRINTING: 'success', FAILED: 'danger', PAUSED: 'warning' }[status] || 'default')
 const priorityLabel = priority => ({ 0: '普通', 1: '优先', 2: '加急' }[priority] || String(priority ?? '普通'))
-const close = () => emit('update:modelValue', false)
 </script>

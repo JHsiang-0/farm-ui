@@ -979,6 +979,7 @@ const openFileDetail = (file, event) => {
  * 关闭文件详情
  */
 const closeFileDetail = () => {
+  detailDrawerVisible.value = false
   selectedFile.value = null
   sessionStorage.removeItem(FILE_DETAIL_CONTEXT_KEY)
 }

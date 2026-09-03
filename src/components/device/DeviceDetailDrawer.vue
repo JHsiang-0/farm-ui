@@ -5,12 +5,12 @@
       - 平板：70% 宽度
       - 桌面：固定最大宽度，防止大屏过度拉伸
     -->
-    <t-drawer v-model:visible="visible" :header="drawerTitle"
+    <t-drawer :visible="modelValue" :header="drawerTitle"
         :size="drawerSize"
         :destroy-on-close="true"
         class="printer-detail-drawer"
         :class="{ 'is-mobile': isMobile, 'is-tablet': isTablet }"
-        @closed="handleClosed">
+        @update:visible="handleVisibleChange">
 
         <!-- 内容区域 - 使用流式内边距 -->
         <div v-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
@@ -394,12 +394,10 @@ const emit = defineEmits([
 // ============================================
 
 /** 可见性双向绑定 */
-const visible = computed({
-    get: () => props.modelValue,
-    set: (val) => {
-        emit('update:modelValue', val)
-    }
-})
+function handleVisibleChange(value) {
+    emit('update:modelValue', value)
+    if (!value) emit('closed')
+}
 
 // 监听抽屉打开事件
 watch(() => props.modelValue, (newVal) => {
@@ -527,10 +525,6 @@ function handleRemove() {
     emit('remove', props.device)
 }
 
-function handleClosed() {
-    emit('closed')
-}
-
 /** 确认现场安全 */
 async function handleConfirmSafe() {
     try {
@@ -558,7 +552,7 @@ async function handleStartPrint(action) {
         const successMsg = action === 'START_PRINT' ? '下发并开始打印成功！' : '仅下发文件成功！'
         message.success(successMsg)
         // 关闭抽屉
-        visible.value = false
+        emit('update:modelValue', false)
     } catch {
         // 错误信息由拦截器处理
     } finally {
