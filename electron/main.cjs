@@ -1,8 +1,10 @@
 const path = require('node:path')
+const fs = require('node:fs')
 const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
 
 const APP_ID = 'com.example.farmui'
 const DEV_SERVER_URL = 'http://127.0.0.1:5173'
+const DIST_INDEX_PATH = path.join(__dirname, '..', 'dist', 'index.html')
 const WINDOW_SIZE = {
   minWidth: 800,
   minHeight: 560,
@@ -14,6 +16,33 @@ const WINDOW_SIZE = {
 app.setAppUserModelId(APP_ID)
 
 let mainWindow = null
+
+const loadRenderer = async () => {
+  if (app.isPackaged) {
+    await mainWindow.loadFile(DIST_INDEX_PATH)
+    return
+  }
+
+  try {
+    await mainWindow.loadURL(DEV_SERVER_URL)
+  } catch (error) {
+    if (!fs.existsSync(DIST_INDEX_PATH)) throw error
+
+    console.warn('Vite 开发服务器不可用，将回退到本地构建产物:', error.message)
+    await mainWindow.loadFile(DIST_INDEX_PATH)
+  }
+}
+
+const getAppIconPath = () => {
+  const candidates = app.isPackaged
+    ? [path.join(__dirname, '..', 'dist', 'icon.png')]
+    : [
+        path.join(__dirname, '..', 'public', 'icon.png'),
+        path.join(__dirname, '..', 'dist', 'icon.png')
+      ]
+
+  return candidates.find(candidate => fs.existsSync(candidate))
+}
 
 ipcMain.handle('farm-window:set-fullscreen', (_event, fullscreen) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false
@@ -57,6 +86,7 @@ if (!hasSingleInstanceLock) {
       resizable: true,
       show: false,
       autoHideMenuBar: true,
+      icon: getAppIconPath(),
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
@@ -85,11 +115,7 @@ if (!hasSingleInstanceLock) {
       return { action: 'deny' }
     })
 
-    if (app.isPackaged) {
-      await mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
-    } else {
-      await mainWindow.loadURL(DEV_SERVER_URL)
-    }
+    await loadRenderer()
 
     mainWindow.on('closed', () => {
       mainWindow = null
