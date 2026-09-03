@@ -73,6 +73,10 @@
             <template #icon><Document /></template>
             打印记录
           </t-menu-item>
+          <t-menu-item value="/batch-dispatch" to="/batch-dispatch">
+            <template #icon><List /></template>
+            批量派发
+          </t-menu-item>
         </t-submenu>
       </t-menu>
     </t-aside>
@@ -197,7 +201,8 @@ const currentRoute = computed(() => {
     '/files': { name: '切片文件库', icon: 'FolderOpened' },
     '/tasks': { name: '任务管理', icon: 'List' },
     '/tasks/queue': { name: '任务队列', icon: 'List' },
-    '/tasks/history': { name: '打印记录', icon: 'Document' }
+    '/tasks/history': { name: '打印记录', icon: 'Document' },
+    '/batch-dispatch': { name: '批量派发', icon: 'List' }
   }
   return map[route.path] || { name: '', icon: '' }
 })

@@ -65,6 +65,11 @@ const router = createRouter({
             }
           ]
         },
+        {
+          path: 'batch-dispatch',
+          name: 'batch-dispatch',
+          component: () => import('../views/BatchDispatch.vue')
+        },
         // 👇 未来这里可以继续加：
         // { path: 'printers', component: () => import('../views/PrinterManage.vue') },
         // { path: 'files', component: () => import('../views/FileLibrary.vue') },

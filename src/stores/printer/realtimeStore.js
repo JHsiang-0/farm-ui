@@ -7,6 +7,8 @@ import { normalizeProgress } from '@/utils/formatters'
 import { isMockEnabled } from '@/mock'
 import { useUserStore } from '@/stores/user'
 import { createMockWebSocketStream } from '@/mock/websocket'
+import { getPrinterList } from '@/api/printer'
+import { acceptRealtimeSequence } from '@/utils/realtimeSequence'
 import {
   getRealtimeAlertClearId,
   toRealtimeAlert,
@@ -35,6 +37,11 @@ export const useRealtimeStore = defineStore('realtime', () => {
   let wsClient = null
   let mockStream = null
   const mockConnectionState = ref('CLOSED')
+  const lastSequence = ref(null)
+  const lastEventId = ref(null)
+  const isRealtimeStale = ref(false)
+  const isRecovering = ref(false)
+  let recoveryPromise = null
   const userStore = useUserStore()
 
   // ============================================
@@ -245,7 +252,18 @@ export const useRealtimeStore = defineStore('realtime', () => {
   }
 
   function handleWebSocketMessage(message) {
-    const { type, printerId, data, timestamp } = message || {}
+    const { type, printerId, data, timestamp, sequence, eventId } = message || {}
+
+    const sequenceResult = acceptRealtimeSequence(lastSequence.value, sequence)
+    if (!sequenceResult.accepted) return
+    if (Number.isInteger(Number(sequence)) && Number(sequence) >= 0) {
+      if (sequenceResult.gap) {
+        isRealtimeStale.value = true
+        recoverRealtimeSnapshot()
+      }
+      lastSequence.value = sequenceResult.nextSequence
+    }
+    if (eventId) lastEventId.value = eventId
 
     const alert = toRealtimeAlert(message)
     if (alert) {
@@ -259,6 +277,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     }
 
     if (type === 'SNAPSHOT') {
+      isRealtimeStale.value = false
       toRealtimeSnapshotEntries(data).forEach(entry => queueRealtimeUpdate(entry.printerId, entry.data, timestamp))
       return
     }
@@ -291,6 +310,38 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
     // 调度批量更新
     scheduleBatchUpdate()
+  }
+
+  /**
+   * WebSocket 断档时用打印机分页接口重新拉取当前快照。
+   * 这是恢复当前状态，不试图补 replay 历史事件。
+   */
+  async function recoverRealtimeSnapshot() {
+    if (recoveryPromise) return recoveryPromise
+    isRecovering.value = true
+    recoveryPromise = getPrinterList({ pageNum: 1, pageSize: 100 })
+      .then(response => {
+        const records = response?.data?.records || []
+        records.forEach(printer => {
+          queueRealtimeUpdate(printer.id, {
+            unifiedState: printer.status,
+            state: printer.status,
+            currentJobId: printer.currentJobId,
+            currentJobStatus: printer.currentJobStatus,
+            progress: printer.progress
+          }, printer.updatedAt || Date.now())
+        })
+        isRealtimeStale.value = false
+      })
+      .catch(error => {
+        console.error('[RealtimeStore] WebSocket 断档恢复失败:', error)
+        isRealtimeStale.value = true
+      })
+      .finally(() => {
+        isRecovering.value = false
+        recoveryPromise = null
+      })
+    return recoveryPromise
   }
 
   /**
@@ -378,6 +429,11 @@ export const useRealtimeStore = defineStore('realtime', () => {
     // 清空实时状态数据
     statusMap.value = new Map()
     alerts.value = []
+    lastSequence.value = null
+    lastEventId.value = null
+    isRealtimeStale.value = false
+    isRecovering.value = false
+    recoveryPromise = null
   }
 
   /**
@@ -412,6 +468,10 @@ export const useRealtimeStore = defineStore('realtime', () => {
     disconnectWs,
     getDeviceRealTimeStatus,
     clearRealTimeStatus,
-    dismissAlert
+    dismissAlert,
+    lastSequence,
+    lastEventId,
+    isRealtimeStale,
+    isRecovering
   }
 })

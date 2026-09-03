@@ -159,6 +159,7 @@ export const PROGRESS_STATUS_MAP = {
  * @constant {Object}
  */
 export const JOB_STATUS = {
+  UPLOADING: 'UPLOADING',
   QUEUED: 'QUEUED',
   ASSIGNED: 'ASSIGNED',
   READY: 'READY',
@@ -166,6 +167,7 @@ export const JOB_STATUS = {
   PRINTING: 'PRINTING',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
+  RECONCILING: 'RECONCILING',
   CANCELLED: 'CANCELLED'
 }
 

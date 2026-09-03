@@ -94,6 +94,28 @@ export function uploadFile(formData, onUploadProgress, options = {}) {
 }
 
 /**
+ * 批量上传切片文件。后端会逐文件返回成功/失败结果，不会因为单个文件失败而丢失整批结果。
+ * @param {File[]} files - 文件列表，后端字段名固定为 files
+ * @param {number|string|null} [parentId] - 目标虚拟目录
+ */
+export function batchUploadFiles(files, parentId = null, onUploadProgress, options = {}) {
+  const formData = new FormData()
+  files.forEach(file => formData.append('files', file))
+  if (parentId !== null && parentId !== undefined && parentId !== '') {
+    formData.append('parentId', parentId)
+  }
+
+  return request({
+    url: '/api/v1/print-files/batch-upload',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress,
+    ...options
+  })
+}
+
+/**
  * 删除单个文件
  * @param {number} id - 文件ID
  * @returns {Promise<{code: number, message: string}>} 删除结果

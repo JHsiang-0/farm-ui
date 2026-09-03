@@ -117,6 +117,24 @@ export function updateJobPriority(id, priority) {
   })
 }
 
+/** 预览用户确认的批量派发计划，不产生上传或打印副作用。 */
+export function previewBatchDispatch(data) {
+  return request({
+    url: '/api/v1/print-jobs/batch/preview',
+    method: 'post',
+    data
+  })
+}
+
+/** 确认并执行批量派发计划。 */
+export function confirmBatchDispatch(data) {
+  return request({
+    url: '/api/v1/print-jobs/batch/confirm',
+    method: 'post',
+    data
+  })
+}
+
 /**
  * 获取打印任务分页列表（支持高级检索）
  * @param {Object} params - 查询参数

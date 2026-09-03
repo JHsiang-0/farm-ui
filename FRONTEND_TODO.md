@@ -12,8 +12,8 @@
 - `P1` 第一版业务功能
 - `P2` 稳定性、体验和生产加固
 
-前端只使用 `ADMIN`、`OPERATOR` 两种角色。任务状态只使用：
-`QUEUED`、`ASSIGNED`、`READY`、`PRINTING`、`PAUSED`、`COMPLETED`、`FAILED`、`CANCELLED`。
+前端只使用 `ADMIN`、`OPERATOR` 两种角色。任务状态使用后端冻结契约：
+`UPLOADING`、`QUEUED`、`ASSIGNED`、`READY`、`PRINTING`、`PAUSED`、`COMPLETED`、`FAILED`、`RECONCILING`、`CANCELLED`。
 
 ## 当前前端基线
 
@@ -111,6 +111,14 @@
 - [x] 任务详情展示文件、打印机、发起人、操作员、进度、时间和错误原因。
 - [x] 接入失败重试、重新排队和排队优先级调整；设备恢复/取消使用统一控制接口。
 
+### P1.5 批量手动派发
+
+- [x] 接入 `POST /api/v1/print-files/batch-upload`，支持多文件逐项结果和上传后刷新文件列表。
+- [x] 新增批量派发页面：选择文件/打印机、选择 `ONE_TO_ONE`/`ROUND_ROBIN`/`AUTO_MATCH`，生成无副作用预览。
+- [x] 预览后明确确认并调用 `/api/v1/print-jobs/batch/confirm`，展示逐项结果；冲突项不会被提交执行。
+- [x] 页面只提供用户主动触发的匹配，不提供后台自动派单开关或入口。
+- [ ] `START_AFTER_CONFIRM` 的逐项安全确认/启动、批量上传失败项重试和浏览器真实端到端验收。
+
 ## P1：实时状态接入
 
 - [x] WebSocket 使用正式地址 `/ws/farm-status`，不再新增 `/ws` 引用。
@@ -122,6 +130,7 @@
 - [x] 处理 `JOB_STATUS`：局部更新任务状态、进度和错误原因，不重复请求整个列表。
 - [x] 页面卸载、退出登录和切换农场看板时销毁连接和定时器。
 - [x] 连接断开时显示“数据可能不是最新”，使用指数退避重连并避免重复连接。
+- [x] 按 `sequence` 丢弃重复/乱序事件；发现断档时通过打印机 REST 快照恢复当前状态，并暴露恢复中/数据可能过期状态。
 - [x] 后端 WebSocket 新协议完成前，mock 增加快照、状态变化、离线和任务状态事件样例。
 
 ## P1：模拟数据与开发模式
