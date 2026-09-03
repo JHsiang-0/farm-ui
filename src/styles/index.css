@@ -24,3 +24,17 @@ body,
 body {
   overflow: hidden;
 }
+
+:root {
+  --app-page-background: #f3f4f6;
+  --app-surface: #fff;
+  --app-surface-muted: #f5f7fa;
+  --app-border: #e7e7e7;
+  --app-text-primary: #1f2329;
+  --app-text-secondary: #646a73;
+  --app-text-placeholder: #8f959e;
+  --app-primary: #0052d9;
+  --app-success: #2ba471;
+  --app-warning: #e37318;
+  --app-danger: #d54941;
+}

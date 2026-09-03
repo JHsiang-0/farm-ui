@@ -21,57 +21,64 @@ const router = createRouter({
       path: '/dashboard/fullscreen',
       name: 'fullscreen-dashboard',
       component: () => import('../views/FullscreenDashboard.vue'),
-      meta: { requiresAuth: true, roles: APP_ROLES, fullscreen: true }
+      meta: { title: '实时设备看板', requiresAuth: true, roles: APP_ROLES, fullscreen: true }
     },
     // 将 Layout 设置为根路由
     {
       path: '/',
       component: Layout, 
-      meta: { requiresAuth: true, roles: APP_ROLES },
+      meta: { title: '首页', requiresAuth: true, roles: APP_ROLES },
       children: [
         {
-          // path 为空代表默认加载的子页面
-          path: '', 
+          path: '',
           name: 'dashboard',
-          redirect: { name: 'printers' }
+          redirect: { name: 'dashboard-overview' }
         },
-        { 
-          path: 'printers', 
+        {
+          path: 'dashboard',
+          name: 'dashboard-overview',
+          component: () => import('../views/Dashboard.vue'),
+          meta: { title: '概览仪表盘' }
+        },
+        {
+          path: 'printers',
           name: 'printers',
-          component: () => import('../views/PrinterManage.vue') 
+          component: () => import('../views/PrinterManage.vue'),
+          meta: { title: '打印机管理' }
         },
         {
           path: 'users',
           name: 'users',
           component: () => import('../views/UserManagement.vue'),
-          meta: { roles: ['ADMIN'] }
+          meta: { title: '用户管理', roles: ['ADMIN'] }
         },
-        { 
-          path: 'files', 
+        {
+          path: 'files',
           name: 'files',
-          component: () => import('../views/FileLibrary.vue') 
+          component: () => import('../views/FileLibrary.vue'),
+          meta: { title: '文件库' }
         },
         {
           path: 'tasks',
           name: 'tasks',
           component: () => import('../views/TaskManagement.vue'),
+          meta: { title: '任务管理' },
           redirect: '/tasks/queue',
           children: [
             {
               path: 'queue',
               name: 'tasks-queue',
-              component: () => import('../views/JobQueue.vue')
+              component: () => import('../views/JobQueue.vue'),
+              meta: { title: '任务队列' }
             },
             {
               path: 'history',
               name: 'tasks-history',
-              component: () => import('../views/JobHistory.vue')
+              component: () => import('../views/JobHistory.vue'),
+              meta: { title: '打印历史' }
             }
           ]
-        },
-        // 👇 未来这里可以继续加：
-        // { path: 'printers', component: () => import('../views/PrinterManage.vue') },
-        // { path: 'files', component: () => import('../views/FileLibrary.vue') },
+        }
       ]
     }
   ]
@@ -91,8 +98,11 @@ router.beforeEach((to) => {
     return { name: 'printers' }
   }
 
-  const requiredRoles = to.matched.flatMap(record => record.meta.roles || [])
-  if (requiredRoles.length > 0 && !userStore.hasRole(requiredRoles)) {
+  const roleRequirements = to.matched
+    .map(record => record.meta.roles)
+    .filter(roles => Array.isArray(roles) && roles.length > 0)
+  const hasRequiredRoles = roleRequirements.every(roles => userStore.hasRole(roles))
+  if (roleRequirements.length > 0 && !hasRequiredRoles) {
     message.error('当前账号没有访问该页面的权限')
     return { name: 'printers' }
   }

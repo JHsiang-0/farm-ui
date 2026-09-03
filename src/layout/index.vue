@@ -1,312 +1,78 @@
 <template>
-  <t-layout v-cloak class="h-full w-full overflow-hidden">
-    <!-- 侧边栏 -->
-    <t-aside :width="isCollapse ? '64px' : '220px'"
-      class="bg-white relative z-10 flex flex-col transition-all duration-300" :class="{ 'is-collapse': isCollapse }">
-      <!-- 右侧分隔线 -->
-      <div class="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent">
-      </div>
+  <t-layout v-cloak class="app-shell">
+    <AppSidebar :collapsed="sidebarCollapsed" />
 
-      <div
-        class="h-16 flex items-center justify-center gap-3 border-b border-gray-100 overflow-hidden whitespace-nowrap relative bg-gradient-to-r from-white to-gray-50 shrink-0">
-        <!-- 底部装饰线 -->
-        <div
-          class="absolute left-0 right-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300 via-gray-600 via-gray-300 to-transparent opacity-60">
+    <t-layout class="app-main-layout">
+      <AppHeader :collapsed="sidebarCollapsed" @toggle-sidebar="toggleSidebar" />
+
+      <t-content class="app-content">
+        <div class="app-content__inner">
+          <AppBreadcrumb />
+          <router-view v-slot="{ Component }">
+            <transition name="fade-transform" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </div>
-
-        <monitor :size="32" class="text-primary shrink-0"
-          style="filter: drop-shadow(0 2px 4px rgba(17, 24, 39, 0.2));" />
-        <span v-show="!isCollapse"
-          class="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-transparent tracking-wide">嘉东三维打印控制系统</span>
-      </div>
-
-      <t-menu
-        :value="route.path"
-        v-model:expanded="expandedMenus"
-        :collapsed="isCollapse"
-        theme="light"
-        @change="handleMenuChange"
-        class="custom-menu flex-1 pt-2 overflow-y-auto"
-      >
-        <t-menu-item value="/printers" to="/printers">
-          <template #icon><Printer /></template>
-          打印机
-        </t-menu-item>
-
-        <t-submenu value="/tasks">
-          <template #icon><List /></template>
-          <template #title>
-            任务进度
-          </template>
-          <t-menu-item value="/tasks/queue" to="/tasks/queue">
-            <template #icon><List /></template>
-            任务队列
-          </t-menu-item>
-          <t-menu-item value="/tasks/history" to="/tasks/history">
-            <template #icon><Document /></template>
-            打印记录
-          </t-menu-item>
-        </t-submenu>
-
-        <t-menu-item value="/files" to="/files">
-          <template #icon><FolderOpened /></template>
-          文件管理
-        </t-menu-item>
-
-        <t-menu-item v-if="userStore.isAdmin" value="/users" to="/users">
-          <template #icon><User /></template>
-          用户管理
-        </t-menu-item>
-
-        <t-menu-item value="/dashboard/fullscreen" @click="handleFullscreenMenuClick">
-          <template #icon><Monitor /></template>
-          全屏看板
-        </t-menu-item>
-      </t-menu>
-    </t-aside>
-
-    <t-layout class="bg-gray-50 flex flex-col h-full overflow-hidden">
-      <!-- 顶栏 -->
-      <t-header class="h-16 bg-white shadow-sm flex justify-between items-center px-6 z-5 shrink-0">
-        <div class="flex items-center gap-4">
-          <div
-            class="w-9 h-9 flex items-center justify-center rounded hover:bg-gray-50 cursor-pointer transition-colors text-gray-600 hover:text-primary"
-            @click="toggleCollapse" :title="isCollapse ? '展开菜单' : '收起菜单'">
-            <span :class="{ 'rotate-180 transition-transform duration-300': isCollapse }">
-              <fold v-if="!isCollapse" :size="18" />
-              <expand v-else :size="18" />
-            </span>
-          </div>
-
-          <t-breadcrumb separator="/" class="text-sm">
-            <t-breadcrumb-item :to="{ path: '/' }">首页</t-breadcrumb-item>
-            <t-breadcrumb-item v-if="currentRoute.name">{{ currentRoute.name }}</t-breadcrumb-item>
-          </t-breadcrumb>
-        </div>
-
-        <div class="flex items-center gap-5">
-          <!-- 消息通知 -->
-          <div class="cursor-pointer p-2 rounded hover:bg-gray-50 transition-colors">
-            <t-badge :count="3" color="#dc2626">
-              <bell :size="20" class="text-gray-600" />
-            </t-badge>
-          </div>
-
-          <!-- 用户下拉菜单 -->
-          <t-dropdown trigger="click" @click="handleCommand">
-            <div class="flex items-center gap-3 cursor-pointer px-3 py-1.5 rounded hover:bg-gray-50 transition-colors">
-              <t-avatar :size="36" :image="userStore.userInfo.avatar || defaultAvatar"
-                class="bg-gradient-to-r from-primary to-gray-700 text-white font-semibold">
-                {{ userStore.userInfo.username?.charAt(0).toUpperCase() || 'U' }}
-              </t-avatar>
-              <span v-show="!isCollapse" class="text-sm text-gray-900 font-medium max-w-24 truncate">
-                {{ userStore.userInfo.username || '管理员' }}
-              </span>
-              <span class="text-gray-400 text-xs transition-transform duration-200 group-hover:rotate-180">
-                <arrow-down />
-              </span>
-            </div>
-
-            <template #dropdown>
-              <t-dropdown-menu>
-                <t-dropdown-item value="profile">
-                  <span>
-                    <user />
-                  </span>
-                  个人中心
-                </t-dropdown-item>
-                <t-dropdown-item value="settings">
-                  <span>
-                    <setting />
-                  </span>
-                  系统设置
-                </t-dropdown-item>
-                <t-dropdown-item value="logout" divider>
-                  <span><switch-button /></span>
-                  退出登录
-                </t-dropdown-item>
-              </t-dropdown-menu>
-            </template>
-          </t-dropdown>
-        </div>
-      </t-header>
-
-      <!-- 主内容区 -->
-      <t-content class="overflow-hidden flex-1 p-0">
-        <router-view v-slot="{ Component }">
-          <transition name="fade-transform" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
       </t-content>
     </t-layout>
   </t-layout>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { message, confirmMessage } from '@/utils/message'
-import { enterAppFullscreen } from '@/utils/fullscreen'
-import {
-  DesktopIcon as Monitor,
-  PrintIcon as Printer,
-  FolderOpenIcon as FolderOpened,
-  ListNumberedIcon as List,
-  FileIcon as Document,
-  MenuFoldIcon as Fold,
-  MenuUnfoldIcon as Expand,
-  NotificationIcon as Bell,
-  ChevronDownIcon as ArrowDown,
-  UserIcon as User,
-  SettingIcon as Setting,
-  PoweroffIcon as SwitchButton
-} from 'tdesign-icons-vue-next'
+import { ref } from 'vue'
+import AppBreadcrumb from '@/components/layout/AppBreadcrumb.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import AppSidebar from '@/components/layout/AppSidebar.vue'
 
 defineOptions({ name: 'AppLayout' })
 
-const router = useRouter()
-const route = useRoute()
-const userStore = useUserStore()
+const sidebarCollapsed = ref(false)
 
-// 侧边栏折叠状态
-const isCollapse = ref(false)
-const expandedMenus = ref([])
-
-// 默认头像（当没有头像时使用）
-const defaultAvatar = ''
-
-// 当前路由信息
-const currentRoute = computed(() => {
-  const map = {
-    '/printers': { name: '机器管理', icon: 'Printer' },
-    '/files': { name: '文件管理', icon: 'FolderOpened' },
-    '/tasks': { name: '任务进度', icon: 'List' },
-    '/tasks/queue': { name: '任务队列', icon: 'List' },
-    '/tasks/history': { name: '打印记录', icon: 'Document' }
-  }
-  return map[route.path] || { name: '', icon: '' }
-})
-
-watch(() => route.path, path => {
-  if (path.startsWith('/tasks')) {
-    if (!expandedMenus.value.includes('/tasks')) expandedMenus.value.push('/tasks')
-    return
-  }
-
-  expandedMenus.value = expandedMenus.value.filter(value => value !== '/tasks')
-}, { immediate: true })
-
-// 切换侧边栏折叠
-const toggleCollapse = () => {
-  isCollapse.value = !isCollapse.value
-}
-
-// TDesign 菜单通过 value/to 与 Vue Router 联动。
-const handleMenuChange = (value) => {
-  const target = typeof value === 'string' ? value : value?.value
-  if (target === '/dashboard/fullscreen') {
-    // 全屏菜单由自身 click 事件处理，避免和菜单 change 事件重复触发。
-    return
-  }
-
-  if (target && target !== route.path) {
-    router.push(target)
-  }
-}
-
-const handleFullscreenMenuClick = async () => {
-  if (route.name === 'fullscreen-dashboard') return
-
-  try {
-    // 在用户点击事件中调用，确保浏览器允许 requestFullscreen。
-    await enterAppFullscreen()
-  } catch (error) {
-    console.warn('进入原生全屏失败，将继续打开无导航栏看板:', error)
-  }
-
-  try {
-    await router.push({ name: 'fullscreen-dashboard' })
-  } catch (error) {
-    console.error('打开全屏看板失败:', error)
-  }
-}
-
-// 处理下拉菜单命令
-const handleCommand = (item) => {
-  const command = typeof item === 'string' ? item : item?.value
-  switch (command) {
-    case 'profile':
-      message.info('个人中心功能开发中...')
-      break
-    case 'settings':
-      message.info('系统设置功能开发中...')
-      break
-    case 'logout':
-      handleLogout()
-      break
-  }
-}
-
-// 退出登录逻辑
-const handleLogout = () => {
-  confirmMessage(
-    '确定要退出登录吗？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    userStore.logout()
-    router.push('/login')
-    message.success('已退出登录')
-  }).catch(() => { })
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
 }
 </script>
 
 <style scoped>
-/* ============================================
-   菜单项深度选择器样式
-   ============================================ */
-/* ============================================
-   路由过渡动画
-   ============================================ */
+.app-shell,
+.app-main-layout {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--app-page-background);
+}
+
+.app-content__inner {
+  min-height: 100%;
+  padding: 1.5rem;
+}
+
 .fade-transform-leave-active,
 .fade-transform-enter-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .fade-transform-enter-from {
   opacity: 0;
-  transform: translateX(-20px);
+  transform: translateY(8px);
 }
 
 .fade-transform-leave-to {
   opacity: 0;
-  transform: translateX(20px);
+  transform: translateY(-8px);
 }
 
-/* ============================================
-   响应式适配
-   ============================================ */
 @media (max-width: 768px) {
-  :deep(.aside) {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    transform: translateX(-100%);
-  }
-
-  :deep(.aside.is-collapse) {
-    transform: translateX(0);
-  }
-
-  .username {
-    display: none;
+  .app-content__inner {
+    padding: 1rem;
   }
 }
 </style>
