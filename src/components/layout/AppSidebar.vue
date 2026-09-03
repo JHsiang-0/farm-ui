@@ -36,7 +36,6 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { enterAppFullscreen } from '@/utils/fullscreen'
 import { navigationGroups } from '@/config/navigation'
 
 defineOptions({ name: 'AppSidebar' })
@@ -62,15 +61,7 @@ const goDashboard = () => {
   router.push('/dashboard')
 }
 
-const handleItemClick = async item => {
-  if (item.to === '/dashboard/fullscreen') {
-    try {
-      await enterAppFullscreen()
-    } catch (error) {
-      console.warn('进入原生全屏失败，将继续打开全屏看板:', error)
-    }
-  }
-
+const handleItemClick = item => {
   if (route.path !== item.to) {
     router.push(item.to)
   }

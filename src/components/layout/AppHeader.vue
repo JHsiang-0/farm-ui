@@ -25,15 +25,24 @@
     </div>
 
     <div class="app-header__right">
+      <button
+        type="button"
+        class="header-icon-button"
+        aria-label="实时设备看板"
+        title="实时设备看板"
+        @click="openFullscreenDashboard"
+      >
+        <DesktopIcon :size="19" />
+      </button>
       <button type="button" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
         <t-badge :count="3" color="#e34d59">
           <MailIcon :size="19" />
         </t-badge>
       </button>
-      <button type="button" class="header-icon-button" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
+      <button type="button" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
         <HelpCircleIcon :size="19" />
       </button>
-      <button type="button" class="header-icon-button" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
+      <button type="button" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
         <SettingIcon :size="19" />
       </button>
       <AppUserMenu />
@@ -43,7 +52,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
+  DesktopIcon,
   HelpCircleIcon,
   MailIcon,
   MenuFoldIcon,
@@ -52,6 +63,7 @@ import {
   SettingIcon
 } from 'tdesign-icons-vue-next'
 import { message } from '@/utils/message'
+import { enterAppFullscreen } from '@/utils/fullscreen'
 import AppUserMenu from './AppUserMenu.vue'
 
 defineOptions({ name: 'AppHeader' })
@@ -66,6 +78,17 @@ defineProps({
 defineEmits(['toggle-sidebar'])
 
 const searchText = ref('')
+const router = useRouter()
+
+const openFullscreenDashboard = async () => {
+  try {
+    await enterAppFullscreen()
+  } catch (error) {
+    console.warn('进入原生全屏失败，将继续打开全屏看板:', error)
+  }
+
+  router.push('/dashboard/fullscreen')
+}
 
 const handleSearch = () => {
   if (!searchText.value.trim()) return
@@ -148,8 +171,7 @@ const handleSearch = () => {
     width: min(42vw, 220px);
   }
 
-  .app-header__right > .header-icon-button:nth-child(2),
-  .app-header__right > .header-icon-button:nth-child(3) {
+  .app-header__right .app-header__optional-action {
     display: none;
   }
 }

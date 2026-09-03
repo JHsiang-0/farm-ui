@@ -1,6 +1,5 @@
 import {
   DashboardIcon,
-  DesktopIcon,
   FileIcon,
   FolderOpenIcon,
   ListNumberedIcon,
@@ -13,8 +12,7 @@ export const navigationGroups = [
     key: 'workspace',
     label: '工作台',
     items: [
-      { key: 'dashboard', title: '概览仪表盘', to: '/dashboard', icon: DashboardIcon },
-      { key: 'fullscreen-dashboard', title: '实时设备看板', to: '/dashboard/fullscreen', icon: DesktopIcon }
+      { key: 'dashboard', title: '概览仪表盘', to: '/dashboard', icon: DashboardIcon }
     ]
   },
   {
