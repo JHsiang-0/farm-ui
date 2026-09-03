@@ -51,20 +51,30 @@ export const useRealtimeStore = defineStore('realtime', () => {
   // 获取 WebSocket 地址：优先使用环境变量，否则使用当前页面 host
   const getWsUrl = () => {
     const envWsUrl = import.meta.env.VITE_WS_URL
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
     const baseUrl = envWsUrl || (() => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const host = window.location.host
-      return `${protocol}//${host}/ws/farm-status`
+      if (apiBaseUrl) {
+        try {
+          const apiUrl = new URL(apiBaseUrl)
+          const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+          return `${protocol}//${apiUrl.host}/ws/farm-status`
+        } catch {
+          console.warn('[RealtimeStore] VITE_API_BASE_URL 不是有效地址')
+        }
+      }
+
+      if (window.location.host && ['http:', 'https:'].includes(window.location.protocol)) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        return `${protocol}//${window.location.host}/ws/farm-status`
+      }
+
+      return ''
     })()
     if (userStore.token) {
       const separator = baseUrl.includes('?') ? '&' : '?'
       return `${baseUrl}${separator}token=${encodeURIComponent(userStore.token)}`
     }
-    if (!userStore.token) return baseUrl
-    // 降级：使用当前页面协议和 host，兼容局域网访问
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = window.location.host
-    return `${protocol}//${host}/ws/farm-status`
+    if (!userStore.token || !baseUrl) return baseUrl
   }
 
   const WS_CONFIG = {
@@ -292,13 +302,19 @@ export const useRealtimeStore = defineStore('realtime', () => {
       return
     }
 
+    const wsUrl = getWsUrl()
+    if (!wsUrl) {
+      console.warn('未配置 WebSocket 地址，跳过 WebSocket 连接')
+      return
+    }
+
     // 如果已存在连接，先关闭
     if (wsClient) {
       disconnectWs()
     }
 
     // 创建新的 WebSocket 客户端 - 使用 markRaw 避免响应式代理
-    wsClient = markRaw(new WebSocketClient(getWsUrl(), {
+    wsClient = markRaw(new WebSocketClient(wsUrl, {
       reconnectDelay: WS_CONFIG.reconnectDelay,
       maxReconnectDelay: WS_CONFIG.maxReconnectDelay,
       reconnectBackoffMultiplier: WS_CONFIG.reconnectBackoffMultiplier,

@@ -16,7 +16,7 @@ import { isMockEnabled, mockRequest } from '@/mock'
  */
 const REQUEST_CONFIG = {
   TIMEOUT: REQUEST_TIMEOUT.DEFAULT,
-  BASE_URL: '' // 使用 Vite proxy，此处留空
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || ''
 }
 
 // 创建 axios 实例

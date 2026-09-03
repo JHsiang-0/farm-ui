@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    base: mode === 'desktop' ? './' : '/',
     plugins: [vue()],
     resolve: {
       alias: {

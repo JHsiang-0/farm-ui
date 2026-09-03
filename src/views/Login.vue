@@ -171,16 +171,26 @@ const handleLogin = async () => {
    使用 CSS 变量确保兼容性
    ============================================ */
 
+.login-page,
+.login-page * {
+  box-sizing: border-box;
+}
+
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #1f2937 0%, #1e3a8a 50%, #1e40af 100%);
-  padding: 24px;
+  padding: clamp(12px, 2vw, 32px);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  box-sizing: border-box;
 }
 
 /* 背景装饰 */
@@ -199,14 +209,16 @@ const handleLogin = async () => {
 .login-container {
   display: flex;
   width: 100%;
-  max-width: 1000px;
-  min-height: 600px;
+  max-width: min(88vw, 1000px);
+  height: min(78dvh, 600px);
+  min-height: 0;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 /* ============================================
@@ -221,21 +233,27 @@ const handleLogin = async () => {
   justify-content: center;
   position: relative;
   overflow: hidden;
-  padding: 32px;
+  padding: clamp(20px, 3vw, 32px);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .brand-content {
   text-align: center;
   position: relative;
   z-index: 2;
+  width: 100%;
 }
 
 .brand-icon {
-  margin-bottom: 24px;
+  margin-bottom: clamp(12px, 2.5vh, 24px);
   animation: float 3s ease-in-out infinite;
 }
 
 .brand-icon :deep(.t-icon) {
+  width: clamp(44px, 5vw, 64px);
+  height: clamp(44px, 5vw, 64px);
+  font-size: clamp(44px, 5vw, 64px);
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
@@ -245,15 +263,15 @@ const handleLogin = async () => {
 }
 
 .brand-title {
-  font-size: 28px;
+  font-size: clamp(22px, 2.4vw, 28px);
   font-weight: 700;
   margin: 0 0 8px;
-  letter-spacing: 2px;
+  letter-spacing: clamp(1px, 0.15vw, 2px);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .brand-subtitle {
-  font-size: 14px;
+  font-size: clamp(12px, 1.2vw, 14px);
   margin: 0;
   opacity: 0.85;
   font-weight: 400;
@@ -261,31 +279,31 @@ const handleLogin = async () => {
 }
 
 .brand-divider {
-  width: 60px;
-  height: 3px;
+  width: clamp(44px, 5vw, 60px);
+  height: clamp(2px, 0.25vw, 3px);
   background: rgba(255, 255, 255, 0.3);
-  margin: 24px auto;
+  margin: clamp(16px, 3vh, 24px) auto;
   border-radius: 2px;
 }
 
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(8px, 2vh, 16px);
 }
 
 .feature-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font-size: 13px;
+  gap: clamp(8px, 1vw, 12px);
+  font-size: clamp(11px, 1.1vw, 13px);
   opacity: 0.9;
 }
 
 .feature-icon {
-  width: 32px;
-  height: 32px;
+  width: clamp(28px, 3vw, 32px);
+  height: clamp(28px, 3vw, 32px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -294,7 +312,7 @@ const handleLogin = async () => {
 }
 
 .feature-icon .t-icon {
-  font-size: 16px;
+  font-size: clamp(14px, 1.5vw, 16px);
 }
 
 .feature-text {
@@ -310,15 +328,15 @@ const handleLogin = async () => {
 }
 
 .circle-1 {
-  width: 300px;
-  height: 300px;
+  width: clamp(180px, 25vw, 300px);
+  height: clamp(180px, 25vw, 300px);
   top: -100px;
   right: -100px;
 }
 
 .circle-2 {
-  width: 200px;
-  height: 200px;
+  width: clamp(140px, 17vw, 200px);
+  height: clamp(140px, 17vw, 200px);
   bottom: -60px;
   left: -60px;
 }
@@ -328,33 +346,35 @@ const handleLogin = async () => {
    ============================================ */
 .form-panel {
   width: 58%;
-  padding: 40px 48px;
+  padding: clamp(24px, 5vh, 40px) clamp(24px, 4.5vw, 48px);
   display: flex;
   flex-direction: column;
   justify-content: center;
   background: #ffffff;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .form-wrapper {
   width: 100%;
-  max-width: 380px;
+  max-width: min(380px, 100%);
   margin: 0 auto;
 }
 
 .form-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: clamp(20px, 4vh, 32px);
 }
 
 .form-title {
-  font-size: 24px;
+  font-size: clamp(20px, 2vw, 24px);
   font-weight: 700;
   color: var(--farm-text-color-primary);
   margin: 0 0 8px;
 }
 
 .form-desc {
-  font-size: 14px;
+  font-size: clamp(12px, 1.1vw, 14px);
   color: var(--farm-text-color-secondary);
   margin: 0;
 }
@@ -362,7 +382,7 @@ const handleLogin = async () => {
 /* 表单样式 */
 .login-form :deep(.t-form-item),
 .register-form :deep(.t-form-item) {
-  margin-bottom: 20px;
+  margin-bottom: clamp(12px, 2.5vh, 20px);
 }
 
 .login-form :deep(.t-form-item:last-child),
@@ -372,55 +392,58 @@ const handleLogin = async () => {
 
 .login-form :deep(.t-input__wrapper),
 .register-form :deep(.t-input__wrapper) {
-  padding: 1px 16px;
+  height: clamp(40px, 5vh, 48px) !important;
+  min-height: clamp(40px, 5vh, 48px) !important;
+  padding: 1px clamp(10px, 1.5vw, 16px);
 }
 
 .login-form :deep(.t-input__inner),
 .register-form :deep(.t-input__inner) {
-  height: 48px;
+  height: clamp(40px, 5vh, 48px) !important;
+  line-height: clamp(40px, 5vh, 48px) !important;
 }
 
 .form-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: clamp(16px, 3vh, 24px);
 }
 
 .form-options :deep(.t-checkbox__label) {
-  font-size: 13px;
+  font-size: clamp(12px, 1.1vw, 13px);
   color: var(--farm-text-color-regular);
 }
 
 .forgot-link {
-  font-size: 13px;
+  font-size: clamp(12px, 1.1vw, 13px);
 }
 
 .submit-btn {
   width: 100%;
-  height: 48px;
-  font-size: 16px;
+  height: clamp(40px, 5vh, 48px);
+  font-size: clamp(14px, 1.4vw, 16px);
   font-weight: 600;
   border-radius: 6px;
 }
 
 .terms-item {
-  margin-bottom: 16px !important;
+  margin-bottom: clamp(12px, 2vh, 16px) !important;
 }
 
 .terms-text {
-  font-size: 13px;
+  font-size: clamp(12px, 1.1vw, 13px);
   color: var(--farm-text-color-regular);
 }
 
 .terms-text :deep(.t-link) {
-  font-size: 13px;
+  font-size: clamp(12px, 1.1vw, 13px);
   vertical-align: baseline;
 }
 
 /* 切换区域 */
 .form-switch {
-  margin-top: 32px;
+  margin-top: clamp(20px, 4vh, 32px);
   text-align: center;
   display: flex;
   align-items: center;
@@ -429,12 +452,12 @@ const handleLogin = async () => {
 }
 
 .switch-text {
-  font-size: 13px;
+  font-size: clamp(12px, 1.1vw, 13px);
   color: var(--farm-text-color-secondary);
 }
 
 .switch-btn {
-  font-size: 13px;
+  font-size: clamp(12px, 1.1vw, 13px);
   font-weight: 600;
 }
 
@@ -442,10 +465,14 @@ const handleLogin = async () => {
    Footer - 页脚
    ============================================ */
 .login-footer {
-  margin-top: 32px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(8px, 1.5dvh, 20px);
+  margin: 0;
   text-align: center;
   color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
+  font-size: clamp(11px, 1.1vw, 13px);
   position: relative;
   z-index: 1;
 }
@@ -458,9 +485,18 @@ const handleLogin = async () => {
    Responsive - 响应式
    ============================================ */
 @media (max-width: 900px) {
+  .login-page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
   .login-container {
     flex-direction: column;
-    max-width: 480px;
+    max-width: min(480px, 100%);
+    min-height: 0;
+    height: auto;
   }
 
   .brand-panel,
@@ -469,12 +505,16 @@ const handleLogin = async () => {
   }
 
   .brand-panel {
-    min-height: 200px;
-    padding: 32px;
+    min-height: clamp(160px, 28dvh, 220px);
+    padding: clamp(20px, 4vw, 32px);
   }
 
   .form-panel {
-    padding: 32px;
+    padding: clamp(24px, 4vw, 32px);
+  }
+
+  .login-footer {
+    position: static;
   }
 
   .circle-1,
@@ -485,19 +525,19 @@ const handleLogin = async () => {
 
 @media (max-width: 480px) {
   .login-page {
-    padding: 16px;
+    padding: 12px;
   }
 
   .form-panel {
-    padding: 24px;
+    padding: clamp(20px, 6vw, 24px);
   }
 
   .brand-title {
-    font-size: 24px;
+    font-size: clamp(20px, 6vw, 24px);
   }
 
   .form-title {
-    font-size: 20px;
+    font-size: clamp(18px, 5vw, 20px);
   }
 }
 </style>

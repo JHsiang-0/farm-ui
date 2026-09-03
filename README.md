@@ -42,6 +42,26 @@ npm run build
 ```sh
 npm run lint
 ```
+
+## Windows 桌面端
+
+项目使用 Electron 运行前端页面，使用 electron-builder 生成 Windows NSIS 安装包。
+
+首次使用前复制桌面端环境变量示例：
+
+```sh
+copy .env.desktop.example .env.desktop
+```
+
+根据实际后端地址修改 `.env.desktop`，然后执行：
+
+```sh
+npm run desktop:dev       # Electron 桌面开发模式
+npm run desktop:build     # 生成 release/ 下的 Windows 安装包
+npm run desktop:build:dir # 生成未安装目录，便于快速验收
+```
+
+桌面端构建使用 hash 路由，并要求 `VITE_API_BASE_URL` 配置为后端 HTTP 地址，`VITE_WS_URL` 配置为 WebSocket 地址。安装包只包含前端客户端，不包含后端服务；后端需要单独部署并允许桌面客户端访问。
 # Mock 开发模式
 
 复制 `.env.example` 为本地环境文件并设置 `VITE_USE_MOCK=true`，即可在不依赖后端的情况下开发页面。
