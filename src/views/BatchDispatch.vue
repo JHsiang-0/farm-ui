@@ -15,9 +15,12 @@
       <button class="primary-button" type="button" :disabled="uploading || !uploadFiles.length" @click="uploadSelected">
         {{ uploading ? '上传中…' : '批量上传' }}
       </button>
+      <button v-if="uploading" class="secondary-button" type="button" @click="cancelUpload">取消上传</button>
       <div v-if="uploadResult" class="result-box">
         上传完成：成功 {{ uploadResult.successCount ?? 0 }} 个，失败 {{ uploadResult.failureCount ?? 0 }} 个
-        <span v-if="uploadResult.items?.length">（详细结果见控制台契约数据）</span>
+        <button v-if="retryableUploadFiles.length" class="secondary-button" type="button" @click="retryFailedUploads">
+          重试失败项（{{ retryableUploadFiles.length }}）
+        </button>
       </div>
     </section>
 
@@ -100,6 +103,8 @@ const selectedPrinterIds = ref([])
 const uploadFiles = ref([])
 const uploadInput = ref(null)
 const uploadResult = ref(null)
+const lastBatchUploadFiles = ref([])
+const uploadController = ref(null)
 const previewData = ref(null)
 const confirmData = ref(null)
 const uploading = ref(false)
@@ -112,6 +117,10 @@ const executableItemIds = computed(() => (previewData.value?.items || [])
   .filter(item => item.canExecute)
   .map(item => item.itemId)
   .filter(itemId => itemId !== undefined && itemId !== null))
+
+const retryableUploadFiles = computed(() => (uploadResult.value?.items || [])
+  .filter(item => item.retryable && lastBatchUploadFiles.value[item.index])
+  .map(item => lastBatchUploadFiles.value[item.index]))
 
 function queryIds(value) {
   if (!value) return []
@@ -138,8 +147,15 @@ function handleFileChange(event) {
 
 async function uploadSelected() {
   uploading.value = true
+  lastBatchUploadFiles.value = [...uploadFiles.value]
+  uploadController.value = new AbortController()
   try {
-    const response = await batchUploadFiles(uploadFiles.value)
+    const response = await batchUploadFiles(
+      uploadFiles.value,
+      null,
+      undefined,
+      { signal: uploadController.value.signal }
+    )
     uploadResult.value = response?.data || {}
     message.success('批量上传处理完成')
     uploadFiles.value = []
@@ -147,10 +163,25 @@ async function uploadSelected() {
     await loadResources()
   } catch (error) {
     console.error('批量上传失败:', error)
-    message.error(error?.message || '批量上传失败')
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+      message.info('批量上传已取消')
+    } else {
+      message.error(error?.message || '批量上传失败')
+    }
   } finally {
+    uploadController.value = null
     uploading.value = false
   }
+}
+
+function cancelUpload() {
+  uploadController.value?.abort()
+}
+
+async function retryFailedUploads() {
+  if (!retryableUploadFiles.value.length || uploading.value) return
+  uploadFiles.value = retryableUploadFiles.value
+  await uploadSelected()
 }
 
 async function preview() {
