@@ -18,24 +18,23 @@ export function confirmMessage(content, title = '提示', options = {}) {
       callback()
     }
 
-    const dialog = DialogPlugin.confirm({
+    let dialog
+    const closeDialog = (callback) => {
+      // 传入自定义 onClose 后，TDesign 不再执行默认的隐藏逻辑。
+      dialog?.hide?.()
+      settle(callback)
+    }
+
+    dialog = DialogPlugin.confirm({
       header: title,
       body: content,
       theme: options.type === 'danger' ? 'danger' : options.type === 'warning' ? 'warning' : 'default',
       confirmBtn: options.confirmButtonText || '确定',
       cancelBtn: options.cancelButtonText || '取消',
-      onConfirm: () => settle(resolve),
-      onCancel: () => settle(() => reject('cancel')),
-      onClose: () => settle(() => reject('cancel'))
+      onConfirm: () => closeDialog(resolve),
+      onCancel: () => closeDialog(() => reject('cancel')),
+      onClose: () => closeDialog(() => reject('cancel'))
     })
-
-    // 保证实例在回调执行后释放。
-    if (dialog && typeof dialog.hide === 'function') {
-      const hide = dialog.hide.bind(dialog)
-      dialog.hide = () => {
-        hide()
-      }
-    }
   })
 }
 
