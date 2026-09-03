@@ -2,9 +2,8 @@
   <div class="dashboard-page">
     <header class="dashboard-heading">
       <div>
-        <p class="dashboard-heading__eyebrow">3D 打印农场</p>
         <h1>概览仪表盘</h1>
-        <p class="dashboard-heading__description">集中查看设备状态、打印任务和生产运行情况</p>
+        <p class="dashboard-heading__description">设备、任务与打印机状态一览</p>
       </div>
       <div class="dashboard-heading__actions">
         <t-button variant="outline" :loading="loading" @click="fetchOverview">
@@ -396,7 +395,7 @@ onMounted(fetchOverview)
 
 .dashboard-heading {
   gap: 1rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .dashboard-heading h1,
@@ -410,15 +409,6 @@ onMounted(fetchOverview)
   color: var(--app-text-primary);
   font-size: 1.5rem;
   line-height: 1.35;
-}
-
-.dashboard-heading__eyebrow {
-  margin-bottom: 0.25rem !important;
-  color: var(--app-primary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .dashboard-heading__description,

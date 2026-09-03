@@ -38,7 +38,7 @@ const router = createRouter({
           path: 'dashboard',
           name: 'dashboard-overview',
           component: () => import('../views/Dashboard.vue'),
-          meta: { title: '概览仪表盘' }
+          meta: { title: '概览仪表盘', hideBreadcrumb: true }
         },
         {
           path: 'printers',

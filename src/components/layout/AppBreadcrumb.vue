@@ -1,5 +1,5 @@
 <template>
-  <div class="app-breadcrumb">
+  <div v-if="!route.meta.hideBreadcrumb" class="app-breadcrumb">
     <t-breadcrumb separator="/">
       <t-breadcrumb-item v-for="item in breadcrumbs" :key="item.key">
         {{ item.title }}
