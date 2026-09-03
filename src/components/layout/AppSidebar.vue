@@ -4,9 +4,15 @@
     :class="{ 'app-sidebar--mobile-hidden': props.collapsed }"
     :width="props.collapsed ? '64px' : '232px'"
   >
-    <button type="button" class="app-brand" :title="props.collapsed ? '打印农场' : ''" @click="goDashboard">
-      <span class="app-brand__mark">3D</span>
-      <span v-if="!props.collapsed" class="app-brand__name">打印农场</span>
+    <button
+      type="button"
+      class="app-brand"
+      aria-label="嘉东三维打印农场"
+      :title="props.collapsed ? '嘉东三维打印农场' : ''"
+      @click="goDashboard"
+    >
+      <img src="/icon.png" alt="" aria-hidden="true" class="app-brand__logo">
+      <span v-if="!props.collapsed" class="app-brand__name">嘉东三维打印农场</span>
     </button>
 
     <t-menu :value="activePath" :collapsed="props.collapsed" theme="light" class="app-menu">
@@ -97,17 +103,14 @@ const handleItemClick = item => {
   flex-shrink: 0;
 }
 
-.app-brand__mark {
+.app-brand__logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: #0052d9;
   border-radius: 6px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
