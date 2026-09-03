@@ -88,19 +88,19 @@
           </div>
 
           <!-- 文件夹图标 -->
-          <div class="relative h-24 overflow-hidden bg-blue-50 flex items-center justify-center">
+          <div class="file-card__media relative h-24 overflow-hidden bg-blue-50 flex items-center justify-center">
             <IconFolder :size="64" class="text-blue-500" />
           </div>
 
           <!-- 卡片内容 -->
-          <div class="p-2">
+          <div class="file-card__body p-2">
             <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
               :title="file.originalName">
               {{ file.originalName }}
             </h3>
 
             <!-- 文件夹统计 -->
-            <div class="flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
+            <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
               <div class="flex flex-col gap-0.5">
                 <span class="text-xs text-gray-600 uppercase">类型</span>
                 <span class="text-sm font-semibold text-gray-900">文件夹</span>
@@ -108,7 +108,7 @@
             </div>
 
             <!-- 悬浮操作按钮 -->
-            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
+            <div class="file-card__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
               <t-button theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click.stop="navigateToFolder(file)"
                 class="flex-1 text-xs px-1 py-1">
                 打开
@@ -135,7 +135,7 @@
           </div>
 
           <!-- 缩略图区域 -->
-          <div class="relative h-24 overflow-hidden bg-gray-100">
+          <div class="file-card__media relative h-24 overflow-hidden bg-gray-100">
             <t-image v-if="file.thumbnailUrl" :src="file.thumbnailUrl" :alt="file.originalName" fit="cover"
               class="w-full h-full">
               <template #error>
@@ -156,14 +156,14 @@
           </div>
 
           <!-- 卡片内容 -->
-          <div class="p-2">
+          <div class="file-card__body p-2">
             <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
               :title="file.originalName">
               {{ file.originalName }}
             </h3>
 
             <!-- 核心数据指标 -->
-            <div class="flex gap-2 mb-2">
+            <div class="file-card__metrics flex gap-2 mb-2">
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <Clock :size="14" class="text-gray-600" />
                 <span>{{ formatDuration(file.estTime) }}</span>
@@ -182,7 +182,7 @@
             </div>
 
             <!-- 统计信息 -->
-            <div class="flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
+            <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
               <div class="flex flex-col gap-0.5">
                 <span class="text-xs text-gray-600 uppercase">打印</span>
                 <span class="text-sm font-semibold text-gray-900">{{ file.printCount || 0 }}次</span>
@@ -196,7 +196,7 @@
             </div>
 
             <!-- 悬浮操作按钮 -->
-            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
+            <div class="file-card__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
               <t-button theme="primary" size="small" :icon="renderIcon(Printer)" @click.stop="handlePrint(file)"
                 class="flex-1 text-xs px-1 py-1">
                 打印
@@ -333,7 +333,7 @@
         </div>
         <template #tips>
           <div class="farm-upload__tip">
-            支持 .gcode 和 .bgcode 格式文件，文件大小不超过 100MB
+            支持 .gcode 和 .bgcode 格式文件，文件大小由服务端配置决定
           </div>
         </template>
       </t-upload>
@@ -731,10 +731,6 @@ const handleFileChange = async (files) => {
     return
   }
 
-  if (file.size > 100 * 1024 * 1024) {
-    message.warning('文件大小不能超过 100MB')
-    return
-  }
   if (fileList.value.some(item => item.isFolder !== 1 && item.originalName === file.name)) {
     message.warning('当前目录已存在同名文件，请先重命名后再上传')
     return
@@ -1045,8 +1041,8 @@ onMounted(() => {
 /* 网格视图布局 */
 .file-grid-view {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(200px, 16vw, 280px)), 1fr));
+  gap: clamp(0.75rem, 1vw, 1.25rem);
   align-content: start;
   overflow-y: auto;
   padding-bottom: 1rem;
@@ -1054,10 +1050,60 @@ onMounted(() => {
 
 /* 文件卡片样式 */
 .file-card {
-  height: fit-content;
-  min-height: auto;
+  height: clamp(260px, 22vw, 320px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+.file-card__media {
+  height: clamp(88px, 8vw, 112px);
+  flex-shrink: 0;
+}
+
+.file-card__body {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.file-card__body > h3 {
+  flex-shrink: 0;
+}
+
+.file-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.file-card__metrics > div {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.file-card__stats {
+  flex-shrink: 0;
+}
+
+.file-card__actions {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+@media (max-width: 640px) {
+  .file-card {
+    height: 260px;
+  }
+
+  .file-card__media {
+    height: 88px;
+  }
 }
 
 /* 进度条样式 */
