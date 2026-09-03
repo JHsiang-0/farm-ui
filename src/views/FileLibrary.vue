@@ -1,70 +1,72 @@
 <template>
   <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
     <!-- 顶部操作栏 -->
-    <div class="flex flex-wrap justify-between items-center gap-4 m-6 mb-4 p-4 bg-white rounded-lg shadow-sm">
-      <div class="flex flex-wrap items-center gap-4">
-        <h1 class="text-xl font-bold text-gray-900 m-0">📁 文件库</h1>
+    <div class="file-library-toolbar m-6 mb-4 p-5 bg-white rounded-xl shadow-sm">
+      <div class="file-library-toolbar__heading">
+        <div class="file-library-toolbar__title-row">
+          <h1 class="file-library-toolbar__title app-route-title">
+            <FolderOpened :size="22" />
+            <span>文件库</span>
+          </h1>
 
-        <!-- 面包屑导航 -->
-        <t-breadcrumb separator="/" class="hidden sm:block">
-          <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
-            <span><folder-opened /></span>
-            <span>根目录</span>
-          </t-breadcrumb-item>
-          <t-breadcrumb-item
-            v-for="(breadcrumb, index) in breadcrumbs"
-            :key="breadcrumb.id"
-            @click.prevent="navigateTo(index)"
-          >
-            {{ breadcrumb.name }}
-          </t-breadcrumb-item>
-        </t-breadcrumb>
-
-        <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-40" size="medium"
-          @keyup.enter="handleSearch">
-          <template #prefixIcon>
-            <span>
-              <Search />
-            </span>
-          </template>
-        </t-input>
-        <t-select v-model="materialFilter" placeholder="材质筛选" clearable class="w-40" size="medium"
-          @change="handleSearch">
-          <t-option label="PLA" value="PLA" />
-          <t-option label="ABS" value="ABS" />
-          <t-option label="PETG" value="PETG" />
-          <t-option label="TPU" value="TPU" />
-          <t-option label="尼龙" value="尼龙" />
-        </t-select>
+          <!-- 面包屑导航 -->
+          <t-breadcrumb separator="/" class="hidden sm:block">
+            <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
+              <span><folder-opened /></span>
+              <span>根目录</span>
+            </t-breadcrumb-item>
+            <t-breadcrumb-item
+              v-for="(breadcrumb, index) in breadcrumbs"
+              :key="breadcrumb.id"
+              @click.prevent="navigateTo(index)"
+            >
+              {{ breadcrumb.name }}
+            </t-breadcrumb-item>
+          </t-breadcrumb>
+        </div>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <t-space class="border border-gray-300 rounded overflow-hidden">
-          <t-button :theme="viewMode === 'grid' ? 'default' : 'default'" size="small" @click="viewMode = 'grid'"
-            class="rounded-none border-0" :class="{ 'bg-gray-200': viewMode === 'grid' }">
-            <span>
+      <div class="file-library-toolbar__body">
+        <div class="file-library-toolbar__filters">
+          <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-full sm:w-52" size="medium"
+            @keyup.enter="handleSearch">
+            <template #prefixIcon>
+              <Search />
+            </template>
+          </t-input>
+          <t-select v-model="materialFilter" placeholder="材质筛选" clearable class="w-full sm:w-40" size="medium"
+            @change="handleSearch">
+            <t-option label="PLA" value="PLA" />
+            <t-option label="ABS" value="ABS" />
+            <t-option label="PETG" value="PETG" />
+            <t-option label="TPU" value="TPU" />
+            <t-option label="尼龙" value="尼龙" />
+          </t-select>
+        </div>
+        <div class="file-library-toolbar__actions">
+          <t-space class="file-view-toggle">
+            <t-button variant="text" size="small" @click="viewMode = 'grid'"
+              :class="{ 'file-view-toggle__active': viewMode === 'grid' }" aria-label="网格视图">
               <Grid />
-            </span>
-          </t-button>
-          <t-button :theme="viewMode === 'list' ? 'default' : 'default'" size="small" @click="viewMode = 'list'"
-            class="rounded-none border-0" :class="{ 'bg-gray-200': viewMode === 'list' }">
-            <span>
+            </t-button>
+            <t-button variant="text" size="small" @click="viewMode = 'list'"
+              :class="{ 'file-view-toggle__active': viewMode === 'list' }" aria-label="列表视图">
               <List />
-            </span>
+            </t-button>
+          </t-space>
+          <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
+          <t-button variant="outline" theme="default" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
+            新建文件夹
           </t-button>
-        </t-space>
-        <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
-        <t-button theme="success" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
-          新建文件夹
-        </t-button>
-        <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
-          上传 G-Code 文件
-        </t-button>
-        <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
-          批量删除 ({{ selectedIds.length }})
-        </t-button>
-        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
-          刷新
-        </t-button>
+          <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
+            上传 G-Code 文件
+          </t-button>
+          <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
+            批量删除 ({{ selectedIds.length }})
+          </t-button>
+          <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
+            刷新
+          </t-button>
+        </div>
       </div>
     </div>
 
@@ -1038,6 +1040,80 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.file-library-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid var(--app-border);
+}
+
+.file-library-toolbar__heading {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.file-library-toolbar__title-row,
+.file-library-toolbar__body,
+.file-library-toolbar__filters,
+.file-library-toolbar__actions {
+  display: flex;
+  align-items: center;
+}
+
+.file-library-toolbar__title-row {
+  gap: 1rem;
+  min-width: 0;
+}
+
+.file-library-toolbar__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--app-text-primary);
+  font-size: var(--app-page-title-size);
+  font-weight: 700;
+}
+
+.file-library-toolbar__body {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.file-library-toolbar__filters,
+.file-library-toolbar__actions {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.file-library-toolbar__filters {
+  min-width: 0;
+  flex: 1;
+}
+
+.file-library-toolbar__actions {
+  justify-content: flex-end;
+}
+
+.file-view-toggle {
+  padding: 0.125rem;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+}
+
+.file-view-toggle :deep(.t-button) {
+  min-width: 2rem;
+  color: var(--app-text-secondary);
+}
+
+.file-view-toggle :deep(.file-view-toggle__active) {
+  color: var(--app-primary);
+  background: var(--app-surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+}
+
 /* 网格视图布局 */
 .file-grid-view {
   display: grid;
@@ -1097,12 +1173,46 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+  .file-library-toolbar {
+    padding: 1rem;
+  }
+
+  .file-library-toolbar__title-row,
+  .file-library-toolbar__body {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .file-library-toolbar__filters,
+  .file-library-toolbar__actions {
+    width: 100%;
+  }
+
+  .file-library-toolbar__actions {
+    justify-content: flex-start;
+  }
+
+  .file-library-toolbar__actions > .t-button {
+    flex: 1 1 auto;
+  }
+
   .file-card {
     height: 260px;
   }
 
   .file-card__media {
     height: 88px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .file-library-toolbar__body {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .file-library-toolbar__actions {
+    justify-content: flex-start;
   }
 }
 

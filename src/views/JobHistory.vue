@@ -3,9 +3,9 @@
     <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
       <template #header>
         <div class="flex flex-wrap justify-between items-center gap-x-8 gap-y-3">
-          <div class="flex min-w-0 items-center gap-3 text-lg font-semibold text-gray-900">
+          <div class="flex min-w-0 items-center gap-3 font-semibold text-gray-900">
             <document :size="20" class="text-gray-600" />
-            <span class="truncate">打印历史记录</span>
+            <span class="app-route-title truncate">打印历史记录</span>
           </div>
           <t-button class="shrink-0" :icon="renderIcon(Refresh)" :loading="loading" @click="handleQuery" size="medium">
             刷新

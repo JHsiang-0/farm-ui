@@ -2,7 +2,7 @@
   <div class="dashboard-page">
     <header class="dashboard-heading">
       <div>
-        <h1>概览仪表盘</h1>
+        <h1 class="app-route-title">概览仪表盘</h1>
         <p class="dashboard-heading__description">设备、任务与打印机状态一览</p>
       </div>
       <div class="dashboard-heading__actions">
@@ -419,8 +419,6 @@ onMounted(fetchOverview)
 
 .dashboard-heading h1 {
   color: var(--app-text-primary);
-  font-size: 1.5rem;
-  line-height: 1.35;
 }
 
 .dashboard-heading__description,

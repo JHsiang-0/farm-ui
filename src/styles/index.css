@@ -37,4 +37,11 @@ body {
   --app-success: #2ba471;
   --app-warning: #e37318;
   --app-danger: #d54941;
+  --app-page-title-size: 1.5rem;
+  --app-page-title-line-height: 1.35;
+}
+
+.app-route-title {
+  font-size: var(--app-page-title-size);
+  line-height: var(--app-page-title-line-height);
 }

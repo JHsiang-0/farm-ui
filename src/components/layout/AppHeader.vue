@@ -12,16 +12,6 @@
         <MenuFoldIcon v-else :size="20" />
       </button>
 
-      <div class="header-search">
-        <SearchIcon :size="18" />
-        <input
-          v-model="searchText"
-          type="search"
-          placeholder="请输入搜索内容"
-          aria-label="搜索内容"
-          @keyup.enter="handleSearch"
-        >
-      </div>
     </div>
 
     <div class="app-header__right">
@@ -51,7 +41,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   DesktopIcon,
@@ -59,7 +48,6 @@ import {
   MailIcon,
   MenuFoldIcon,
   MenuUnfoldIcon,
-  SearchIcon,
   SettingIcon
 } from 'tdesign-icons-vue-next'
 import { message } from '@/utils/message'
@@ -77,7 +65,6 @@ defineProps({
 
 defineEmits(['toggle-sidebar'])
 
-const searchText = ref('')
 const router = useRouter()
 
 const openFullscreenDashboard = async () => {
@@ -90,10 +77,6 @@ const openFullscreenDashboard = async () => {
   router.push('/dashboard/fullscreen')
 }
 
-const handleSearch = () => {
-  if (!searchText.value.trim()) return
-  message.info(`搜索功能将在后续版本接入：${searchText.value.trim()}`)
-}
 </script>
 
 <style scoped>
@@ -141,34 +124,9 @@ const handleSearch = () => {
   background: var(--app-surface-muted);
 }
 
-.header-search {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 280px;
-  color: var(--app-text-secondary);
-}
-
-.header-search input {
-  width: 100%;
-  color: var(--app-text-primary);
-  font-size: 0.875rem;
-  background: transparent;
-  border: 0;
-  outline: 0;
-}
-
-.header-search input::placeholder {
-  color: var(--app-text-placeholder);
-}
-
 @media (max-width: 768px) {
   .app-header {
     padding: 0 1rem;
-  }
-
-  .header-search {
-    width: min(42vw, 220px);
   }
 
   .app-header__right .app-header__optional-action {
