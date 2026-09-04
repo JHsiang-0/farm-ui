@@ -139,6 +139,56 @@
       </t-empty>
     </t-card>
 
+    <t-card class="app-page-card mt-4 shadow-sm rounded-xl">
+      <template #title>活动任务</template>
+      <TdTable
+        :data="activePageData"
+        :loading="activeLoading"
+        style="width: 100%"
+        :header-cell-style="{ background: '#f9fafb' }"
+      >
+        <TdTableColumn prop="id" label="任务单号" width="110" align="center">
+          <template #default="scope">
+            <span class="font-mono font-semibold text-gray-700">#{{ scope.row.id }}</span>
+          </template>
+        </TdTableColumn>
+        <TdTableColumn prop="fileId" label="切片文件ID" width="120" align="center" />
+        <TdTableColumn prop="printerId" label="打印机ID" width="120" align="center">
+          <template #default="scope">{{ scope.row.printerId || '未分配' }}</template>
+        </TdTableColumn>
+        <TdTableColumn prop="status" label="状态" width="140" align="center">
+          <template #default="scope">
+            <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
+              {{ getStatusLabel(scope.row.status) }}
+            </t-tag>
+          </template>
+        </TdTableColumn>
+        <TdTableColumn prop="progress" label="进度" width="150" align="center">
+          <template #default="scope">
+            <t-progress :percentage="scope.row.progress || 0" :status="getProgressStatus(scope.row.status, scope.row.progress)" />
+          </template>
+        </TdTableColumn>
+        <TdTableColumn prop="updatedAt" label="最近更新" min-width="160" align="center">
+          <template #default="scope">{{ formatDateTime(scope.row.updatedAt) }}</template>
+        </TdTableColumn>
+        <TdTableColumn label="操作" width="100" align="center">
+          <template #default="scope">
+            <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+          </template>
+        </TdTableColumn>
+      </TdTable>
+      <t-empty v-if="activePageData.length === 0 && !activeLoading" description="当前没有活动任务" />
+      <div v-if="activeTotal > activePageSize" class="flex justify-center mt-4">
+        <t-pagination
+          v-model:current="activePage"
+          :page-size="activePageSize"
+          :total="activeTotal"
+          :show-page-size="false"
+          @change="handleActivePageChange"
+        />
+      </div>
+    </t-card>
+
     <!-- 指派打印机弹窗 -->
     <t-dialog v-model:visible="assignDialogVisible" header="指派打印机"
       width="520px"
@@ -206,7 +256,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import {
   RefreshIcon as Refresh,
   LocationIcon as Pointer,
@@ -217,7 +268,7 @@ import {
   FileIcon as Coffee,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
-import { getJobQueue, cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob } from '@/api/job'
+import { cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob } from '@/api/job'
 import { confirmSafe, getPrinterList } from '@/api/printer'
 import { message, confirmMessage } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
@@ -225,11 +276,21 @@ import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
+import { useJobStore } from '@/stores/jobStore'
+import { JOB_STATUS_MAP } from '@/utils/constants'
 
 defineOptions({ name: 'JobQueue' })
 
-const loading = ref(false)
-const queueData = ref([])
+const jobStore = useJobStore()
+const {
+  queueJobs: queueData,
+  activePageJobs: activePageData,
+  activeLoading,
+  activePage,
+  activePageSize,
+  activeTotal
+} = storeToRefs(jobStore)
+const loading = computed(() => jobStore.queueLoading || jobStore.activeLoading)
 
 // 派单弹窗状态
 const assignDialogVisible = ref(false)
@@ -242,10 +303,20 @@ const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
 const JOB_QUEUE_DETAIL_CONTEXT_KEY = 'farm-ui:job-queue-detail'
 
-const openTaskDetail = job => {
+const openTaskDetail = async job => {
   selectedJob.value = job
-  sessionStorage.setItem(JOB_QUEUE_DETAIL_CONTEXT_KEY, String(job.id))
+  const jobId = String(job.id)
+  sessionStorage.setItem(JOB_QUEUE_DETAIL_CONTEXT_KEY, jobId)
   detailDrawerVisible.value = true
+
+  try {
+    const detail = await jobStore.fetchJobDetail(job.id)
+    if (selectedJob.value && String(selectedJob.value.id) === jobId) {
+      selectedJob.value = detail
+    }
+  } catch {
+    // 保留列表中的真实任务数据，详情请求错误由请求层统一提示。
+  }
 }
 
 const handleTaskDetailVisibility = visible => {
@@ -274,33 +345,18 @@ const getPriorityType = (priority) => {
 
 // 获取状态标签类型
 const getStatusType = (status) => {
-  const map = {
-    'UPLOADING': 'warning',
-    'QUEUED': 'primary',
-    'ASSIGNED': 'warning',
-    'PRINTING': 'success',
-    'COMPLETED': 'default',
-    'FAILED': 'danger',
-    'RECONCILING': 'warning'
-  }
-  return map[status] || 'default'
+  return JOB_STATUS_MAP[status]?.type || 'default'
 }
 
 // 获取状态显示文本
 const getStatusLabel = (status) => {
-  const map = {
-    'UPLOADING': '上传中',
-    'QUEUED': '排队中',
-    'ASSIGNED': '已分配待确认',
-    'READY': '已上传待机',
-    'PRINTING': '打印中',
-    'PAUSED': '已暂停',
-    'COMPLETED': '已完成',
-    'FAILED': '失败',
-    'CANCELLED': '已取消',
-    'RECONCILING': '状态核对中'
-  }
-  return map[status] || status
+  return JOB_STATUS_MAP[status]?.label || status
+}
+
+const getProgressStatus = (status, progress) => {
+  if (status === 'PAUSED') return 'warning'
+  if (progress === 100) return 'success'
+  return ''
 }
 
 // 判断任务是否可以取消
@@ -310,16 +366,16 @@ const canCancel = (status) => {
 }
 
 const fetchQueue = async () => {
-  loading.value = true
   try {
-    const res = await getJobQueue()
-    queueData.value = res.data || []
+    await jobStore.refresh()
     restoreTaskDetailContext()
   } catch {
-    // 忽略
-  } finally {
-    loading.value = false
+    // 请求层已统一提示
   }
+}
+
+const handleActivePageChange = ({ current }) => {
+  activePage.value = current
 }
 
 const handleCancel = async (id) => {

@@ -150,7 +150,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：多列表刷新和 WebSocket 增量更新可能产生重复记录。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。新增 Pinia 任务 Store 管理待派队列、活动任务、详情缓存和活动分页；`/queue` 与 Mock 均严格只返回 QUEUED，活动任务通过 `/page` 聚合 ASSIGNED/UPLOADING/READY/PRINTING/PAUSED/RECONCILING；新增 `GET /api/v1/print-jobs/{id}` 详情 API、归属校验和 Mock 路由，JobQueue 增加真实活动列表与详情加载。新增活动状态过滤测试。`npm.cmd test`（37/37）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T012 单任务创建、手动派发与安全启动
 

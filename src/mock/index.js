@@ -563,13 +563,21 @@ const handleJobPage = config => {
 
 const handleJobQueue = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
-  let records = mockState.jobs.filter(item => ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED'].includes(item.status))
+  let records = mockState.jobs.filter(item => item.status === 'QUEUED')
   if (session.role !== 'ADMIN') {
     records = records.filter(item => String(item.userId) === String(session.userId))
   }
   return records
     .sort((a, b) => b.priority - a.priority || new Date(b.createdAt) - new Date(a.createdAt))
     .map(toPublicJob)
+}
+
+const handleJobDetail = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').pop()
+  const job = findJob(id)
+  if (!job || !canReadResource(session, job.userId)) fail(404, 404, '任务不存在')
+  return toPublicJob(job)
 }
 
 const handleCreateJob = config => {
@@ -744,6 +752,7 @@ const route = async config => {
   if (key === 'DELETE /api/v1/print-files/batch') return handleBatchDeleteFiles(config)
   if (key === 'GET /api/v1/print-jobs/queue') return handleJobQueue(config)
   if (key === 'POST /api/v1/print-jobs/page') return handleJobPage(config)
+  if (/^GET \/api\/v1\/print-jobs\/[^/]+$/.test(key)) return handleJobDetail(config)
   if (key === 'POST /api/v1/print-jobs/create' || key === 'POST /api/v1/print-jobs') return handleCreateJob(config)
   if (key === 'POST /api/v1/print-jobs/safe/assign') return handleAssignJob(config)
   if (key === 'POST /api/v1/print-jobs/safe/confirm') return handleConfirmSafe(config)

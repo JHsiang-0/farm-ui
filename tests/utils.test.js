@@ -14,6 +14,7 @@ import {
 } from '../src/utils/dataAdapters.js'
 import { formatFileSize, normalizeProgress } from '../src/utils/formatters.js'
 import { shouldRefreshPresignedUrl } from '../src/utils/fileDownload.js'
+import { isActiveJob, selectActiveJobs } from '../src/utils/jobSelectors.js'
 import {
   getRealtimeAlertClearId,
   toRealtimeAlert,
@@ -73,6 +74,18 @@ test('refreshes an expired presigned URL at most once', () => {
   assert.equal(shouldRefreshPresignedUrl(410, false), true)
   assert.equal(shouldRefreshPresignedUrl(410, true), false)
   assert.equal(shouldRefreshPresignedUrl(500, false), false)
+})
+
+test('selects only active jobs and removes duplicate records by caller contract', () => {
+  const jobs = [
+    { id: 1, status: 'QUEUED' },
+    { id: 2, status: 'PRINTING' },
+    { id: 3, status: 'RECONCILING' },
+    { id: 4, status: 'COMPLETED' }
+  ]
+  assert.equal(isActiveJob(jobs[1]), true)
+  assert.equal(isActiveJob(jobs[0]), false)
+  assert.deepEqual(selectActiveJobs(jobs).map(job => job.id), [2, 3])
 })
 
 test('uses one canonical printer status set and never persists ONLINE', () => {

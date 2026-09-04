@@ -13,7 +13,7 @@ import {
 
 /**
  * 获取排队中的任务列表
- * 返回 QUEUED、ASSIGNED、READY 和 PAUSED 状态的任务
+ * 仅返回 QUEUED 状态的待派发任务
  * @returns {Promise<{code: number, message: string, data: Array<PrintJob>}>} 任务队列
  */
 export function getJobQueue() {
@@ -24,6 +24,14 @@ export function getJobQueue() {
     response,
     data => Array.isArray(data) ? data.map(normalizePrintJob) : []
   ))
+}
+
+/** 获取任务详情，返回完整 PrintJobVO。 */
+export function getJobDetail(id) {
+  return request({
+    url: `/api/v1/print-jobs/${id}`,
+    method: 'get'
+  }).then(response => mapResponseData(response, normalizePrintJob))
 }
 
 /**
