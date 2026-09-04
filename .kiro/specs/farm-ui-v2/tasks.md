@@ -22,7 +22,7 @@
 - 风险：未冻结契约会导致用户管理和批量失败重试返工。
 - 完成状态：部分完成（2026-09-04）。统一响应、分页、批量 action 层级和重复 confirm 的幂等回放语义已按真实代码冻结；仍被 `UserVO.disabled`、已有 `jobId` 的批量失败补偿、批量预览文件归属校验、端点级错误码/OpenAPI 和 WebSocket 角色/禁用态边界阻塞，未经后端处理不得标记完成。
 
-### T002 API 请求层与统一错误模型
+### [x] T002 API 请求层与统一错误模型
 
 - 优先级：P0
 - 前置依赖：T001 中与本任务相关的统一响应、分页和错误大类基线已冻结；T001 其余后端阻塞不影响本任务。
@@ -35,7 +35,7 @@
 - 风险：改动是所有 API 的基础，需防止 Blob、204/null 和旧调用回归。
 - 完成状态：已完成（2026-09-04）。统一响应 envelope、Blob/ArrayBuffer 与 204/null 例外、HTTP/业务错误映射、RequestError 字段、401 单次会话清理/跳转及重复错误提示抑制已实现；现有 API 模块继续兼容 `response.data` 返回结构，相关测试、lint 和构建均通过。
 
-### T003 登录、Token 与首次管理员初始化
+### [x] T003 登录、Token 与首次管理员初始化
 
 - 优先级：P0
 - 前置依赖：T002
@@ -48,7 +48,7 @@
 - 风险：本地旧持久化数据迁移及并发 401 可能重复跳转。
 - 完成状态：已完成（2026-09-04）。登录 API 仅发送后端契约字段，新增 `/auth/me` 恢复接口；会话保存 `expiresIn/expiresAt`，启动恢复会以服务端 UserVO 覆盖本地身份，过期、无效、禁用和退出均清理会话并触发实时连接清理；首次管理员初始化和普通登录校验已按后端规则分流。认证会话测试、`npm.cmd test`、`npm.cmd run lint`、`npm.cmd run build` 均通过。路由启动门禁和 ADMIN/OPERATOR 页面权限由 T004 继续接入。
 
-### T004 ADMIN/OPERATOR 路由与操作权限
+### [x] T004 ADMIN/OPERATOR 路由与操作权限
 
 - 优先级：P0
 - 前置依赖：T003
@@ -61,7 +61,7 @@
 - 风险：仅隐藏按钮不足以代替服务端鉴权，测试需覆盖直接访问 URL。
 - 完成状态：已完成（2026-09-04）。路由守卫会等待持久化 Token 通过 `/auth/me` 恢复，以服务端身份决定 ADMIN/OPERATOR 访问；未知角色清理会话并返回登录页，ADMIN-only 路由返回权限提示后回到打印机页，匿名访问保留 redirect。菜单与既有 ADMIN 操作按钮权限保持一致，退出由用户 Store 清理实时连接。权限决策矩阵测试、`npm.cmd test`、`npm.cmd run lint`、`npm.cmd run build` 均通过。
 
-### T005 领域常量与数据适配器
+### [x] T005 领域常量与数据适配器
 
 - 优先级：P0
 - 前置依赖：T001、T002
@@ -74,7 +74,7 @@
 - 风险：兼容层过宽会继续掩盖错误字段。
 - 完成状态：已完成（2026-09-04）。新增 PrinterVO/实时设备正式状态集合及任务状态映射，适配器统一状态、固件协议、Long ID、分页 `pages` 权威值、`folder`、`estTime` 秒、`filamentLength` 米和 `completedAt`；历史字段仅在边界兼容并移除。覆盖状态映射、ONLINE 防持久化、RRF 保留、分页和 DTO 参数化测试；`npm.cmd test`、`npm.cmd run lint`、`npm.cmd run build` 均通过。
 
-### T006 Mock 响应、错误和场景基础
+### [x] T006 Mock 响应、错误和场景基础
 
 - 优先级：P0
 - 前置依赖：T002、T005
@@ -87,7 +87,7 @@
 - 风险：清除旧字段后会暴露现有页面隐式依赖。
 - 完成状态：已完成（2026-09-04）。Mock 响应统一使用 `{code,message,data,timestamp}` 与标准分页，补齐 400/401/403/404/409/422/503 及业务错误场景；支持 `mock`/`desktop-mock` 开关和确定性的已初始化/未初始化种子；对外 DTO 移除密码、文件内部地址、旧字段和人为摘要，真实模式不拦截请求。Mock 契约测试、`npm.cmd test`（34/34）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T007 打印机列表与真实详情
+### [x] T007 打印机列表与真实详情
 
 - 优先级：P0
 - 前置依赖：T005、T006
@@ -100,7 +100,7 @@
 - 风险：实时状态与 REST 详情合并时可能覆盖新数据。
 - 完成状态：已完成（2026-09-04）。新增 `GET /api/v1/printers/{id}` 详情 API 与 Mock 路由，Device Store 缓存真实 PrinterVO 详情；打印机管理页和详情抽屉区分加载、失败和真实空态，移除列表摘要及零温度伪造，状态文案/颜色统一使用正式枚举，实时温度缺失时显示占位。`npm.cmd test`（34/34）、`npm.cmd run lint`、`npm.cmd run build` 均通过。
 
-### T008 打印机维护、扫描、位置与控制入口
+### [x] T008 打印机维护、扫描、位置与控制入口
 
 - 优先级：P0
 - 前置依赖：T004、T007
@@ -113,7 +113,7 @@
 - 风险：扫描环境和固件类型差异较大。
 - 完成状态：已完成（2026-09-04）。校正 ADMIN 新增/编辑/删除参数与返回，删除执行中设备时返回 409；扫描与批量添加补齐 `firmwareType`、`UNKNOWN` 初始状态和新增/更新/失败统计；位置及未分配入口保持现有 API 链路；移除无后端接口的重启按钮，统一暂停、恢复、取消、急停的合法状态矩阵，并同步 Mock 的 409/422 行为与 WebSocket 状态枚举。`npm.cmd test`（34/34）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T009 文件库基础能力
+### [x] T009 文件库基础能力
 
 - 优先级：P0
 - 前置依赖：T005、T006
@@ -126,7 +126,7 @@
 - 风险：目录与分页切换可能造成面包屑和查询状态不同步。
 - 完成状态：已完成（2026-09-04）。文件分页固定发送 `pageNum/pageSize/fileName/materialType/parentId`，Mock 与后端搜索字段、材质规范化一致；保留分页目录导航、单文件上传和新建目录，并补齐允许扩展名、父目录归属及目录名校验；文件长度按米展示，公开 DTO 不暴露内部存储字段。新增分页参数契约测试。`npm.cmd test`（35/35）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T010 文件删除与下载正确性
+### [x] T010 文件删除与下载正确性
 
 - 优先级：P0
 - 前置依赖：T002、T009
@@ -139,7 +139,7 @@
 - 风险：对象存储跨域错误与 API 错误来源不同。
 - 完成状态：已完成（2026-09-04）。目录删除入口已禁用且接口返回 422；单删对已关联任务返回 409；批量删除消费逐项成功/失败结果并保留失败项定位；下载预签名 URL 在 401/403/410 时最多重新签发一次，区分 CORS/网络异常；错误提示保留后端具体原因。新增预签名重试状态机测试。`npm.cmd test`（36/36）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T011 任务 Store、待派队列与活动任务
+### [x] T011 任务 Store、待派队列与活动任务
 
 - 优先级：P0
 - 前置依赖：T005、T006
@@ -152,7 +152,7 @@
 - 风险：多列表刷新和 WebSocket 增量更新可能产生重复记录。
 - 完成状态：已完成（2026-09-04）。新增 Pinia 任务 Store 管理待派队列、活动任务、详情缓存和活动分页；`/queue` 与 Mock 均严格只返回 QUEUED，活动任务通过 `/page` 聚合 ASSIGNED/UPLOADING/READY/PRINTING/PAUSED/RECONCILING；新增 `GET /api/v1/print-jobs/{id}` 详情 API、归属校验和 Mock 路由，JobQueue 增加真实活动列表与详情加载。新增活动状态过滤测试。`npm.cmd test`（37/37）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T012 单任务创建、手动派发与安全启动
+### [x] T012 单任务创建、手动派发与安全启动
 
 - 优先级：P0
 - 前置依赖：T004、T007、T011
@@ -165,7 +165,7 @@
 - 风险：指定同一 printerId 并发创建多份会出现部分成功。
 - 完成状态：已完成（2026-09-04）。标准 `POST /api/v1/print-jobs` 现返回 scalar Long ID；指定打印机创建后进入 ASSIGNED 并绑定设备，不指定则进入 QUEUED；FileLibrary 多份任务改为串行创建并准确提示部分成功。补齐活动列表中的安全确认/启动入口，Mock 对齐幂等键、设备占用、assign→confirm→start、取消、重试、重新排队和优先级状态矩阵，旧 `/create` 无新业务引用。`npm.cmd test`（37/37）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T013 P0 Mock 业务契约
+### [x] T013 P0 Mock 业务契约
 
 - 优先级：P0
 - 前置依赖：T006、T008、T010、T012
@@ -178,7 +178,7 @@
 - 风险：Mock 过度简化会形成第二套业务规则。
 - 完成状态：已完成（2026-09-04）。补齐 P0 Mock 打印机详情/控制、文件和任务主链路的路由契约校验；新增集中任务状态机，统一约束 QUEUED→ASSIGNED→UPLOADING→READY→PRINTING→终态，以及取消、重试、重排和急停恢复路径；补充状态机单测和真实 Mock 请求链路测试，未引入自动派单。`npm.cmd test`（40/40）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T014 WebSocket 协议与连接生命周期
+### [x] T014 WebSocket 协议与连接生命周期
 
 - 优先级：P0
 - 前置依赖：T002、T003、T005
@@ -191,7 +191,7 @@
 - 风险：浏览器不暴露协议级 Ping/Pong，需要以连接/事件超时策略替代。
 - 完成状态：已完成（2026-09-04）。WebSocket 客户端固定使用 `/ws/farm-status?token` 连接配置，移除应用层 ping/pong，改用连接不活跃超时监测并保留自动重连；实时 Store 校验 `version=1`、去重 `eventId`，每次连接成功重置 sequence 基线，未知版本和 sequence 断档均保留 REST 快照恢复路径。补充协议、Fake WebSocket 超时重连和手动关闭测试。`npm.cmd test`（42/42）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T015 WebSocket 快照、增量同步与陈旧态
+### [x] T015 WebSocket 快照、增量同步与陈旧态
 
 - 优先级：P0
 - 前置依赖：T011、T014
@@ -206,7 +206,7 @@
 
 ## 3. P1：批量业务与管理能力
 
-### T101 文件批量上传
+### [x] T101 文件批量上传
 
 - 优先级：P1
 - 前置依赖：T009、T013
@@ -219,7 +219,7 @@
 - 风险：大文件和并发上传内存占用。
 - 完成状态：已完成（2026-09-04）。文件库上传入口支持 TDesign 多文件选择，批量请求使用重复 `files` 字段和独立上传超时/AbortController；页面逐项展示成功/失败结果，仅保留 `retryable=true` 的失败项重试，部分成功会刷新当前目录但不会误报全成功。Mock 补齐 `/batch-upload` 的数量、总大小、类型校验与逐项结果。`npm.cmd test`（44/44）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T102 批量分配入口与无副作用预览
+### [x] T102 批量分配入口与无副作用预览
 
 - 优先级：P1
 - 前置依赖：T007、T009、T011、T013
