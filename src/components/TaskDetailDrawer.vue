@@ -13,6 +13,7 @@
           <t-progress :percentage="task.progress || 0" />
         </t-descriptions-item>
         <t-descriptions-item label="创建时间">{{ formatDateTime(task.createdAt) }}</t-descriptions-item>
+        <t-descriptions-item label="完成时间">{{ task.completedAt ? formatDateTime(task.completedAt) : '-' }}</t-descriptions-item>
         <t-descriptions-item label="更新时间">{{ formatDateTime(task.updatedAt) }}</t-descriptions-item>
         <t-descriptions-item v-if="task.errorReason" label="错误原因">
           <span class="text-red-600">{{ task.errorReason }}</span>
@@ -40,5 +41,5 @@ const statusLabels = {
 
 const statusLabel = status => statusLabels[status] || status || '未知'
 const statusTheme = status => ({ PRINTING: 'success', FAILED: 'danger', PAUSED: 'warning', RECONCILING: 'warning' }[status] || 'default')
-const priorityLabel = priority => ({ 0: '普通', 1: '优先', 2: '加急' }[priority] || String(priority ?? '普通'))
+const priorityLabel = priority => ({ 0: '普通', 50: '优先', 100: '加急' }[priority] || String(priority ?? '普通'))
 </script>

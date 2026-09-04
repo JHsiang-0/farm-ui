@@ -769,11 +769,26 @@ const handleJobPage = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const params = getBody(config)
   let records = mockState.jobs
+  const filesById = new Map(mockState.files.map(file => [String(file.id), file]))
   if (session.role !== 'ADMIN') {
     records = records.filter(item => String(item.userId) === String(session.userId))
   }
   if (params.status) records = records.filter(item => item.status === params.status)
-  if (params.printerId) records = records.filter(item => String(item.printerId) === String(params.printerId))
+  if (params.printerId !== undefined && params.printerId !== null && params.printerId !== '') {
+    records = records.filter(item => String(item.printerId) === String(params.printerId))
+  }
+  if (params.keyword) {
+    const keyword = String(params.keyword).trim().toLowerCase()
+    records = records.filter(item => (
+      String(item.id).toLowerCase().includes(keyword) ||
+      String(filesById.get(String(item.fileId))?.originalName || '').toLowerCase().includes(keyword)
+    ))
+  }
+  if (params.startTime && params.endTime && new Date(params.startTime) > new Date(params.endTime)) {
+    fail(400, 400, '开始时间不能晚于结束时间')
+  }
+  if (params.startTime) records = records.filter(item => new Date(item.createdAt) >= new Date(params.startTime))
+  if (params.endTime) records = records.filter(item => new Date(item.createdAt) <= new Date(params.endTime))
   return createMockPage(records.map(toPublicJob), params)
 }
 

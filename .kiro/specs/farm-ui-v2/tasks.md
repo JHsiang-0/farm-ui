@@ -308,7 +308,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：历史与活动列表边界需按状态统一定义。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。任务历史已接入状态、打印机 ID、文件名/任务 ID 关键词、创建时间和分页筛选；结束时间统一显示 `completedAt`，详情打开后通过 Job Store 查询真实任务。失败任务仅显示重试入口，`ASSIGNED/READY` 仅显示重新排队，`QUEUED` 仅显示优先级调整，Mock 同步补齐时间/关键词过滤和参数校验。新增筛选、completedAt、恢复动作合法性和时间范围测试。`npm.cmd test`（60/60）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T109 P1 Mock 与端到端回归
 

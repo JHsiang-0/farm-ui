@@ -29,6 +29,13 @@
             </t-select>
           </div>
 
+          <t-input v-model="queryForm.keyword" placeholder="搜索文件名或任务ID" clearable style="width: 190px" />
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-700 whitespace-nowrap">打印机 ID</span>
+            <t-input v-model="queryForm.printerId" placeholder="请输入设备 ID" clearable style="width: 140px" />
+          </div>
+
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">时间范围</span>
             <t-date-range-picker
@@ -111,11 +118,11 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="结束时间" min-width="160" prop="endedAt" align="center">
+        <TdTableColumn label="结束时间" min-width="160" prop="completedAt" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><timer /></span>
-              <span>{{ scope.row.endedAt ? formatDateTime(scope.row.endedAt) : '-' }}</span>
+              <span>{{ scope.row.completedAt ? formatDateTime(scope.row.completedAt) : '-' }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -204,10 +211,12 @@ import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
+import { useJobStore } from '@/stores/jobStore'
 
 defineOptions({ name: 'JobHistory' })
 
 const loading = ref(false)
+const jobStore = useJobStore()
 const tableData = ref([])
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
@@ -217,6 +226,11 @@ const openTaskDetail = job => {
   selectedJob.value = job
   sessionStorage.setItem(JOB_HISTORY_DETAIL_CONTEXT_KEY, String(job.id))
   detailDrawerVisible.value = true
+  jobStore.fetchJobDetail(job.id).then(detail => {
+    if (selectedJob.value && String(selectedJob.value.id) === String(job.id)) selectedJob.value = detail
+  }).catch(() => {
+    // 保留列表中的真实任务数据，详情请求错误由请求层统一提示。
+  })
 }
 
 const handleTaskDetailVisibility = visible => {
@@ -239,7 +253,8 @@ const restoreTaskDetailContext = () => {
 const queryForm = reactive({
   status: '',
   dateRange: [],
-  printerId: ''
+  printerId: '',
+  keyword: ''
 })
 
 // 分页信息
@@ -353,6 +368,10 @@ const buildParams = () => {
     params.status = queryForm.status
   }
 
+  if (queryForm.keyword.trim()) {
+    params.keyword = queryForm.keyword.trim()
+  }
+
   if (queryForm.dateRange && queryForm.dateRange.length === 2) {
     params.startTime = queryForm.dateRange[0]
     params.endTime = queryForm.dateRange[1]
@@ -376,6 +395,7 @@ const handleReset = () => {
   queryForm.status = ''
   queryForm.dateRange = []
   queryForm.printerId = ''
+  queryForm.keyword = ''
   pagination.pageNum = 1
   fetchData()
 }
