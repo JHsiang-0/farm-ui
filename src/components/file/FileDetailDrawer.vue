@@ -6,7 +6,12 @@
     class="file-detail-drawer"
     @update:visible="handleVisibleChange"
   >
-    <div v-if="file" class="p-4">
+    <div v-if="loading" class="p-4">
+      <t-skeleton :loading="true" theme="article" />
+    </div>
+
+    <div v-else-if="file" class="p-4">
+      <t-alert v-if="error" theme="error" :title="error" :closable="false" class="mb-4" />
       <!-- 顶部区域 -->
       <div class="flex items-start gap-4 mb-6">
         <!-- 缩略图 -->
@@ -138,6 +143,36 @@
             </t-descriptions-item>
           </t-descriptions>
         </t-card>
+
+        <!-- 关联打印任务 -->
+        <t-card class="border-gray-200">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <Printer />
+              <span class="text-sm font-semibold text-gray-900">关联任务</span>
+            </div>
+          </template>
+          <t-alert v-if="jobsError" theme="error" :title="jobsError" :closable="false" />
+          <t-skeleton v-else-if="jobsLoading" :loading="true" theme="paragraph" />
+          <t-table
+            v-else-if="jobs.length > 0"
+            :data="jobs"
+            :columns="jobColumns"
+            row-key="id"
+            size="small"
+            bordered
+          >
+            <template #status="slotProps">
+              <t-tag :theme="getJobStatusTagType(slotProps.row.status)" size="small">
+                {{ slotProps.row.status || '-' }}
+              </t-tag>
+            </template>
+            <template #createdAt="slotProps">
+              {{ formatDateTime(slotProps.row.createdAt) }}
+            </template>
+          </t-table>
+          <t-empty v-else description="暂无关联任务" />
+        </t-card>
       </div>
     </div>
 
@@ -169,11 +204,37 @@ const props = defineProps({
   file: {
     type: Object,
     default: () => ({})
+  },
+  loading: {
+    type: Boolean,
+    default: false
+  },
+  error: {
+    type: String,
+    default: ''
+  },
+  jobs: {
+    type: Array,
+    default: () => []
+  },
+  jobsLoading: {
+    type: Boolean,
+    default: false
+  },
+  jobsError: {
+    type: String,
+    default: ''
   }
 })
 
 // Emits
 const emit = defineEmits(['update:modelValue', 'download', 'closed', 'print'])
+
+const jobColumns = [
+  { colKey: 'id', title: '任务 ID', width: 80 },
+  { colKey: 'status', title: '状态', width: 100 },
+  { colKey: 'createdAt', title: '创建时间', ellipsis: true }
+]
 
 // Computed
 const handleVisibleChange = (value) => {
@@ -228,5 +289,18 @@ const getMaterialTagType = (materialType) => {
     尼龙: 'danger'
   }
   return types[materialType] || 'default'
+}
+
+const getJobStatusTagType = (status) => {
+  const types = {
+    COMPLETED: 'success',
+    PRINTING: 'primary',
+    QUEUED: 'warning',
+    ASSIGNED: 'warning',
+    FAILED: 'danger',
+    CANCELLED: 'default',
+    PAUSED: 'warning'
+  }
+  return types[status] || 'default'
 }
 </script>

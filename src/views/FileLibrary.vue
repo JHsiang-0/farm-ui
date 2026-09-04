@@ -391,6 +391,11 @@
     <FileDetailDrawer
       v-model="detailDrawerVisible"
       :file="selectedFile"
+      :loading="detailLoading"
+      :error="detailError"
+      :jobs="detailJobs"
+      :jobs-loading="detailJobsLoading"
+      :jobs-error="detailJobsError"
       @download="handleFileDownload"
       @closed="closeFileDetail"
       @print="handlePrintFromDetail"
@@ -518,6 +523,7 @@ import {
   createFolder,
   getFilePreview,
   getThumbnailUrl,
+  getFileJobs,
   batchUploadFiles
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
@@ -567,6 +573,11 @@ const jobForm = reactive({
 // 文件详情抽屉状态
 const detailDrawerVisible = ref(false)
 const selectedFile = ref(null)
+const detailLoading = ref(false)
+const detailError = ref('')
+const detailJobs = ref([])
+const detailJobsLoading = ref(false)
+const detailJobsError = ref('')
 const FILE_DETAIL_CONTEXT_KEY = 'farm-ui:file-detail'
 // 批量操作模式
 const isBatchMode = ref(false)
@@ -1027,22 +1038,49 @@ const getSuccessRateClass = (successRate) => {
 const openFileDetail = (file, event) => {
   if (event) event.stopPropagation()
   selectedFile.value = { ...file, thumbnailUrl: null }
+  detailLoading.value = true
+  detailError.value = ''
+  detailJobs.value = []
+  detailJobsLoading.value = true
+  detailJobsError.value = ''
   sessionStorage.setItem(FILE_DETAIL_CONTEXT_KEY, String(file.id))
   detailDrawerVisible.value = true
 
-  Promise.all([
+  Promise.allSettled([
     getFilePreview(file.id),
     getThumbnailUrl(file.id).catch(() => ({ data: null }))
-  ]).then(([preview, thumbnail]) => {
+  ]).then(([previewResult, thumbnailResult]) => {
     if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
-      selectedFile.value = {
-        ...selectedFile.value,
-        ...preview.data,
-        thumbnailUrl: thumbnail.data || null
+      if (previewResult.status === 'fulfilled') {
+        selectedFile.value = {
+          ...selectedFile.value,
+          ...previewResult.value.data
+        }
+      } else {
+        detailError.value = '文件预览信息加载失败，请稍后重试'
+      }
+      if (thumbnailResult.status === 'fulfilled') {
+        selectedFile.value.thumbnailUrl = thumbnailResult.value.data || null
       }
     }
+  }).finally(() => {
+    if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
+      detailLoading.value = false
+    }
+  })
+
+  getFileJobs(file.id, { pageNum: 1, pageSize: 10 }).then(response => {
+    if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
+      detailJobs.value = response.data?.records || []
+    }
   }).catch(() => {
-    // 列表数据仍可用于展示，详情接口错误由请求层统一提示。
+    if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
+      detailJobsError.value = '关联任务加载失败，请稍后重试'
+    }
+  }).finally(() => {
+    if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
+      detailJobsLoading.value = false
+    }
   })
 }
 
@@ -1052,6 +1090,8 @@ const openFileDetail = (file, event) => {
 const closeFileDetail = () => {
   detailDrawerVisible.value = false
   selectedFile.value = null
+  detailLoading.value = false
+  detailJobsLoading.value = false
   sessionStorage.removeItem(FILE_DETAIL_CONTEXT_KEY)
 }
 

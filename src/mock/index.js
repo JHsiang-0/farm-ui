@@ -555,6 +555,71 @@ const getFileForSession = (config, id) => {
   return file
 }
 
+const handleFilePreview = config => {
+  const id = getPath(config.url).split('/').at(-2)
+  const file = getFileForSession(config, id)
+  if (file.folder) fail(422, 422, '文件夹不支持预览')
+
+  return {
+    ...toPublicFile(file),
+    previewSupported: /\.(gcode|g|3mf|stl)$/i.test(file.originalName || '')
+  }
+}
+
+const handleThumbnail = config => {
+  const id = getPath(config.url).split('/').at(-2)
+  const file = getFileForSession(config, id)
+  if (file.folder) fail(422, 422, '文件夹没有缩略图')
+
+  // Mock 不伪造切片服务生成的图片，null 用于覆盖前端缺失缩略图占位态。
+  return null
+}
+
+const handleFileJobs = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  getFileForSession(config, id)
+  const records = mockState.jobs
+    .filter(job => String(job.fileId) === String(id))
+    .filter(job => canReadResource(session, job.userId))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+
+  return createMockPage(records.map(toPublicJob), getParams(config))
+}
+
+const handleFileTree = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const files = mockState.files
+    .filter(file => canReadResource(session, file.userId))
+    .map(file => ({
+      id: file.id,
+      parentId: file.parentId ?? null,
+      folder: Boolean(file.folder),
+      name: file.originalName,
+      fileSize: file.fileSize || 0,
+      materialType: file.materialType || null,
+      createdAt: file.createdAt
+    }))
+  const childrenByParent = new Map()
+  files.forEach(file => {
+    const parentKey = file.parentId == null ? 'root' : String(file.parentId)
+    const children = childrenByParent.get(parentKey) || []
+    children.push(file)
+    childrenByParent.set(parentKey, children)
+  })
+  const sortNodes = nodes => nodes.sort((left, right) => (
+    Number(right.folder) - Number(left.folder) ||
+    new Date(right.createdAt) - new Date(left.createdAt) ||
+    String(left.name).localeCompare(String(right.name), 'zh-CN')
+  ))
+  const build = parentKey => sortNodes(childrenByParent.get(parentKey) || []).map(node => ({
+    ...node,
+    children: build(String(node.id))
+  }))
+
+  return build('root')
+}
+
 const handleDownload = config => {
   const id = getPath(config.url).split('/').at(-2)
   const file = getFileForSession(config, id)
@@ -1103,6 +1168,10 @@ const route = async config => {
   if (key === 'POST /api/v1/print-files/upload') return handleUpload(config)
   if (key === 'POST /api/v1/print-files/batch-upload') return handleBatchUpload(config)
   if (key === 'POST /api/v1/print-files/folder/create') return handleCreateFolder(config)
+  if (key === 'GET /api/v1/print-files/tree') return handleFileTree(config)
+  if (/^GET \/api\/v1\/print-files\/[^/]+\/preview$/.test(key)) return handleFilePreview(config)
+  if (/^GET \/api\/v1\/print-files\/[^/]+\/thumbnail$/.test(key)) return handleThumbnail(config)
+  if (/^GET \/api\/v1\/print-files\/[^/]+\/jobs$/.test(key)) return handleFileJobs(config)
   if (key === 'DELETE /api/v1/print-files/batch') return handleBatchDeleteFiles(config)
   if (key === 'GET /api/v1/print-jobs/queue') return handleJobQueue(config)
   if (key === 'POST /api/v1/print-jobs/page') return handleJobPage(config)

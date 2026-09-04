@@ -3,7 +3,8 @@ import {
   mapResponseData,
   normalizePrintFilePageParams,
   normalizePageResponse,
-  normalizePrintFile
+  normalizePrintFile,
+  normalizePrintJob
 } from '@/utils/dataAdapters'
 import { REQUEST_TIMEOUT } from '@/utils/constants'
 import { shouldRefreshPresignedUrl } from '@/utils/fileDownload'
@@ -61,6 +62,29 @@ export function getThumbnailUrl(id, expires = 60) {
     method: 'get',
     params: { expires }
   }).then(response => mapResponseData(response, data => typeof data === 'string' ? data : null))
+}
+
+/** 获取文件关联的打印任务。 */
+export function getFileJobs(id, params = {}) {
+  return request({
+    url: `/api/v1/print-files/${id}/jobs`,
+    method: 'get',
+    params: {
+      pageNum: params.pageNum || 1,
+      pageSize: params.pageSize || 10
+    }
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizePrintJob)
+  ))
+}
+
+/** 获取当前用户可见的文件树，不包含存储内部字段。 */
+export function getFileTree() {
+  return request({
+    url: '/api/v1/print-files/tree',
+    method: 'get'
+  }).then(response => mapResponseData(response, data => Array.isArray(data) ? data : []))
 }
 
 /**
