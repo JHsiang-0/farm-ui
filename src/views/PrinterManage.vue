@@ -8,32 +8,29 @@
       @closed="clearPrinterDetailContext"
     />
 
-    <!-- 操作栏 -->
-    <t-card class="shadow-none rounded-lg bg-white m-6">
-      <div class="flex flex-wrap justify-between items-center gap-3">
-        <div class="flex items-center gap-3">
-          <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
-            刷新
-          </t-button>
-          <div v-if="activeStatusFilter" class="flex items-center gap-2">
-            <t-tag :theme="activeStatusFilter.theme" variant="light">
-              当前筛选：{{ activeStatusFilter.label }}
-            </t-tag>
-            <t-button variant="text" size="small" @click="clearStatusFilter">显示全部</t-button>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
-            <span><aim /></span>
-            扫描局域网设备
-          </t-button>
-          <t-button v-if="isAdmin" theme="success" @click="handleAdd">
-            <span><plus /></span>
-            新增打印机
-          </t-button>
-        </div>
+    <!-- 页面标题与操作栏 -->
+    <div class="printer-manage-toolbar m-6 mb-4">
+      <h1 class="printer-manage-toolbar__title app-route-title">打印机管理</h1>
+      <div v-if="activeStatusFilter" class="printer-manage-toolbar__filter">
+        <t-tag :theme="activeStatusFilter.theme" variant="light">
+          当前筛选：{{ activeStatusFilter.label }}
+        </t-tag>
+        <t-button variant="text" size="small" @click="clearStatusFilter">显示全部</t-button>
       </div>
-    </t-card>
+      <div class="printer-manage-toolbar__actions">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
+          刷新
+        </t-button>
+        <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
+          <span><aim /></span>
+          扫描局域网设备
+        </t-button>
+        <t-button v-if="isAdmin" theme="success" @click="handleAdd">
+          <span><plus /></span>
+          新增打印机
+        </t-button>
+      </div>
+    </div>
 
     <!-- 数据表格 -->
     <t-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mx-6 mb-6">
@@ -819,3 +816,47 @@ onMounted(() => {
   fetchData()
 })
 </script>
+
+<style scoped>
+.printer-manage-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  min-height: 2.025rem;
+}
+
+.printer-manage-toolbar__title {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--app-text-primary);
+}
+
+.printer-manage-toolbar__actions,
+.printer-manage-toolbar__filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.printer-manage-toolbar__actions {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .printer-manage-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .printer-manage-toolbar__actions,
+  .printer-manage-toolbar__filter {
+    width: 100%;
+  }
+
+  .printer-manage-toolbar__actions {
+    margin-left: 0;
+  }
+}
+</style>

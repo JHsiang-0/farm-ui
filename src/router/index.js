@@ -44,7 +44,7 @@ const router = createRouter({
           path: 'printers',
           name: 'printers',
           component: () => import('../views/PrinterManage.vue'),
-          meta: { title: '打印机管理' }
+          meta: { title: '打印机管理', hideBreadcrumb: true }
         },
         {
           path: 'users',
