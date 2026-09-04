@@ -16,10 +16,9 @@
     </header>
 
     <section class="stat-grid" aria-label="设备和任务统计">
-      <t-card
+      <div
         v-for="stat in statCards"
         :key="stat.key"
-        bordered
         class="stat-card"
         :class="[`stat-card--${stat.tone}`, { 'stat-card--interactive': stat.to }]"
         :role="stat.to ? 'button' : undefined"
@@ -29,16 +28,18 @@
         @keydown.enter.prevent="stat.to && goTo(stat.to)"
         @keydown.space.prevent="stat.to && goTo(stat.to)"
       >
-        <div class="stat-card__topline">
-          <span class="stat-card__label">{{ stat.label }}</span>
-          <span class="stat-card__icon"><component :is="stat.icon" :size="22" /></span>
+        <div class="stat-card__body">
+          <div class="stat-card__topline">
+            <span class="stat-card__label">{{ stat.label }}</span>
+            <span class="stat-card__icon"><component :is="stat.icon" :size="22" /></span>
+          </div>
+          <div class="stat-card__value">{{ stat.value }}</div>
+          <div class="stat-card__footer">
+            <span>{{ stat.description }}</span>
+            <ChevronRightIcon :size="16" />
+          </div>
         </div>
-        <div class="stat-card__value">{{ stat.value }}</div>
-        <div class="stat-card__footer">
-          <span>{{ stat.description }}</span>
-          <ChevronRightIcon :size="16" />
-        </div>
-      </t-card>
+      </div>
     </section>
 
     <section class="dashboard-grid">
@@ -47,7 +48,6 @@
           <div class="card-heading">
             <div>
               <h2>打印任务趋势</h2>
-              <p>最近 7 天创建的打印任务数量</p>
             </div>
             <t-tag theme="primary" variant="light">任务统计</t-tag>
           </div>
@@ -86,7 +86,6 @@
           <div class="card-heading">
             <div>
               <h2>设备状态</h2>
-              <p>当前打印机运行状态分布</p>
             </div>
           </div>
         </template>
@@ -117,7 +116,6 @@
           <div class="card-heading">
             <div>
               <h2>最近打印任务</h2>
-              <p>查看最新任务和当前处理状态</p>
             </div>
             <t-button variant="text" @click="goTo('/tasks/history')">查看全部</t-button>
           </div>
@@ -145,7 +143,6 @@
           <div class="card-heading">
             <div>
               <h2>设备提醒</h2>
-              <p>需要关注的设备状态</p>
             </div>
             <t-button variant="text" @click="goTo('/printers')">设备列表</t-button>
           </div>
@@ -409,21 +406,34 @@ onMounted(fetchOverview)
   margin-bottom: 1rem;
 }
 
+.card-heading {
+  width: 100%;
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.card-heading > div:first-child {
+  min-width: 0;
+}
+
+.card-heading > :last-child {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.card-heading :deep(.t-tag),
+.card-heading :deep(.t-button) {
+  font-size: 1.125rem;
+}
+
 .dashboard-heading h1,
 .card-heading h2,
-.card-heading p,
 .dashboard-heading p {
   margin: 0;
 }
 
 .dashboard-heading h1 {
   color: var(--app-text-primary);
-}
-
-.card-heading p {
-  margin-top: 0.25rem !important;
-  color: var(--app-text-secondary);
-  font-size: 0.8125rem;
 }
 
 .dashboard-heading__actions {
@@ -446,7 +456,13 @@ onMounted(fetchOverview)
 }
 
 .stat-card {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--app-border);
   min-width: 0;
+  overflow: hidden;
 }
 
 .stat-card--interactive {
@@ -464,8 +480,31 @@ onMounted(fetchOverview)
   outline-offset: 2px;
 }
 
-.stat-card :deep(.t-card__body) {
-  padding: 1.25rem;
+.stat-card__body {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.875rem;
+  overflow: hidden;
+}
+
+.stat-card__topline,
+.stat-card__footer {
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.stat-card__label,
+.stat-card__footer > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stat-card__label {
@@ -477,17 +516,20 @@ onMounted(fetchOverview)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   color: var(--app-primary);
   background: #e8f3ff;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .stat-card__value {
-  margin: 0.75rem 0 0.625rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.5rem 0 0.375rem;
   color: var(--app-text-primary);
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -536,7 +578,7 @@ onMounted(fetchOverview)
 .dashboard-grid,
 .bottom-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -547,18 +589,19 @@ onMounted(fetchOverview)
 }
 
 .dashboard-card :deep(.t-card__header) {
-  padding: 1.25rem 1.5rem 0;
+  padding: 1rem 1.25rem 0.5rem;
   border-bottom: 0;
 }
 
 .dashboard-card :deep(.t-card__body) {
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 0.75rem 1.25rem 1.25rem;
 }
 
 .card-heading h2 {
   color: var(--app-text-primary);
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .trend-chart {
