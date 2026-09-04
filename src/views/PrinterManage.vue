@@ -842,7 +842,6 @@ onMounted(() => {
 
 .printer-manage-card :deep(.t-card__footer) {
   flex: 0 0 auto;
-  border-top: 1px solid var(--app-border);
 }
 
 .printer-manage-card__table {
