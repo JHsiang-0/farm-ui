@@ -70,12 +70,44 @@ export const ERROR_MESSAGE_MAP = Object.freeze({
 })
 
 // ============================================
-// 打印机状态 - 10个高层聚合标准状态（纯大写）
+// 打印机状态
 // ============================================
+
+/**
+ * PrinterVO 与实时设备状态共用的正式状态集合。
+ * ONLINE 不是后端持久化状态；连接状态应由实时连接生命周期单独表达。
+ * @constant {Object}
+ */
+export const PRINTER_STATUS = Object.freeze({
+  OFFLINE: 'OFFLINE',
+  IDLE: 'IDLE',
+  PREPARING: 'PREPARING',
+  PRINTING: 'PRINTING',
+  PAUSED: 'PAUSED',
+  ERROR: 'ERROR',
+  UNKNOWN: 'UNKNOWN'
+})
+
+export const PRINTER_STATUS_VALUES = Object.freeze(Object.values(PRINTER_STATUS))
+
+/**
+ * 正式打印机状态映射。页面、Mock 和实时状态适配应优先使用此映射。
+ * @constant {Object}
+ */
+export const PRINTER_STATUS_MAP = Object.freeze({
+  [PRINTER_STATUS.OFFLINE]: { label: '离线', type: 'default', level: 'unknown', icon: 'QuestionFilled' },
+  [PRINTER_STATUS.IDLE]: { label: '待机', type: 'default', level: 'normal', icon: 'Coffee' },
+  [PRINTER_STATUS.PREPARING]: { label: '准备中', type: 'warning', level: 'warning', icon: 'Loading' },
+  [PRINTER_STATUS.PRINTING]: { label: '打印中', type: 'primary', level: 'normal', icon: 'VideoPlay' },
+  [PRINTER_STATUS.PAUSED]: { label: '已暂停', type: 'warning', level: 'warning', icon: 'VideoPause' },
+  [PRINTER_STATUS.ERROR]: { label: '故障', type: 'danger', level: 'fatal', icon: 'CircleCloseFilled' },
+  [PRINTER_STATUS.UNKNOWN]: { label: '未知', type: 'default', level: 'unknown', icon: 'QuestionFilled' }
+})
 
 /**
  * 打印机设备状态常量 - 后端 WebSocket 推送的标准状态
  * @constant {Object}
+ * @deprecated 旧版页面使用的聚合状态，仅用于迁移期间兼容；新的 REST/WS/Mock 数据使用 PRINTER_STATUS。
  */
 export const PRINTER_STATE = Object.freeze({
   // ⚪ 未知/离线状态 (Unknown)
@@ -158,18 +190,37 @@ export const PROGRESS_STATUS_MAP = {
  * 打印任务状态常量
  * @constant {Object}
  */
-export const JOB_STATUS = {
-  UPLOADING: 'UPLOADING',
+export const JOB_STATUS = Object.freeze({
   QUEUED: 'QUEUED',
   ASSIGNED: 'ASSIGNED',
+  UPLOADING: 'UPLOADING',
   READY: 'READY',
-  PAUSED: 'PAUSED',
   PRINTING: 'PRINTING',
+  PAUSED: 'PAUSED',
+  RECONCILING: 'RECONCILING',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
-  RECONCILING: 'RECONCILING',
   CANCELLED: 'CANCELLED'
-}
+})
+
+export const JOB_STATUS_VALUES = Object.freeze(Object.values(JOB_STATUS))
+
+/**
+ * 正式任务状态映射，供任务页面和实时任务事件共享文案与颜色。
+ * @constant {Object}
+ */
+export const JOB_STATUS_MAP = Object.freeze({
+  [JOB_STATUS.QUEUED]: { label: '排队中', type: 'default' },
+  [JOB_STATUS.ASSIGNED]: { label: '已派发', type: 'primary' },
+  [JOB_STATUS.UPLOADING]: { label: '上传中', type: 'warning' },
+  [JOB_STATUS.READY]: { label: '待启动', type: 'success' },
+  [JOB_STATUS.PRINTING]: { label: '打印中', type: 'primary' },
+  [JOB_STATUS.PAUSED]: { label: '已暂停', type: 'warning' },
+  [JOB_STATUS.RECONCILING]: { label: '核对中', type: 'warning' },
+  [JOB_STATUS.COMPLETED]: { label: '已完成', type: 'success' },
+  [JOB_STATUS.FAILED]: { label: '失败', type: 'danger' },
+  [JOB_STATUS.CANCELLED]: { label: '已取消', type: 'default' }
+})
 
 /**
  * 任务优先级常量
@@ -265,4 +316,4 @@ export const NOZZLE_SIZES = ['0.4', '0.6', '0.8']
  * 支持的固件类型
  * @constant {Array<string>}
  */
-export const FIRMWARE_TYPES = ['Klipper', 'Marlin']
+export const FIRMWARE_TYPES = Object.freeze(['KLIPPER', 'RRF'])

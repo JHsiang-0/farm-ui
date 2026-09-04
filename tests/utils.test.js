@@ -2,8 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   normalizeId,
+  normalizeFirmwareType,
+  normalizeJobStatus,
   normalizePageParams,
   normalizePageResponse,
+  normalizePrinter,
+  normalizePrinterStatus,
   normalizePrintJob,
   normalizePrintFile
 } from '../src/utils/dataAdapters.js'
@@ -13,6 +17,15 @@ import {
   toRealtimeAlert,
   toRealtimeSnapshotEntries
 } from '../src/utils/realtimeAlerts.js'
+import {
+  FIRMWARE_TYPES,
+  JOB_STATUS,
+  JOB_STATUS_MAP,
+  JOB_STATUS_VALUES,
+  PRINTER_STATUS,
+  PRINTER_STATUS_MAP,
+  PRINTER_STATUS_VALUES
+} from '../src/utils/constants.js'
 
 test('normalizes pagination params and legacy pagination responses', () => {
   assert.deepEqual(normalizePageParams({ pageNum: 3, pageSize: 200 }), {
@@ -24,6 +37,43 @@ test('normalizes pagination params and legacy pagination responses', () => {
   assert.equal(page.pageNum, 2)
   assert.equal(page.pageSize, 20)
   assert.equal(page.pages, 3)
+
+  const authoritativePage = normalizePageResponse({
+    pageNum: 1,
+    pageSize: 10,
+    total: 21,
+    pages: 7,
+    records: []
+  })
+  assert.equal(authoritativePage.pages, 7)
+})
+
+test('uses one canonical printer status set and never persists ONLINE', () => {
+  assert.deepEqual(PRINTER_STATUS_VALUES, [
+    'OFFLINE',
+    'IDLE',
+    'PREPARING',
+    'PRINTING',
+    'PAUSED',
+    'ERROR',
+    'UNKNOWN'
+  ])
+  assert.deepEqual(Object.keys(PRINTER_STATUS_MAP), PRINTER_STATUS_VALUES)
+  assert.equal(normalizePrinterStatus('preparing'), PRINTER_STATUS.PREPARING)
+  assert.equal(normalizePrinterStatus('online'), PRINTER_STATUS.UNKNOWN)
+  assert.equal(normalizePrinter({ id: 1, status: 'ONLINE' }).status, PRINTER_STATUS.UNKNOWN)
+})
+
+test('normalizes firmware and job status aliases without changing RRF', () => {
+  assert.deepEqual(FIRMWARE_TYPES, ['KLIPPER', 'RRF'])
+  assert.equal(normalizeFirmwareType('Klipper'), 'KLIPPER')
+  assert.equal(normalizeFirmwareType('RRF'), 'RRF')
+  assert.equal(normalizeFirmwareType('Marlin'), null)
+
+  assert.deepEqual(Object.keys(JOB_STATUS_MAP), JOB_STATUS_VALUES)
+  assert.equal(normalizeJobStatus('PENDING'), JOB_STATUS.QUEUED)
+  assert.equal(normalizeJobStatus('CANCELED'), JOB_STATUS.CANCELLED)
+  assert.equal(normalizeJobStatus('PREPARING'), JOB_STATUS.UPLOADING)
 })
 
 test('keeps long identifiers as strings and clamps job progress', () => {
@@ -48,6 +98,29 @@ test('normalizes the unified folder flag and removes the legacy field', () => {
     folder: true
   })
   assert.equal(normalizePrintFile({ id: 10, folder: false }).folder, false)
+  assert.deepEqual(normalizePrintFile({
+    id: 11,
+    folder: false,
+    estimatedSeconds: '90',
+    filamentLength: '1.25'
+  }), {
+    id: '11',
+    folder: false,
+    estTime: 90,
+    filamentLength: 1.25
+  })
+})
+
+test('maps legacy endedAt to completedAt and keeps job units canonical', () => {
+  assert.deepEqual(normalizePrintJob({
+    id: 12,
+    status: 'COMPLETED',
+    endedAt: '2026-09-04T10:00:00'
+  }), {
+    id: '12',
+    status: 'COMPLETED',
+    completedAt: '2026-09-04T10:00:00'
+  })
 })
 
 test('creates deduplicable alerts for offline printers and failed jobs', () => {

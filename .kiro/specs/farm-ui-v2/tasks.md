@@ -72,7 +72,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：兼容层过宽会继续掩盖错误字段。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。新增 PrinterVO/实时设备正式状态集合及任务状态映射，适配器统一状态、固件协议、Long ID、分页 `pages` 权威值、`folder`、`estTime` 秒、`filamentLength` 米和 `completedAt`；历史字段仅在边界兼容并移除。覆盖状态映射、ONLINE 防持久化、RRF 保留、分页和 DTO 参数化测试；`npm.cmd test`、`npm.cmd run lint`、`npm.cmd run build` 均通过。
 
 ### T006 Mock 响应、错误和场景基础
 

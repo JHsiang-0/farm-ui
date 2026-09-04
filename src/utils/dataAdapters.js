@@ -1,10 +1,29 @@
-import { PAGINATION } from './constants.js'
+import {
+  FIRMWARE_TYPES,
+  JOB_STATUS,
+  JOB_STATUS_VALUES,
+  PAGINATION,
+  PRINTER_STATUS,
+  PRINTER_STATUS_VALUES
+} from './constants.js'
 
 const identity = value => value
 
 const toPositiveInteger = (value, fallback) => {
   const number = Number(value)
   return Number.isInteger(number) && number > 0 ? number : fallback
+}
+
+const toNonNegativeInteger = value => {
+  const number = Number(value)
+  return Number.isInteger(number) && number >= 0 ? number : null
+}
+
+const normalizeEnum = (value, values, aliases = {}) => {
+  if (value === undefined || value === null || value === '') return null
+  const normalized = String(value).trim().toUpperCase()
+  const canonical = aliases[normalized] || normalized
+  return values.includes(canonical) ? canonical : null
 }
 
 /**
@@ -25,6 +44,7 @@ export function normalizePageParams(params = {}) {
 
 /**
  * 统一分页响应，兼容后端迁移前的 current/size 字段。
+ * 服务端提供 pages 时必须以服务端值为准，计算值只用于历史响应兜底。
  */
 export function normalizePageResponse(data, normalizeRecord = identity) {
   const source = data && typeof data === 'object' ? data : {}
@@ -39,13 +59,14 @@ export function normalizePageResponse(data, normalizeRecord = identity) {
   const pageSize = Math.min(requestedPageSize, PAGINATION.MAX_PAGE_SIZE)
   const total = Math.max(Number(source.total) || 0, 0)
   const records = Array.isArray(source.records) ? source.records : []
+  const serverPages = toNonNegativeInteger(source.pages)
 
   return {
     records: records.map(normalizeRecord),
     total,
     pageNum,
     pageSize,
-    pages: Math.ceil(total / pageSize)
+    pages: serverPages ?? Math.ceil(total / pageSize)
   }
 }
 
@@ -81,8 +102,54 @@ const normalizeIdFields = (record, fields) => {
   return normalized
 }
 
+/**
+ * 规范化 PrinterVO/实时设备状态。
+ * 历史聚合状态仅在适配边界转换；ONLINE 明确降级为 UNKNOWN，避免进入持久化领域。
+ */
+export function normalizePrinterStatus(value) {
+  return normalizeEnum(value, PRINTER_STATUS_VALUES, {
+    ONLINE: PRINTER_STATUS.UNKNOWN,
+    STANDBY: PRINTER_STATUS.IDLE,
+    STARTING: PRINTER_STATUS.PREPARING,
+    FAULT: PRINTER_STATUS.ERROR,
+    SYS_ERROR: PRINTER_STATUS.ERROR,
+    PRINT_ERROR: PRINTER_STATUS.ERROR
+  }) || PRINTER_STATUS.UNKNOWN
+}
+
+/**
+ * 规范化固件协议。RRF 必须保留为 RRF，不得用默认值覆盖。
+ */
+export function normalizeFirmwareType(value) {
+  return normalizeEnum(value, FIRMWARE_TYPES, {
+    KLIPPER: 'KLIPPER',
+    MARLIN: null
+  })
+}
+
+/**
+ * 规范化 PrintJobVO 状态，兼容历史 PENDING/CANCELED 命名。
+ */
+export function normalizeJobStatus(value) {
+  return normalizeEnum(value, JOB_STATUS_VALUES, {
+    PENDING: JOB_STATUS.QUEUED,
+    CANCELED: JOB_STATUS.CANCELLED,
+    PREPARING: JOB_STATUS.UPLOADING
+  })
+}
+
 export function normalizePrinter(record) {
-  return normalizeIdFields(record, ['id', 'currentJobId'])
+  const normalized = normalizeIdFields(record, ['id', 'currentJobId'])
+  if (!normalized || typeof normalized !== 'object') return normalized
+
+  if (Object.prototype.hasOwnProperty.call(normalized, 'status')) {
+    normalized.status = normalizePrinterStatus(normalized.status)
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'firmwareType')) {
+    normalized.firmwareType = normalizeFirmwareType(normalized.firmwareType)
+  }
+
+  return normalized
 }
 
 export function normalizePrintFile(record) {
@@ -93,6 +160,25 @@ export function normalizePrintFile(record) {
   } else if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'isFolder')) {
     normalized.folder = normalized.isFolder === true || normalized.isFolder === 1
     delete normalized.isFolder
+  }
+
+  if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'estimatedSeconds')) {
+    if (!Object.prototype.hasOwnProperty.call(normalized, 'estTime')) {
+      normalized.estTime = normalized.estimatedSeconds
+    }
+    delete normalized.estimatedSeconds
+  }
+
+  if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'estTime')) {
+    const estTime = Number(normalized.estTime)
+    normalized.estTime = Number.isFinite(estTime) && estTime >= 0 ? estTime : 0
+  }
+
+  if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'filamentLength')) {
+    const filamentLength = Number(normalized.filamentLength)
+    normalized.filamentLength = Number.isFinite(filamentLength) && filamentLength >= 0
+      ? filamentLength
+      : 0
   }
 
   if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'successRate')) {
@@ -121,6 +207,19 @@ export function normalizePrintJob(record) {
     normalized.progress = Number.isFinite(progress)
       ? Math.min(Math.max(progress, 0), 100)
       : 0
+  }
+
+  if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'status')) {
+    const status = normalizeJobStatus(normalized.status)
+    if (status) normalized.status = status
+    else delete normalized.status
+  }
+
+  if (normalized && Object.prototype.hasOwnProperty.call(normalized, 'endedAt')) {
+    if (!Object.prototype.hasOwnProperty.call(normalized, 'completedAt')) {
+      normalized.completedAt = normalized.endedAt
+    }
+    delete normalized.endedAt
   }
 
   return normalized
