@@ -189,7 +189,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：浏览器不暴露协议级 Ping/Pong，需要以连接/事件超时策略替代。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。WebSocket 客户端固定使用 `/ws/farm-status?token` 连接配置，移除应用层 ping/pong，改用连接不活跃超时监测并保留自动重连；实时 Store 校验 `version=1`、去重 `eventId`，每次连接成功重置 sequence 基线，未知版本和 sequence 断档均保留 REST 快照恢复路径。补充协议、Fake WebSocket 超时重连和手动关闭测试。`npm.cmd test`（42/42）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T015 WebSocket 快照、增量同步与陈旧态
 

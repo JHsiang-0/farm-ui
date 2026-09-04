@@ -105,6 +105,26 @@ test('reconnects after an unexpected close with bounded backoff', async () => {
   client.destroy()
 })
 
+test('does not send application heartbeat and reconnects after inactivity timeout', async () => {
+  FakeWebSocket.instances.length = 0
+  const client = new WebSocketClient('ws://farm.test/ws', {
+    autoConnect: false,
+    reconnectDelay: 5,
+    maxReconnectDelay: 5,
+    maxReconnectAttempts: 1,
+    inactivityTimeout: 20
+  })
+  await client.connect()
+  const firstSocket = FakeWebSocket.instances[0]
+
+  await new Promise(resolve => setTimeout(resolve, 140))
+  assert.deepEqual(firstSocket.sent, [])
+  assert.equal(FakeWebSocket.instances.length, 2)
+  assert.equal(client.getState(), 'OPEN')
+
+  client.destroy()
+})
+
 test('does not reconnect after an intentional close', async () => {
   FakeWebSocket.instances.length = 0
   const client = new WebSocketClient('ws://farm.test/ws', {

@@ -10,10 +10,16 @@ import { createMockWebSocketStream } from '@/mock/websocket'
 import { getPrinterList } from '@/api/printer'
 import { acceptRealtimeSequence } from '@/utils/realtimeSequence'
 import {
+  isSupportedRealtimeVersion,
+  rememberRealtimeEvent
+} from '@/utils/realtimeProtocol'
+import {
   getRealtimeAlertClearId,
   toRealtimeAlert,
   toRealtimeSnapshotEntries
 } from '@/utils/realtimeAlerts'
+
+const MAX_SEEN_EVENT_IDS = 1000
 
 /**
  * WebSocket 实时状态管理 Store
@@ -39,6 +45,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
   const mockConnectionState = ref('CLOSED')
   const lastSequence = ref(null)
   const lastEventId = ref(null)
+  const seenEventIds = new Set()
   const isRealtimeStale = ref(false)
   const isRecovering = ref(false)
   let recoveryPromise = null
@@ -95,8 +102,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     maxReconnectDelay: 60000,
     reconnectBackoffMultiplier: 2,
     maxReconnectAttempts: null, // 无限重连
-    heartbeatInterval: 30000,   // 30秒心跳
-    heartbeatTimeout: 90000,    // 90秒超时（增加容错空间）
+    inactivityTimeout: 90000,   // 90秒无连接/业务消息活动后重连
     autoConnect: false          // 手动连接
   }
 
@@ -262,7 +268,18 @@ export const useRealtimeStore = defineStore('realtime', () => {
   }
 
   function handleWebSocketMessage(message) {
-    const { type, printerId, data, timestamp, sequence, eventId } = message || {}
+    const { version, type, printerId, data, timestamp, sequence, eventId } = message || {}
+
+    if (!isSupportedRealtimeVersion(version)) {
+      isRealtimeStale.value = true
+      recoverRealtimeSnapshot()
+      return
+    }
+
+    if (rememberRealtimeEvent(seenEventIds, eventId, MAX_SEEN_EVENT_IDS)) return
+    if (eventId !== undefined && eventId !== null && String(eventId)) {
+      lastEventId.value = eventId
+    }
 
     const sequenceResult = acceptRealtimeSequence(lastSequence.value, sequence)
     if (!sequenceResult.accepted) return
@@ -273,8 +290,6 @@ export const useRealtimeStore = defineStore('realtime', () => {
       }
       lastSequence.value = sequenceResult.nextSequence
     }
-    if (eventId) lastEventId.value = eventId
-
     const alert = toRealtimeAlert(message)
     if (alert) {
       const nextAlerts = alerts.value.filter(item => item.id !== alert.id)
@@ -360,8 +375,10 @@ export const useRealtimeStore = defineStore('realtime', () => {
   function connectWs() {
     if (isMockEnabled) {
       if (mockStream) return
+      lastSequence.value = null
       mockConnectionState.value = 'OPEN'
       mockStream = createMockWebSocketStream({
+        onOpen: resetSequenceBaseline,
         onMessage: handleWebSocketMessage,
         onClose: () => { mockConnectionState.value = 'CLOSED' }
       })
@@ -390,8 +407,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
       maxReconnectDelay: WS_CONFIG.maxReconnectDelay,
       reconnectBackoffMultiplier: WS_CONFIG.reconnectBackoffMultiplier,
       maxReconnectAttempts: WS_CONFIG.maxReconnectAttempts,
-      heartbeatInterval: WS_CONFIG.heartbeatInterval,
-      heartbeatTimeout: WS_CONFIG.heartbeatTimeout,
+      inactivityTimeout: WS_CONFIG.inactivityTimeout,
       autoConnect: false
     }))
 
@@ -400,6 +416,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
     // 订阅连接事件
     wsClient.on('open', () => {
+      resetSequenceBaseline()
       console.log('[RealtimeStore] WebSocket 连接已建立')
     })
 
@@ -411,8 +428,8 @@ export const useRealtimeStore = defineStore('realtime', () => {
       console.error('[RealtimeStore] WebSocket 错误:', error)
     })
 
-    wsClient.on('heartbeatTimeout', () => {
-      console.warn('[RealtimeStore] WebSocket 心跳超时')
+    wsClient.on('inactivityTimeout', () => {
+      console.warn('[RealtimeStore] WebSocket 连接不活跃，准备重连')
     })
 
     wsClient.connect().catch(error => {
@@ -447,9 +464,14 @@ export const useRealtimeStore = defineStore('realtime', () => {
     alerts.value = []
     lastSequence.value = null
     lastEventId.value = null
+    seenEventIds.clear()
     isRealtimeStale.value = false
     isRecovering.value = false
     recoveryPromise = null
+  }
+
+  function resetSequenceBaseline() {
+    lastSequence.value = null
   }
 
   /**
