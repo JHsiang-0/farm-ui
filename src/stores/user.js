@@ -53,10 +53,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 登录动作
-  const userLogin = async (loginForm, options = {}) => {
-    const res = await login(loginForm)
-    const data = res.data
+  const applyLoginResult = (data, options = {}) => {
     const role = String(data?.role || '').toUpperCase()
 
     if (!data?.token || !['ADMIN', 'OPERATOR'].includes(role)) {
@@ -69,6 +66,17 @@ export const useUserStore = defineStore('user', () => {
     token.value = String(data.token)
     userInfo.value = { ...data, role }
     persistSession(options.remember === true)
+  }
+
+  // 登录动作
+  const userLogin = async (loginForm, options = {}) => {
+    const res = await login(loginForm)
+    applyLoginResult(res.data, options)
+  }
+
+  // 首次管理员初始化接口已经返回登录结果，避免创建后再次发送一次密码登录请求。
+  const userLoginWithResult = (data, options = {}) => {
+    applyLoginResult(data, options)
   }
 
   const hasRole = roles => {
@@ -89,6 +97,7 @@ export const useUserStore = defineStore('user', () => {
     isAdmin,
     isOperator,
     userLogin,
+    userLoginWithResult,
     hasRole,
     logout
   }

@@ -183,6 +183,49 @@ const handleLogin = config => {
   }
 }
 
+const handleFirstAdminSetupStatus = () => ({
+  initialized: mockState.users.length > 0,
+  setupAvailable: mockState.users.length === 0
+})
+
+const handleFirstAdminSetup = config => {
+  if (mockState.users.length > 0) {
+    fail(409, 409, '系统已完成初始化，请登录后由管理员创建账号')
+  }
+
+  const body = getBody(config)
+  if (!body.username || !body.password || body.password !== body.confirmPassword) {
+    fail(400, 400, '用户名、密码和确认密码不能为空且必须一致')
+  }
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(body.password)) {
+    fail(400, 400, '密码必须为 6-20 位且包含大小写字母和数字')
+  }
+
+  const user = {
+    id: nextMockId('users'),
+    username: body.username,
+    password: body.password,
+    role: 'ADMIN',
+    email: body.email || null,
+    phone: body.phone || null,
+    enabled: true,
+    createdAt: now(),
+    updatedAt: now()
+  }
+  mockState.users.push(user)
+  const token = `mock-token-${user.id}`
+  mockState.sessions[token] = { userId: user.id, username: user.username, role: user.role }
+  return {
+    token,
+    expiresIn: 604800,
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+    email: user.email,
+    phone: user.phone
+  }
+}
+
 const handleRegister = config => {
   requireSession(config, ['ADMIN'])
   const body = getBody(config)
@@ -681,6 +724,8 @@ const route = async config => {
   const key = `${method} ${path}`
 
   if (key === 'POST /api/v1/auth/login') return handleLogin(config)
+  if (key === 'GET /api/v1/auth/setup/status') return handleFirstAdminSetupStatus()
+  if (key === 'POST /api/v1/auth/setup/admin') return handleFirstAdminSetup(config)
   if (key === 'POST /api/v1/auth/register') return handleRegister(config)
   if (key === 'GET /api/v1/auth/admin/users') return handleAdminUserPage(config)
   if (key === 'POST /api/v1/auth/admin/users') return handleAdminUserCreate(config)

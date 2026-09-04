@@ -375,6 +375,7 @@ const createSeedData = () => ({
     }
   ],
   nextIds: {
+    users: 3,
     file: 24,
     folder: 3,
     job: 1007,

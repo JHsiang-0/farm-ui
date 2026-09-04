@@ -27,6 +27,27 @@ export function login(data) {
 }
 
 /**
+ * 查询首次管理员初始化状态。
+ */
+export function getFirstAdminSetupStatus() {
+  return request({
+    url: '/api/v1/auth/setup/status',
+    method: 'get'
+  })
+}
+
+/**
+ * 创建 Local Edition 的首个管理员，成功后返回可直接使用的登录结果。
+ */
+export function setupFirstAdmin(data) {
+  return request({
+    url: '/api/v1/auth/setup/admin',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 用户注册
  * @param {Object} data - 注册参数
  * @param {string} data.username - 用户名

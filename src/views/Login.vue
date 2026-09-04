@@ -44,12 +44,12 @@
         <!-- 登录表单 -->
         <div class="form-wrapper animate-fade-in">
           <div class="form-header">
-            <h2 class="form-title">欢迎回来</h2>
-            <p class="form-desc">请登录您的账户以继续操作</p>
+            <h2 class="form-title">{{ setupMode ? '初始化管理员' : '欢迎回来' }}</h2>
+            <p class="form-desc">{{ setupMode ? '首次使用请创建本地管理员账户' : '请登录您的账户以继续操作' }}</p>
           </div>
 
           <t-form :data="loginForm"
-            :rules="rules"
+            :rules="setupMode ? setupRules : rules"
             ref="loginFormRef"
             size="large"
             class="login-form"
@@ -73,7 +73,16 @@
               />
             </t-form-item>
 
-            <div class="form-options">
+            <t-form-item v-if="setupMode" name="confirmPassword">
+              <t-input
+                v-model="loginForm.confirmPassword"
+                type="password"
+                placeholder="请再次输入密码"
+                :prefix-icon="renderIcon(Lock)"
+              />
+            </t-form-item>
+
+            <div v-if="!setupMode" class="form-options">
               <t-checkbox v-model="rememberMe">记住我</t-checkbox>
               <t-link theme="primary" :underline="false" class="forgot-link">
                 忘记密码？
@@ -86,8 +95,18 @@
               :loading="loading"
               @click="handleLogin"
             >
-              登 录
+              {{ setupMode ? '创建管理员并进入系统' : '登 录' }}
             </t-button>
+
+            <t-link
+              v-if="setupMode"
+              theme="primary"
+              :underline="false"
+              class="setup-switch"
+              @click="setupMode = false"
+            >
+              已有账号，返回登录
+            </t-link>
           </t-form>
 
         </div>
@@ -103,11 +122,12 @@
 
 <script setup>
 defineOptions({ name: 'LoginView' })
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
+import { getFirstAdminSetupStatus, setupFirstAdmin } from '@/api/user'
 import {
   UserIcon as User,
   LockOnIcon as Lock,
@@ -122,9 +142,10 @@ const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
+const setupMode = ref(false)
 const rememberMe = ref(false)
 
-const loginForm = reactive({ username: '', password: '' })
+const loginForm = reactive({ username: '', password: '', confirmPassword: '' })
 
 const loginFormRef = ref(null)
 
@@ -146,12 +167,41 @@ const rules = {
   ]
 }
 
+const setupRules = {
+  ...rules,
+  confirmPassword: [
+    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    {
+      validator: value => value === loginForm.password
+        ? true
+        : { result: false, message: '两次输入的密码不一致' },
+      trigger: 'blur'
+    }
+  ]
+}
+
+const loadSetupStatus = async () => {
+  try {
+    const response = await getFirstAdminSetupStatus()
+    setupMode.value = response?.data?.setupAvailable === true
+  } catch (error) {
+    // 初始化状态查询失败时仍保留普通登录入口，避免后端临时不可用导致页面无法使用。
+    console.warn('[Login] 首次管理员初始化状态查询失败', error)
+  }
+}
+
 const handleLogin = async () => {
   await loginFormRef.value.validate()
   loading.value = true
   try {
-    await userStore.userLogin(loginForm, { remember: rememberMe.value })
-    message.success('登录成功')
+    if (setupMode.value) {
+      const response = await setupFirstAdmin(loginForm)
+      userStore.userLoginWithResult(response.data, { remember: true })
+      message.success('管理员初始化成功')
+    } else {
+      await userStore.userLogin(loginForm, { remember: rememberMe.value })
+      message.success('登录成功')
+    }
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
       ? route.query.redirect
       : '/'
@@ -162,6 +212,8 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
+onMounted(loadSetupStatus)
 
 </script>
 
@@ -402,6 +454,12 @@ const handleLogin = async () => {
   font-size: 16px;
   font-weight: 600;
   border-radius: 6px;
+}
+
+.setup-switch {
+  display: block;
+  margin: 16px auto 0;
+  text-align: center;
 }
 
 .terms-item {
