@@ -15,10 +15,10 @@
       </template>
       </dashboard-header>
       <t-alert
-        v-if="store.wsConnectionState !== 'OPEN'"
+        v-if="store.wsConnectionState !== 'OPEN' || store.isRealtimeStale || store.isRecovering"
         class="mt-2"
         theme="warning"
-        title="实时连接未建立，当前看板数据可能不是最新"
+        :title="store.isRecovering ? '正在恢复实时状态' : (store.isRealtimeStale ? '实时状态可能已陈旧' : '实时连接未建立，当前看板数据可能不是最新')"
         :closable="false"
       />
       <div v-if="store.alerts.length" class="mt-2 space-y-2" aria-live="polite">

@@ -6,6 +6,7 @@ import { normalizeId } from '@/utils/dataAdapters'
 import { normalizeProgress } from '@/utils/formatters'
 import { isMockEnabled } from '@/mock'
 import { useUserStore } from '@/stores/user'
+import { useJobStore } from '@/stores/jobStore'
 import { createMockWebSocketStream } from '@/mock/websocket'
 import { getPrinterList } from '@/api/printer'
 import { acceptRealtimeSequence } from '@/utils/realtimeSequence'
@@ -50,6 +51,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
   const isRecovering = ref(false)
   let recoveryPromise = null
   const userStore = useUserStore()
+  const jobStore = useJobStore()
 
   // ============================================
   // RAF 批量更新机制
@@ -249,7 +251,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
    * @private
    */
   function normalizeRealtimeState(data = {}) {
-    const state = String(data.unifiedState || data.state || PRINTER_STATE.UNKNOWN).toUpperCase()
+    const state = String(data.status || data.unifiedState || data.state || PRINTER_STATE.UNKNOWN).toUpperCase()
     if (state === 'IDLE') return PRINTER_STATE.STANDBY
     if (state === 'ERROR') return PRINTER_STATE.FAULT
     if (state === 'OFFLINE') return PRINTER_STATE.UNKNOWN
@@ -265,6 +267,12 @@ export const useRealtimeStore = defineStore('realtime', () => {
       timestamp: timestamp || Date.now()
     })
     scheduleBatchUpdate()
+  }
+
+  function refreshJobState() {
+    jobStore.refresh().catch(error => {
+      console.error('[RealtimeStore] 任务状态恢复失败:', error)
+    })
   }
 
   function handleWebSocketMessage(message) {
@@ -317,6 +325,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     }
 
     if (type === 'JOB_STATUS') {
+      jobStore.applyRealtimeJobStatus(message)
       queueRealtimeUpdate(printerId, {
         currentJobId: data?.currentJobId ?? message.jobId,
         currentJobStatus: data?.status ?? data?.currentJobStatus,
@@ -357,6 +366,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
           }, printer.updatedAt || Date.now())
         })
         isRealtimeStale.value = false
+        refreshJobState()
       })
       .catch(error => {
         console.error('[RealtimeStore] WebSocket 断档恢复失败:', error)
@@ -378,7 +388,10 @@ export const useRealtimeStore = defineStore('realtime', () => {
       lastSequence.value = null
       mockConnectionState.value = 'OPEN'
       mockStream = createMockWebSocketStream({
-        onOpen: resetSequenceBaseline,
+        onOpen: () => {
+          resetSequenceBaseline()
+          refreshJobState()
+        },
         onMessage: handleWebSocketMessage,
         onClose: () => { mockConnectionState.value = 'CLOSED' }
       })
@@ -417,10 +430,12 @@ export const useRealtimeStore = defineStore('realtime', () => {
     // 订阅连接事件
     wsClient.on('open', () => {
       resetSequenceBaseline()
+      refreshJobState()
       console.log('[RealtimeStore] WebSocket 连接已建立')
     })
 
-    wsClient.on('close', () => {
+    wsClient.on('close', event => {
+      if (event?.code !== 1000) isRealtimeStale.value = true
       console.log('[RealtimeStore] WebSocket 连接已关闭')
     })
 

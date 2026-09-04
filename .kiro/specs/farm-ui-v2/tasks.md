@@ -202,7 +202,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：REST 和 WS 更新顺序可能导致旧值覆盖。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。SNAPSHOT 统一从正式 `PrinterVO.status` 读取，四类实时消息均按协议分流；`JOB_STATUS` 同步任务 Store，断线和 sequence 断档/未知版本时暴露 stale 与恢复中状态并以 REST 快照及任务列表收敛；Mock WebSocket 补齐 `version/eventId/sequence` 和真实任务状态。`npm.cmd test`（42/42）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ## 3. P1：批量业务与管理能力
 

@@ -1,6 +1,9 @@
-import { mockState } from './data'
+import { mockState } from './data.js'
+
+let mockEventSequence = 0
 
 const toState = status => ({
+  status,
   unifiedState: status,
   state: status
 })
@@ -18,7 +21,14 @@ const buildPrinterData = printer => ({
 
 export function createMockWebSocketStream({ onOpen, onMessage, onClose } = {}) {
   let tick = 0
-  const emit = message => onMessage?.({ timestamp: Date.now(), ...message })
+  let sequence = 0
+  const emit = message => onMessage?.({
+    version: '1',
+    eventId: `mock-event-${++mockEventSequence}`,
+    sequence: ++sequence,
+    timestamp: Date.now(),
+    ...message
+  })
 
   onOpen?.()
   emit({
@@ -38,10 +48,16 @@ export function createMockWebSocketStream({ onOpen, onMessage, onClose } = {}) {
 
     emit({ type: 'PRINTER_STATUS', printerId: printer.id, data: buildPrinterData(printer) })
     if (printer.currentJobId) {
+      const job = mockState.jobs.find(item => String(item.id) === String(printer.currentJobId))
       emit({
         type: 'JOB_STATUS',
         printerId: printer.id,
-        data: { currentJobId: printer.currentJobId, status: 'PRINTING', progress: Math.min(62 + tick, 99) }
+        data: {
+          jobId: job?.id,
+          currentJobId: printer.currentJobId,
+          status: job?.status || 'PRINTING',
+          progress: Math.min(62 + tick, 99)
+        }
       })
     }
   }, 5000)

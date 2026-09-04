@@ -43,6 +43,8 @@ export function usePrinterStore() {
     wsConnectionState,
     isWsConnected,
     alerts,
+    isRealtimeStale,
+    isRecovering,
   } = storeToRefs(realtime)
 
   // realTimeStatus 是 computed 返回的 Proxy，不是 ref，需要特殊处理
@@ -79,6 +81,8 @@ export function usePrinterStore() {
     wsConnectionState,
     isWsConnected,
     alerts,
+    isRealtimeStale,
+    isRecovering,
 
     // ============================================
     // Getters (来自 gridStore)

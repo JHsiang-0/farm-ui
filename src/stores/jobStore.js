@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getJobDetail, getJobPage, getJobQueue } from '@/api/job'
-import { ACTIVE_JOB_STATUSES, selectActiveJobs } from '@/utils/jobSelectors'
+import { ACTIVE_JOB_STATUSES, isActiveJob, selectActiveJobs } from '@/utils/jobSelectors'
 
 const sortByUpdatedAt = (left, right) => (
   new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0)
@@ -88,6 +88,34 @@ export const useJobStore = defineStore('job', () => {
     }
   }
 
+  function applyRealtimeJobStatus(message = {}) {
+    const data = message.data || {}
+    const id = data.jobId ?? message.jobId
+    const status = String(data.status || data.currentJobStatus || '').toUpperCase()
+    if (id === undefined || id === null || !status) return null
+
+    const key = String(id)
+    const existing = activeJobs.value.find(job => String(job.id) === key)
+      || jobDetails.value.get(key)
+      || {}
+    const updated = { ...existing, id, status }
+    if (data.progress !== undefined) updated.progress = data.progress
+    if (data.printerId !== undefined) updated.printerId = data.printerId
+    if (data.errorReason !== undefined) updated.errorReason = data.errorReason
+    if (data.completedAt !== undefined) updated.completedAt = data.completedAt
+    if (data.updatedAt !== undefined) updated.updatedAt = data.updatedAt
+    if (message.timestamp !== undefined && updated.updatedAt === undefined) updated.updatedAt = message.timestamp
+
+    const remaining = activeJobs.value.filter(job => String(job.id) !== key)
+    activeJobs.value = isActiveJob(updated)
+      ? selectActiveJobs([...remaining, updated]).sort(sortByUpdatedAt)
+      : remaining
+    if (jobDetails.value.has(key)) {
+      jobDetails.value = new Map(jobDetails.value).set(key, updated)
+    }
+    return updated
+  }
+
   async function refresh() {
     const results = await Promise.allSettled([fetchQueue(), fetchActive()])
     const rejected = results.find(result => result.status === 'rejected')
@@ -112,6 +140,7 @@ export const useJobStore = defineStore('job', () => {
     fetchQueue,
     fetchActive,
     fetchJobDetail,
+    applyRealtimeJobStatus,
     refresh
   }
 })
