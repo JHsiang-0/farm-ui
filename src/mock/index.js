@@ -1,8 +1,10 @@
-import { cloneMockData, mockState, nextMockId, resetMockState } from './data'
-import { createMockPage, createMockSuccess, MockRequestError } from './factory'
-import { resolveMockErrorScenario } from './scenarios'
-import { toPublicFile, toPublicJob, toPublicPrinter } from './server'
+import { cloneMockData, mockState, nextMockId, resetMockState } from './data.js'
+import { createMockPage, createMockSuccess, MockRequestError } from './factory.js'
+import { resolveMockErrorScenario } from './scenarios.js'
+import { toPublicFile, toPublicJob, toPublicPrinter } from './server.js'
+import { transitionMockJob } from './stateMachine.js'
 
+const runtimeEnv = import.meta.env || {}
 const MOCK_DELAY = 120
 const ATTENTION_PRINTER_STATUSES = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
 
@@ -64,6 +66,11 @@ const getParams = config => config.params || {}
 const findPrinter = id => mockState.printers.find(item => String(item.id) === String(id))
 const findFile = id => mockState.files.find(item => String(item.id) === String(id))
 const findJob = id => mockState.jobs.find(item => String(item.id) === String(id))
+
+const setJobStatus = (job, nextStatus) => {
+  job.status = transitionMockJob(job.status, nextStatus)
+  job.updatedAt = now()
+}
 
 const canReadResource = (session, userId) => session.role === 'ADMIN' || String(session.userId) === String(userId)
 
@@ -619,7 +626,7 @@ const handleCreateJob = config => {
     operatorId: null,
     priority,
     idempotencyKey: body.idempotencyKey || null,
-    status: printer ? 'ASSIGNED' : 'QUEUED',
+    status: 'QUEUED',
     progress: 0,
     startedAt: null,
     completedAt: null,
@@ -629,6 +636,7 @@ const handleCreateJob = config => {
   }
   mockState.jobs.push(job)
   if (printer) {
+    setJobStatus(job, 'ASSIGNED')
     printer.currentJobId = job.id
     printer.isSafeToPrint = false
     printer.updatedAt = createdAt
@@ -642,11 +650,10 @@ const handleCancelJob = config => {
   const job = findJob(id)
   if (!job) fail(404, 404, '任务不存在')
   if (!canReadResource(session, job.userId)) fail(403, 403, '无权操作此任务')
-  if (!['QUEUED', 'ASSIGNED', 'READY', 'PRINTING', 'PAUSED'].includes(job.status)) {
+  if (!['QUEUED', 'ASSIGNED', 'UPLOADING', 'READY', 'PRINTING', 'PAUSED'].includes(job.status)) {
     fail(422, 422, '当前任务状态不允许取消')
   }
-  job.status = 'CANCELLED'
-  job.updatedAt = now()
+  setJobStatus(job, 'CANCELLED')
   if (job.printerId) {
     const printer = findPrinter(job.printerId)
     if (printer?.currentJobId === job.id) {
@@ -669,8 +676,7 @@ const handleAssignJob = config => {
   if (job.status !== 'QUEUED') fail(422, 422, '当前任务状态不允许派发')
   if (printer.status !== 'IDLE' || printer.currentJobId) fail(409, 10002, '打印机当前忙碌')
   job.printerId = printer.id
-  job.status = 'ASSIGNED'
-  job.updatedAt = now()
+  setJobStatus(job, 'ASSIGNED')
   printer.currentJobId = job.id
   printer.status = 'IDLE'
   printer.updatedAt = now()
@@ -690,9 +696,9 @@ const handleRetryJob = config => {
     completedAt: null,
     errorReason: null,
     progress: 0,
-    status: 'QUEUED',
     updatedAt: now()
   })
+  setJobStatus(job, 'QUEUED')
   return null
 }
 
@@ -711,7 +717,8 @@ const handleRequeueJob = config => {
       printer.updatedAt = now()
     }
   }
-  Object.assign(job, { printerId: null, status: 'QUEUED', progress: 0, updatedAt: now() })
+  Object.assign(job, { printerId: null, progress: 0 })
+  setJobStatus(job, 'QUEUED')
   return null
 }
 
@@ -754,7 +761,9 @@ const handleStartJob = config => {
   if (!['START_PRINT', 'UPLOAD_ONLY'].includes(body.action || 'START_PRINT')) {
     fail(400, 400, '启动 action 不合法')
   }
-  job.status = body.action === 'UPLOAD_ONLY' ? 'READY' : 'PRINTING'
+  if (job.status === 'ASSIGNED') setJobStatus(job, 'UPLOADING')
+  if (job.status === 'UPLOADING') setJobStatus(job, 'READY')
+  if (body.action !== 'UPLOAD_ONLY') setJobStatus(job, 'PRINTING')
   job.operatorId = session.userId
   job.startedAt = job.startedAt || now()
   job.updatedAt = now()
@@ -777,20 +786,17 @@ const handlePrinterControl = config => {
 
   if (action === 'pause') {
     if (job.status !== 'PRINTING') fail(422, 422, '当前任务状态不允许暂停')
-    job.status = 'PAUSED'
-    job.updatedAt = now()
+    setJobStatus(job, 'PAUSED')
     printer.status = 'PAUSED'
   } else if (action === 'resume') {
     if (job.status !== 'PAUSED') fail(422, 422, '当前任务状态不允许恢复')
-    job.status = 'PRINTING'
-    job.updatedAt = now()
+    setJobStatus(job, 'PRINTING')
     printer.status = 'PRINTING'
   } else if (action === 'cancel') {
-    if (!['PRINTING', 'PAUSED', 'ASSIGNED', 'READY'].includes(job.status)) {
+    if (!['PRINTING', 'PAUSED', 'ASSIGNED', 'UPLOADING', 'READY'].includes(job.status)) {
       fail(422, 422, '当前任务状态不允许取消')
     }
-    job.status = 'CANCELLED'
-    job.updatedAt = now()
+    setJobStatus(job, 'CANCELLED')
     printer.status = 'IDLE'
     printer.currentJobId = null
     printer.isSafeToPrint = false
@@ -798,7 +804,7 @@ const handlePrinterControl = config => {
     if (!['PRINTING', 'PAUSED'].includes(job.status)) {
       fail(422, 422, '当前任务状态不允许急停')
     }
-    job.status = 'RECONCILING'
+    setJobStatus(job, 'RECONCILING')
     job.errorReason = '紧急停机，等待现场核对'
     job.updatedAt = now()
     printer.status = 'ERROR'
@@ -856,12 +862,12 @@ const route = async config => {
   fail(404, 404, `Mock 未实现接口：${method} ${path}`)
 }
 
-export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true' || [
+export const isMockEnabled = runtimeEnv.VITE_USE_MOCK === 'true' || [
   'mock',
   'desktop-mock'
-].includes(import.meta.env.MODE)
+].includes(runtimeEnv.MODE)
 
-if (import.meta.env.DEV) {
+if (runtimeEnv.DEV && typeof window !== 'undefined') {
   window.__FARM_RESET_MOCK__ = resetMockState
 }
 

@@ -176,7 +176,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：Mock 过度简化会形成第二套业务规则。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。补齐 P0 Mock 打印机详情/控制、文件和任务主链路的路由契约校验；新增集中任务状态机，统一约束 QUEUED→ASSIGNED→UPLOADING→READY→PRINTING→终态，以及取消、重试、重排和急停恢复路径；补充状态机单测和真实 Mock 请求链路测试，未引入自动派单。`npm.cmd test`（40/40）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T014 WebSocket 协议与连接生命周期
 
