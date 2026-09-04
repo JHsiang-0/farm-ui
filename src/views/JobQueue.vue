@@ -87,44 +87,46 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="调度操作" width="300" align="center" fixed="right">
+        <TdTableColumn label="调度操作" width="200" align="center" fixed="right">
           <template #default="scope">
-            <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
-            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" variant="text"
-              @click="handleRequeue(scope.row.id)">重新排队</t-button>
-            <t-button
-              size="small" theme="primary"
-              @click="openAssignDialog(scope.row)"
-              :disabled="scope.row.status !== 'QUEUED'"
-            >
-              <span><promotion /></span>
-              分配机器
-            </t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
-              size="small" theme="warning" variant="outline"
-              @click="handleConfirmSafe(scope.row)"
-            >
-              确认安全
-            </t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
-              size="small" theme="success"
-              @click="handleStart(scope.row)"
-            >
-              启动打印
-            </t-button>
-            <t-popconfirm content="确定要取消这个任务吗？"
-              theme="danger"
-              @confirm="handleCancel(scope.row.id)"
-              :disabled="!canCancel(scope.row.status)"
-            >
-              <template>
-                <t-button size="small" theme="danger" variant="outline" :disabled="!canCancel(scope.row.status)">
-                  <span><circle-close /></span>
-                </t-button>
-              </template>
-            </t-popconfirm>
+            <div class="task-action-group">
+              <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+              <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" variant="text"
+                @click="handleRequeue(scope.row.id)">重新排队</t-button>
+              <t-button
+                size="small" theme="primary"
+                @click="openAssignDialog(scope.row)"
+                :disabled="scope.row.status !== 'QUEUED'"
+              >
+                <span><promotion /></span>
+                分配机器
+              </t-button>
+              <t-button
+                v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
+                size="small" theme="warning" variant="outline"
+                @click="handleConfirmSafe(scope.row)"
+              >
+                确认安全
+              </t-button>
+              <t-button
+                v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
+                size="small" theme="success"
+                @click="handleStart(scope.row)"
+              >
+                启动打印
+              </t-button>
+              <t-popconfirm content="确定要取消这个任务吗？"
+                theme="danger"
+                @confirm="handleCancel(scope.row.id)"
+                :disabled="!canCancel(scope.row.status)"
+              >
+                <template>
+                  <t-button size="small" theme="danger" variant="outline" :disabled="!canCancel(scope.row.status)">
+                    <span><circle-close /></span>
+                  </t-button>
+                </template>
+              </t-popconfirm>
+            </div>
           </template>
         </TdTableColumn>
       </TdTable>
@@ -428,5 +430,13 @@ onMounted(() => {
 
 .animate-spin {
   animation: rotate 1s linear infinite;
+}
+
+.task-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  white-space: nowrap;
 }
 </style>

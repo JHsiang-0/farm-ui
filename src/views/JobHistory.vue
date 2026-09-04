@@ -127,33 +127,35 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="操作" width="300" align="center" fixed="right">
+        <TdTableColumn label="操作" width="200" align="center" fixed="right">
           <template #default="scope">
-            <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
-              @click="handleRetry(scope.row.id)">重试</t-button>
-            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
-              @click="handleRequeue(scope.row.id)">重新排队</t-button>
-            <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
-              @change="value => handlePriority(scope.row, value)" style="width: 88px">
-              <t-option label="普通" :value="0" />
-              <t-option label="优先" :value="50" />
-              <t-option label="加急" :value="100" />
-            </t-select>
-            <t-popconfirm content="确定要取消这个任务吗？"
-              theme="danger"
-              @confirm="handleCancel(scope.row.id)"
-              :disabled="!canCancel(scope.row.status)"
-            >
-              <template>
-                <t-button
-                  size="small" theme="danger" variant="outline"
-                  :disabled="!canCancel(scope.row.status)"
-                >
-                  <span><circle-close /></span>
-                  取消
-                </t-button>
-              </template>
-            </t-popconfirm>
+            <div class="history-action-group">
+              <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
+                @click="handleRetry(scope.row.id)">重试</t-button>
+              <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
+                @click="handleRequeue(scope.row.id)">重新排队</t-button>
+              <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
+                @change="value => handlePriority(scope.row, value)" style="width: 88px">
+                <t-option label="普通" :value="0" />
+                <t-option label="优先" :value="50" />
+                <t-option label="加急" :value="100" />
+              </t-select>
+              <t-popconfirm content="确定要取消这个任务吗？"
+                theme="danger"
+                @confirm="handleCancel(scope.row.id)"
+                :disabled="!canCancel(scope.row.status)"
+              >
+                <template>
+                  <t-button
+                    size="small" theme="danger" variant="outline"
+                    :disabled="!canCancel(scope.row.status)"
+                  >
+                    <span><circle-close /></span>
+                    取消
+                  </t-button>
+                </template>
+              </t-popconfirm>
+            </div>
           </template>
         </TdTableColumn>
       </TdTable>
@@ -412,3 +414,13 @@ const fetchData = async () => {
 // 初始化数据
 fetchData()
 </script>
+
+<style scoped>
+.history-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+</style>

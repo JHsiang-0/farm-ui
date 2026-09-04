@@ -128,9 +128,9 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="操作" width="280" align="center" fixed="right">
+        <TdTableColumn label="操作" width="200" align="center" fixed="right">
           <template #default="scope">
-            <div class="flex items-center justify-center gap-1">
+            <div class="printer-action-group flex items-center justify-center gap-1">
               <!-- 确认热床已清理按钮 -->
               <t-button
                 v-if="shouldShowSafeButton(scope.row)"
@@ -847,5 +847,10 @@ onMounted(() => {
 .printer-manage-card__table {
   flex: 1 1 0%;
   min-height: 0;
+}
+
+.printer-action-group {
+  gap: 0.25rem;
+  white-space: nowrap;
 }
 </style>
