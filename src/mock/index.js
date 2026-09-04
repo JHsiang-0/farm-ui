@@ -268,6 +268,14 @@ const handlePrinterPage = config => {
   return createMockPage(records.map(toPublicPrinter), params)
 }
 
+const handlePrinterDetail = config => {
+  requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').pop()
+  const printer = findPrinter(id)
+  if (!printer) fail(404, 404, '打印机不存在')
+  return toPublicPrinter(printer)
+}
+
 const handleAddPrinter = config => {
   requireSession(config, ['ADMIN'])
   const body = getBody(config)
@@ -663,6 +671,7 @@ const route = async config => {
   if (/^(GET|PUT) \/api\/v1\/auth\/[^/]+\/profile$/.test(key)) return handleProfile(config)
   if (/^POST \/api\/v1\/auth\/[^/]+\/change-password$/.test(key)) return handleChangePassword(config)
   if (key === 'GET /api/v1/printers/page') return handlePrinterPage(config)
+  if (/^GET \/api\/v1\/printers\/[^/]+$/.test(key)) return handlePrinterDetail(config)
   if (key === 'POST /api/v1/printers/add') return handleAddPrinter(config)
   if (key === 'PUT /api/v1/printers/update') return handleUpdatePrinter(config)
   if (key === 'GET /api/v1/printers/scan') return handleScanPrinters(config)

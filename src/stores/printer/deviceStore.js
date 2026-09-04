@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { getPrinterList, batchUpdatePositions, updatePrinter } from '@/api/printer'
+import { getPrinterDetail, getPrinterList, batchUpdatePositions, updatePrinter } from '@/api/printer'
 import { GRID_CONFIG } from '@/utils/constants'
 
 /**
@@ -20,6 +20,12 @@ export const useDeviceStore = defineStore('device', () => {
 
   /** 数据版本号 */
   const version = ref(0)
+
+  /** 按 ID 缓存后端返回的 PrinterVO 详情 */
+  const detailsById = ref(new Map())
+
+  /** 详情请求状态 */
+  const detailLoading = ref(false)
 
   // ============================================
   // Getters (Computed)
@@ -110,6 +116,25 @@ export const useDeviceStore = defineStore('device', () => {
   }
 
   /**
+   * 获取真实打印机详情并缓存，失败时不以列表行或伪造温度替代。
+   */
+  async function fetchDeviceDetail(deviceId) {
+    detailLoading.value = true
+    try {
+      const response = await getPrinterDetail(deviceId)
+      const detail = response?.data || null
+      if (detail) {
+        const nextDetails = new Map(detailsById.value)
+        nextDetails.set(String(detail.id), detail)
+        detailsById.value = nextDetails
+      }
+      return detail
+    } finally {
+      detailLoading.value = false
+    }
+  }
+
+  /**
    * 批量更新设备位置
    */
   async function updatePositions(payload) {
@@ -153,6 +178,8 @@ export const useDeviceStore = defineStore('device', () => {
     rawDeviceList,
     loading,
     version,
+    detailsById,
+    detailLoading,
 
     // Getters
     deviceById,
@@ -161,6 +188,7 @@ export const useDeviceStore = defineStore('device', () => {
 
     // Actions
     fetchDeviceData,
+    fetchDeviceDetail,
     updatePositions,
     updateDevice,
     removeDeviceFromBoard,

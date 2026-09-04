@@ -5,6 +5,8 @@
       v-model="detailDrawerVisible"
       :device="selectedDevice"
       :real-time-data="selectedDeviceRealTimeData"
+      :detail-loading="detailLoading"
+      :detail-error="detailError"
       @closed="clearPrinterDetailContext"
     />
 
@@ -115,13 +117,7 @@
           <template #default="scope">
             <div class="text-center">
               <span v-if="scope.row.currentJobId" class="text-sm">
-                <span class="block truncate" :title="scope.row.currentJobFileName || `任务 #${scope.row.currentJobId}`">
-                  {{ scope.row.currentJobFileName || `任务 #${scope.row.currentJobId}` }}
-                </span>
                 <span class="text-xs text-gray-500">任务 #{{ scope.row.currentJobId }}</span>
-                <t-tag size="small" :theme="getJobStatusType(scope.row.currentJobStatus || scope.row.status)" class="ml-1">
-                  {{ getJobStatusLabel(scope.row.currentJobStatus || scope.row.status) }}
-                </t-tag>
               </span>
               <span v-else class="text-gray-400 text-sm">无</span>
             </div>
@@ -411,6 +407,9 @@ import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
+import { useDeviceStore } from '@/stores/printer/deviceStore'
+import { useRealtimeStore } from '@/stores/printer/realtimeStore'
+import { PRINTER_STATUS_MAP } from '@/utils/constants'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
@@ -422,6 +421,8 @@ const loading = ref(false)
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const deviceStore = useDeviceStore()
+const realtimeStore = useRealtimeStore()
 const isAdmin = computed(() => userStore.isAdmin)
 const tableData = ref([])
 const total = ref(0)
@@ -446,6 +447,8 @@ const activeStatusFilter = computed(() => statusFilterConfig[activeStatusFilterK
 const detailDrawerVisible = ref(false)
 const selectedDevice = ref(null)
 const selectedDeviceRealTimeData = ref(null)
+const detailLoading = ref(false)
+const detailError = ref('')
 const PRINTER_DETAIL_CONTEXT_KEY = 'farm-ui:printer-detail'
 
 // ===== 表单与弹窗状态 =====
@@ -493,64 +496,24 @@ const scanStatsText = computed(() => {
 
 // 获取状态对应颜色
 const getStatusColor = (status) => {
-  const map = {
-    'PRINTING': '#1d4ed8',
-    'IDLE': '#059669',
-    'ERROR': '#dc2626',
-    'OFFLINE': '#6b7280'
+  const themeColors = {
+    primary: '#1d4ed8',
+    default: '#6b7280',
+    warning: '#d97706',
+    danger: '#dc2626',
+    success: '#059669'
   }
-  return map[status?.toUpperCase()] || '#6b7280'
+  const config = PRINTER_STATUS_MAP[String(status || '').toUpperCase()]
+  return themeColors[config?.type] || themeColors.default
 }
 
 // 获取状态标签类型
 const getStatusType = (status) => {
-  if (!status) return 'default'
-  const map = {
-    'PRINTING': 'primary',
-    'IDLE': 'success',
-    'ERROR': 'danger',
-    'OFFLINE': 'default'
-  }
-  return map[status.toUpperCase()] || 'default'
+  return PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.type || 'default'
 }
 
 const getStatusLabel = (status) => {
-  const map = {
-    OFFLINE: '离线',
-    IDLE: '待机',
-    PREPARING: '准备中',
-    PRINTING: '打印中',
-    PAUSED: '已暂停',
-    ERROR: '错误',
-    UNKNOWN: '未知'
-  }
-  return map[String(status || '').toUpperCase()] || '未知'
-}
-
-// 获取任务状态标签类型
-const getJobStatusType = (status) => {
-  const map = {
-    'QUEUED': 'primary',
-    'ASSIGNED': 'warning',
-    'PRINTING': 'success',
-    'PAUSED': 'warning',
-    'COMPLETED': 'default',
-    'FAILED': 'danger'
-  }
-  return map[status] || 'default'
-}
-
-const getJobStatusLabel = (status) => {
-  const map = {
-    QUEUED: '排队中',
-    ASSIGNED: '已分配',
-    PRINTING: '打印中',
-    PAUSED: '已暂停',
-    COMPLETED: '已完成',
-    FAILED: '失败',
-    CANCELLED: '已取消'
-  }
-  return map[String(status || '').toUpperCase()] || '未知'
+  return PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.label || '未知'
 }
 
 // 判断是否应该显示"确认清理"按钮
@@ -630,19 +593,27 @@ const handleStartJob = async (printer) => {
 const handleRowClick = (row) => {
   selectedDevice.value = row
   sessionStorage.setItem(PRINTER_DETAIL_CONTEXT_KEY, String(row.id))
-  // 为设备添加实时数据（这里可以根据实际情况获取真实数据）
-  selectedDeviceRealTimeData.value = {
-    state: row.currentJobStatus === 'ASSIGNED' ? 'ASSIGNED' : (row.status || 'IDLE'),
-    currentJobId: row.currentJobId,
-    currentJobFileName: row.currentJobFileName,
-    toolTemperature: 0,
-    bedTemperature: 0,
-    printDuration: 0,
-    filamentUsed: 0,
-    progress: 0,
-    systemMessage: ''
-  }
+  selectedDeviceRealTimeData.value = realtimeStore.getDeviceRealTimeStatus(row.id)
+  detailError.value = ''
   detailDrawerVisible.value = true
+  loadPrinterDetail(row.id)
+}
+
+const loadPrinterDetail = async deviceId => {
+  detailLoading.value = true
+  detailError.value = ''
+  try {
+    const detail = await deviceStore.fetchDeviceDetail(deviceId)
+    if (String(selectedDevice.value?.id) === String(deviceId) && detail) {
+      selectedDevice.value = detail
+    }
+  } catch (error) {
+    if (String(selectedDevice.value?.id) === String(deviceId)) {
+      detailError.value = error?.message || '打印机详情加载失败，请重试'
+    }
+  } finally {
+    if (String(selectedDevice.value?.id) === String(deviceId)) detailLoading.value = false
+  }
 }
 
 const clearPrinterDetailContext = () => {
@@ -650,6 +621,8 @@ const clearPrinterDetailContext = () => {
   sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
   selectedDevice.value = null
   selectedDeviceRealTimeData.value = null
+  detailLoading.value = false
+  detailError.value = ''
 }
 
 const restorePrinterDetailContext = () => {

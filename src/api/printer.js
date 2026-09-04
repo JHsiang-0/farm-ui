@@ -16,7 +16,7 @@ import {
  * @param {Object} params - 查询参数
  * @param {number} [params.pageNum=1] - 页码
  * @param {number} [params.pageSize=10] - 每页条数
- * @param {string} [params.status] - 设备状态（PRINTING/IDLE/ATTENTION）
+ * @param {string} [params.status] - 设备状态（OFFLINE/IDLE/PREPARING/PRINTING/PAUSED/ERROR/UNKNOWN）
  * @returns {Promise<{code: number, message: string, data: {records: Array<Printer>, total: number, pageNum: number, pageSize: number}}>} 分页结果
  */
 export function getPrinterList(params = {}) {
@@ -28,6 +28,18 @@ export function getPrinterList(params = {}) {
     response,
     data => normalizePageResponse(data, normalizePrinter)
   ))
+}
+
+/**
+ * 查询单个打印机的真实详情。
+ * @param {number|string} id - 打印机 ID
+ * @returns {Promise<{code: number, message: string, data: Printer}>} 打印机详情
+ */
+export function getPrinterDetail(id) {
+  return request({
+    url: `/api/v1/printers/${id}`,
+    method: 'get'
+  }).then(normalizePrinterResponse)
 }
 
 /**
@@ -202,8 +214,8 @@ export function confirmSafe(printerId) {
  * @property {string} machineNumber - 机器编号（如 A-01）
  * @property {string} ipAddress - IP地址
  * @property {string} macAddress - MAC地址
- * @property {string} firmwareType - 固件类型（Klipper/Marlin）
- * @property {string} status - 设备状态（ONLINE/OFFLINE/PRINTING/ERROR/IDLE）
+ * @property {string} firmwareType - 固件类型（KLIPPER/RRF）
+ * @property {string} status - 设备状态（OFFLINE/IDLE/PREPARING/PRINTING/PAUSED/ERROR/UNKNOWN）
  * @property {number} [currentJobId] - 当前任务ID
  * @property {string} [currentMaterial] - 当前耗材类型
  * @property {string} [nozzleSize] - 喷头尺寸

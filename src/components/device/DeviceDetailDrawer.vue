@@ -13,13 +13,18 @@
         @update:visible="handleVisibleChange">
 
         <!-- 内容区域 - 使用流式内边距 -->
-        <div v-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
+        <div v-if="detailLoading" class="flex min-h-48 items-center justify-center">
+            <t-loading text="正在加载打印机详情..." />
+        </div>
+
+        <t-empty v-else-if="detailError" type="fail" description="打印机详情加载失败，请关闭后重试" />
+
+        <div v-else-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
             <!-- 实时状态概览卡片 -->
             <div class="p-fluid-md rounded-lg bg-gray-100 border" :class="[
-                currentStateClass === 'fault' || currentStateClass === 'sys_error' ? 'bg-red-50 border-red-300' : '',
-                currentStateClass === 'print_error' || currentStateClass === 'starting' || currentStateClass === 'paused' ? 'bg-yellow-50 border-yellow-300' : '',
-                currentStateClass === 'printing' ? 'bg-gray-100 border-gray-500' : '',
-                currentStateClass === 'completed' ? 'bg-green-50 border-green-300' : ''
+                currentStateClass === 'error' ? 'bg-red-50 border-red-300' : '',
+                currentStateClass === 'preparing' || currentStateClass === 'paused' ? 'bg-yellow-50 border-yellow-300' : '',
+                currentStateClass === 'printing' ? 'bg-gray-100 border-gray-500' : ''
             ]">
                 <!-- 状态标签和进度 -->
                 <div class="flex items-center justify-between gap-3">
@@ -298,7 +303,8 @@ import {
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconBed from '../icons/IconBed.vue'
 import IconSpool from '../icons/IconSpool.vue'
-import { PRINTER_STATE, PRINTER_STATE_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
+import { PRINTER_STATUS, PRINTER_STATUS_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
+import { normalizePrinterStatus } from '@/utils/dataAdapters'
 import { formatTemp, formatDuration, formatFilament } from '@/utils/formatters'
 import { confirmSafe } from '@/api/printer'
 import { startJob } from '@/api/job'
@@ -373,6 +379,16 @@ const props = defineProps({
     actionLoading: {
         type: Boolean,
         default: false
+    },
+    /** 是否正在加载真实 PrinterVO 详情 */
+    detailLoading: {
+        type: Boolean,
+        default: false
+    },
+    /** 详情加载错误文案 */
+    detailError: {
+        type: String,
+        default: ''
     }
 })
 
@@ -414,12 +430,14 @@ const drawerTitle = computed(() => {
 
 /** 当前状态 */
 const currentState = computed(() => {
-    return props.realTimeData?.state || PRINTER_STATE.STANDBY
+    const sourceState = props.realTimeData?.state || props.device?.status
+    if (String(sourceState || '').toUpperCase() === 'ASSIGNED') return PRINTER_STATUS.IDLE
+    return normalizePrinterStatus(sourceState)
 })
 
 /** 当前状态配置 */
 const currentStateConfig = computed(() => {
-    return PRINTER_STATE_MAP[currentState.value] || PRINTER_STATE_MAP[PRINTER_STATE.STANDBY]
+    return PRINTER_STATUS_MAP[currentState.value] || PRINTER_STATUS_MAP[PRINTER_STATUS.UNKNOWN]
 })
 
 /** 当前状态类名 */
@@ -429,42 +447,36 @@ const currentStateClass = computed(() => {
 
 /** 是否为打印中状态 */
 const isPrintingState = computed(() => {
-    return currentState.value === PRINTER_STATE.PRINTING
+    return currentState.value === PRINTER_STATUS.PRINTING
 })
 
 /** 是否为打印中或相关状态 */
 const isPrintingOrRelated = computed(() => {
     const relatedStates = [
-        PRINTER_STATE.PRINTING,
-        PRINTER_STATE.PAUSED,
-        PRINTER_STATE.PRINT_ERROR,
-        PRINTER_STATE.COMPLETED,
-        PRINTER_STATE.CANCELLED
+        PRINTER_STATUS.PRINTING,
+        PRINTER_STATUS.PAUSED
     ]
     return relatedStates.includes(currentState.value)
 })
 
 /** 是否为错误状态 */
 const isErrorState = computed(() => {
-    return currentState.value === PRINTER_STATE.FAULT ||
-        currentState.value === PRINTER_STATE.SYS_ERROR ||
-        currentState.value === PRINTER_STATE.PRINT_ERROR
+    return currentState.value === PRINTER_STATUS.ERROR
 })
 
 /** 是否为致命错误 */
 const isFatalError = computed(() => {
-    return currentState.value === PRINTER_STATE.FAULT ||
-        currentState.value === PRINTER_STATE.SYS_ERROR
+    return currentState.value === PRINTER_STATUS.ERROR
 })
 
 /** 喷头温度 */
 const nozzleTemp = computed(() => {
-    return props.realTimeData?.toolTemperature || 0
+    return props.realTimeData?.toolTemperature
 })
 
 /** 热床温度 */
 const bedTemp = computed(() => {
-    return props.realTimeData?.bedTemperature || 0
+    return props.realTimeData?.bedTemperature
 })
 
 /** Mainsail 访问地址 */
@@ -480,11 +492,9 @@ const progressStatus = computed(() => {
 
 /** 是否为已分配状态（等待安全确认） */
 const isAssignedState = computed(() => {
-    const state = props.realTimeData?.state
+    const state = String(props.realTimeData?.state || '').toUpperCase()
     const hasJob = props.realTimeData?.currentJobId || props.device?.currentJobId
-    const isPrinting = state === PRINTER_STATE.PRINTING
-
-    return state === 'ASSIGNED' || (hasJob && !isPrinting && state !== PRINTER_STATE.COMPLETED)
+    return state === 'ASSIGNED' && !!hasJob
 })
 
 /** 是否已确认安全 */
@@ -495,17 +505,17 @@ const isLoading = ref(false)
 
 /** 是否可以暂停 */
 const canPause = computed(() => {
-    return currentState.value === PRINTER_STATE.PRINTING
+    return currentState.value === PRINTER_STATUS.PRINTING
 })
 
 /** 是否可以恢复 */
 const canResume = computed(() => {
-    return currentState.value === PRINTER_STATE.PAUSED
+    return currentState.value === PRINTER_STATUS.PAUSED
 })
 
 /** 是否可以取消 */
 const canCancel = computed(() => {
-    return [PRINTER_STATE.PRINTING, PRINTER_STATE.PAUSED, PRINTER_STATE.PRINT_ERROR].includes(currentState.value)
+    return [PRINTER_STATUS.PRINTING, PRINTER_STATUS.PAUSED].includes(currentState.value)
 })
 
 // ============================================
