@@ -5,8 +5,8 @@ const mockFileUrl = name => {
   return `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`
 }
 
-const createSeedData = () => ({
-  users: [
+const createSeedData = ({ initialized = true } = {}) => ({
+  users: initialized ? [
     {
       id: 1,
       username: 'admin',
@@ -29,7 +29,7 @@ const createSeedData = () => ({
       createdAt: '2026-09-01T09:10:00',
       updatedAt: '2026-09-01T09:10:00'
     }
-  ],
+  ] : [],
   printers: [
     {
       id: 403,
@@ -394,8 +394,8 @@ const createSeedData = () => ({
 
 export const mockState = createSeedData()
 
-export function resetMockState() {
-  const seed = createSeedData()
+export function resetMockState(options = {}) {
+  const seed = createSeedData(options)
   Object.keys(mockState).forEach(key => {
     mockState[key] = clone(seed[key])
   })

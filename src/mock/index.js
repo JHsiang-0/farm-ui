@@ -1,4 +1,7 @@
 import { cloneMockData, mockState, nextMockId, resetMockState } from './data'
+import { createMockPage, createMockSuccess, MockRequestError } from './factory'
+import { resolveMockErrorScenario } from './scenarios'
+import { toPublicFile, toPublicJob, toPublicPrinter } from './server'
 
 const MOCK_DELAY = 120
 const ATTENTION_PRINTER_STATUSES = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
@@ -6,29 +9,6 @@ const ATTENTION_PRINTER_STATUSES = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FA
 const wait = duration => new Promise(resolve => setTimeout(resolve, duration))
 
 const now = () => new Date().toISOString().slice(0, 19)
-
-const success = data => ({
-  code: 200,
-  message: '操作成功',
-  data,
-  timestamp: Date.now()
-})
-
-export class MockRequestError extends Error {
-  constructor(status, code, message, data = null) {
-    super(message)
-    this.name = 'MockRequestError'
-    this.response = {
-      status,
-      data: {
-        code,
-        message,
-        data,
-        timestamp: Date.now()
-      }
-    }
-  }
-}
 
 const fail = (status, code, message, data) => {
   throw new MockRequestError(status, code, message, data)
@@ -49,25 +29,9 @@ const getHeader = (headers, name) => {
   return headers[name] || headers[name.toLowerCase()] || ''
 }
 
-const getMockErrorScenario = config => {
-  const value = config.params?.mockError || getHeader(config.headers, 'X-Mock-Error')
-  return String(value || '').trim()
-}
-
 const throwMockErrorScenario = config => {
-  const scenario = getMockErrorScenario(config)
-  const scenarios = {
-    '401': [401, 401, '模拟未登录'],
-    '403': [403, 403, '模拟无权限'],
-    '404': [404, 404, '模拟资源不存在'],
-    '409': [409, 409, '模拟资源冲突'],
-    '422': [422, 422, '模拟业务校验失败'],
-    '10001': [400, 10001, '模拟参数错误'],
-    '10002': [409, 10002, '模拟设备忙碌'],
-    '5003': [500, 5003, '模拟设备执行失败'],
-    '5004': [503, 5004, '模拟服务维护中']
-  }
-  if (scenarios[scenario]) fail(...scenarios[scenario])
+  const scenario = resolveMockErrorScenario(config)
+  if (scenario) fail(scenario.status, scenario.code, scenario.message)
 }
 
 const getSession = config => {
@@ -97,49 +61,11 @@ const getPath = url => {
 
 const getParams = config => config.params || {}
 
-const getPage = (params = {}) => {
-  const pageNum = Math.max(Number(params.pageNum) || 1, 1)
-  const pageSize = Math.min(Math.max(Number(params.pageSize) || 10, 1), 100)
-  return { pageNum, pageSize }
-}
-
-const getPageData = (records, params) => {
-  const { pageNum, pageSize } = getPage(params)
-  const start = (pageNum - 1) * pageSize
-  const pages = Math.ceil(records.length / pageSize)
-  return {
-    records: records.slice(start, start + pageSize),
-    total: records.length,
-    pageNum,
-    pageSize,
-    pages
-  }
-}
-
 const findPrinter = id => mockState.printers.find(item => String(item.id) === String(id))
 const findFile = id => mockState.files.find(item => String(item.id) === String(id))
 const findJob = id => mockState.jobs.find(item => String(item.id) === String(id))
 
 const canReadResource = (session, userId) => session.role === 'ADMIN' || String(session.userId) === String(userId)
-
-const publicFile = file => {
-  const data = cloneMockData(file)
-  delete data.safeName
-  return data
-}
-
-const publicJob = job => {
-  const file = findFile(job.fileId)
-  const printer = job.printerId ? findPrinter(job.printerId) : null
-  return {
-    ...cloneMockData(job),
-    fileName: file?.originalName || `文件 #${job.fileId}`,
-    printerName: printer?.name || null,
-    materialType: file?.materialType || null,
-    nozzleSize: file?.nozzleSize || null,
-    endedAt: job.completedAt
-  }
-}
 
 const publicUser = user => {
   const data = cloneMockData(user)
@@ -260,7 +186,7 @@ const handleAdminUserPage = config => {
   if (params.username) records = records.filter(user => user.username.includes(String(params.username)))
   if (params.role) records = records.filter(user => user.role === params.role)
   if (params.email) records = records.filter(user => (user.email || '').includes(String(params.email)))
-  return getPageData(records.map(publicUser), params)
+  return createMockPage(records.map(publicUser), params)
 }
 
 const handleAdminUserCreate = config => {
@@ -339,7 +265,7 @@ const handlePrinterPage = config => {
       ? records.filter(item => ATTENTION_PRINTER_STATUSES.includes(String(item.status || '').toUpperCase()))
       : records.filter(item => item.status === params.status)
   }
-  return getPageData(records.map(cloneMockData), params)
+  return createMockPage(records.map(toPublicPrinter), params)
 }
 
 const handleAddPrinter = config => {
@@ -429,7 +355,7 @@ const handleBatchAddPrinters = config => {
   return {
     successCount: items.length,
     failedCount: 0,
-    items: items.map(cloneMockData)
+    items: items.map(toPublicPrinter)
   }
 }
 
@@ -439,7 +365,7 @@ const handleUnallocatedPrinters = config => {
   return mockState.printers
     .filter(item => item.gridRow == null)
     .filter(item => !keyword || item.name.toLowerCase().includes(String(keyword).toLowerCase()))
-    .map(cloneMockData)
+    .map(toPublicPrinter)
 }
 
 const handlePositions = config => {
@@ -470,7 +396,7 @@ const handleFilePage = config => {
   if (params.materialType) {
     records = records.filter(item => item.materialType === params.materialType)
   }
-  return getPageData(records.map(publicFile), params)
+  return createMockPage(records.map(toPublicFile), params)
 }
 
 const handleUpload = config => {
@@ -508,7 +434,7 @@ const handleUpload = config => {
     successRate: 0
   }
   mockState.files.push(printFile)
-  return publicFile(printFile)
+  return toPublicFile(printFile)
 }
 
 const handleCreateFolder = config => {
@@ -539,7 +465,7 @@ const handleCreateFolder = config => {
     successRate: 0
   }
   mockState.files.push(folder)
-  return publicFile(folder)
+  return toPublicFile(folder)
 }
 
 const getFileForSession = (config, id) => {
@@ -585,7 +511,7 @@ const handleJobPage = config => {
   }
   if (params.status) records = records.filter(item => item.status === params.status)
   if (params.printerId) records = records.filter(item => String(item.printerId) === String(params.printerId))
-  return getPageData(records.map(publicJob), params)
+  return createMockPage(records.map(toPublicJob), params)
 }
 
 const handleJobQueue = config => {
@@ -596,7 +522,7 @@ const handleJobQueue = config => {
   }
   return records
     .sort((a, b) => b.priority - a.priority || new Date(b.createdAt) - new Date(a.createdAt))
-    .map(publicJob)
+    .map(toPublicJob)
 }
 
 const handleCreateJob = config => {
@@ -663,7 +589,7 @@ const handleAssignJob = config => {
   printer.currentJobId = job.id
   printer.status = 'IDLE'
   printer.updatedAt = now()
-  return publicJob(job)
+  return toPublicJob(job)
 }
 
 const handleConfirmSafe = config => {
@@ -673,7 +599,7 @@ const handleConfirmSafe = config => {
   if (session.role !== 'ADMIN' && !printer.currentJobId) fail(422, 422, '打印机没有待确认任务')
   printer.isSafeToPrint = true
   printer.updatedAt = now()
-  return cloneMockData(printer)
+  return toPublicPrinter(printer)
 }
 
 const handleStartJob = config => {
@@ -693,7 +619,7 @@ const handleStartJob = config => {
   printer.status = job.status === 'PRINTING' ? 'PRINTING' : 'IDLE'
   printer.isSafeToPrint = false
   printer.updatedAt = now()
-  return publicJob(job)
+  return toPublicJob(job)
 }
 
 const handlePrinterControl = config => {
@@ -762,7 +688,10 @@ const route = async config => {
   fail(404, 404, `Mock 未实现接口：${method} ${path}`)
 }
 
-export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.MODE === 'desktop-mock'
+export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true' || [
+  'mock',
+  'desktop-mock'
+].includes(import.meta.env.MODE)
 
 if (import.meta.env.DEV) {
   window.__FARM_RESET_MOCK__ = resetMockState
@@ -783,5 +712,5 @@ export async function mockRequest(config) {
     throw error
   }
   const data = await route(config)
-  return success(data)
+  return createMockSuccess(data)
 }
