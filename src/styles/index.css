@@ -45,3 +45,7 @@ body {
   font-size: var(--app-page-title-size);
   line-height: var(--app-page-title-line-height);
 }
+
+.app-page-background {
+  background-color: var(--app-page-background);
+}

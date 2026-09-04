@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
+  <div class="h-full app-page-background flex flex-col overflow-hidden">
     <!-- 顶部操作栏 -->
     <div class="file-library-toolbar m-6 mb-4 p-5 bg-white rounded-xl shadow-sm">
       <div class="file-library-toolbar__heading">

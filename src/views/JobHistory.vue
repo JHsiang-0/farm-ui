@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
+  <div class="h-full app-page-background flex flex-col overflow-hidden">
     <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
       <template #header>
         <div class="flex flex-wrap justify-between items-center gap-x-8 gap-y-3">

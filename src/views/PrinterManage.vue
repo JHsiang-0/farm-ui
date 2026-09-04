@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
+  <div class="h-full app-page-background flex flex-col overflow-hidden">
     <!-- 设备详情抽屉 -->
     <DeviceDetailDrawer
       v-model="detailDrawerVisible"

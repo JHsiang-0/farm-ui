@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-gray-50 p-6">
+  <div class="h-full app-page-background p-6">
     <t-card title="用户管理" class="shadow-sm user-management-card">
       <template #actions><t-button theme="primary" @click="openCreate">新增用户</t-button></template>
       <div class="flex gap-3 mb-4">
