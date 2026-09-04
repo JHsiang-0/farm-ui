@@ -328,7 +328,7 @@
         </div>
         <template #tips>
           <div class="farm-upload__tip">
-            支持 .gcode、.bgcode、.g、.3mf、.stl 格式文件，文件大小不超过 200MB
+            支持 .gcode、.g、.3mf、.stl 格式文件，文件大小不超过 200MB
           </div>
         </template>
       </t-upload>

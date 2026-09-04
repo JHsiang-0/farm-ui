@@ -409,11 +409,13 @@ const handleFilePage = config => {
   if (session.role !== 'ADMIN') {
     records = records.filter(item => canReadResource(session, item.userId))
   }
-  if (params.keyword) {
-    records = records.filter(item => item.originalName.toLowerCase().includes(String(params.keyword).toLowerCase()))
+  if (params.fileName) {
+    const fileName = String(params.fileName).trim().toLowerCase()
+    records = records.filter(item => item.originalName.toLowerCase().includes(fileName))
   }
   if (params.materialType) {
-    records = records.filter(item => item.materialType === params.materialType)
+    const materialType = String(params.materialType).trim().toUpperCase()
+    records = records.filter(item => item.materialType === materialType)
   }
   return createMockPage(records.map(toPublicFile), params)
 }
@@ -423,7 +425,7 @@ const handleUpload = config => {
   const body = getBody(config)
   const file = body.file
   if (!file?.name) fail(400, 400, '请选择要上传的文件')
-  if (!/\.(gcode|bgcode)$/i.test(file.name)) fail(400, 400, '仅支持 .gcode 或 .bgcode 文件')
+  if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) fail(400, 400, '仅支持 .gcode、.g、.3mf 或 .stl 文件')
 
   const createdAt = now()
   const printFile = {
@@ -442,7 +444,7 @@ const handleUpload = config => {
     materialType: 'PLA',
     nozzleSize: 0.4,
     filamentWeight: 8,
-    filamentLength: 1800,
+    filamentLength: 1.8,
     nozzleTemp: 210,
     bedTemp: 60,
     layerHeight: 0.2,
@@ -459,14 +461,26 @@ const handleUpload = config => {
 const handleCreateFolder = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const body = getBody(config)
-  if (!body.folderName?.trim()) fail(400, 400, '文件夹名称不能为空')
+  const folderName = body.folderName?.trim()
+  if (!folderName) fail(400, 400, '文件夹名称不能为空')
+  const hasControlCharacter = [...folderName].some(character => character.charCodeAt(0) < 32)
+  if (folderName.length > 100 || hasControlCharacter || /[\\/:*?"<>|]/.test(folderName)) {
+    fail(400, 400, '文件夹名称不合法')
+  }
+  const parentId = body.parentId == null || body.parentId === '' ? null : Number(body.parentId)
+  if (parentId !== null) {
+    const parent = findFile(parentId)
+    if (!parent?.folder || !canReadResource(session, parent.userId)) {
+      fail(404, 404, '父文件夹不存在')
+    }
+  }
   const folder = {
     id: nextMockId('folder'),
-    parentId: body.parentId == null ? null : Number(body.parentId),
+    parentId,
     folder: true,
     isFolder: 1,
-    originalName: body.folderName.trim(),
-    safeName: body.folderName.trim(),
+    originalName: folderName,
+    safeName: folderName,
     fileSize: 0,
     fileUrl: null,
     userId: session.userId,

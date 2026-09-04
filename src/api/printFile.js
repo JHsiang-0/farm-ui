@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 import {
   mapResponseData,
-  normalizePageParams,
+  normalizePrintFilePageParams,
   normalizePageResponse,
   normalizePrintFile
 } from '@/utils/dataAdapters'
@@ -26,7 +26,7 @@ import { REQUEST_TIMEOUT } from '@/utils/constants'
  * @property {string} thumbnailUrl - 缩略图URL
  * @property {string} materialType - 耗材类型
  * @property {number} filamentWeight - 耗材重量(g)
- * @property {number} filamentLength - 耗材长度(mm)
+ * @property {number} filamentLength - 耗材长度(m)
  * @property {number} printCount - 打印次数
  * @property {number} successRate - 成功率(%)
  * @property {number} estTime - 预计耗时(秒)
@@ -37,7 +37,7 @@ export function getFileList(params = {}) {
   return request({
     url: '/api/v1/print-files/page',
     method: 'post',
-    data: normalizePageParams(params)
+    data: normalizePrintFilePageParams(params)
   }).then(response => mapResponseData(
     response,
     data => normalizePageResponse(data, normalizePrintFile)

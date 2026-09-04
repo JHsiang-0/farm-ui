@@ -199,9 +199,8 @@ const formatWeight = (grams) => {
   return `${Number(grams).toFixed(1)}g`
 }
 
-const formatLength = (millimeters) => {
-  if (millimeters === undefined || millimeters === null) return '-'
-  const meters = millimeters / 1000
+const formatLength = (meters) => {
+  if (meters === undefined || meters === null) return '-'
   return `${Number(meters).toFixed(2)}m`
 }
 

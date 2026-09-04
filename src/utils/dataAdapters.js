@@ -43,6 +43,24 @@ export function normalizePageParams(params = {}) {
 }
 
 /**
+ * 规范化文件分页查询参数，固定使用后端约定的 fileName，不兼容旧 keyword。
+ */
+export function normalizePrintFilePageParams(params = {}) {
+  const fileName = typeof params.fileName === 'string' ? params.fileName.trim() : undefined
+  const materialType = typeof params.materialType === 'string'
+    ? params.materialType.trim().toUpperCase()
+    : undefined
+
+  return normalizePageParams({
+    pageNum: params.pageNum,
+    pageSize: params.pageSize,
+    fileName: fileName || undefined,
+    materialType: materialType || undefined,
+    parentId: params.parentId ?? null
+  })
+}
+
+/**
  * 统一分页响应，兼容后端迁移前的 current/size 字段。
  * 服务端提供 pages 时必须以服务端值为准，计算值只用于历史响应兜底。
  */

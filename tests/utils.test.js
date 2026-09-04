@@ -5,6 +5,7 @@ import {
   normalizeFirmwareType,
   normalizeJobStatus,
   normalizePageParams,
+  normalizePrintFilePageParams,
   normalizePageResponse,
   normalizePrinter,
   normalizePrinterStatus,
@@ -46,6 +47,23 @@ test('normalizes pagination params and legacy pagination responses', () => {
     records: []
   })
   assert.equal(authoritativePage.pages, 7)
+})
+
+test('normalizes file page query with contract fields', () => {
+  assert.deepEqual(normalizePrintFilePageParams({
+    pageNum: 2,
+    pageSize: 20,
+    fileName: '  gear  ',
+    materialType: ' pla ',
+    parentId: 1,
+    keyword: 'must-not-be-sent'
+  }), {
+    pageNum: 2,
+    pageSize: 20,
+    fileName: 'gear',
+    materialType: 'PLA',
+    parentId: 1
+  })
 })
 
 test('uses one canonical printer status set and never persists ONLINE', () => {

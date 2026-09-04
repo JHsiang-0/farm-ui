@@ -124,7 +124,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：目录与分页切换可能造成面包屑和查询状态不同步。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。文件分页固定发送 `pageNum/pageSize/fileName/materialType/parentId`，Mock 与后端搜索字段、材质规范化一致；保留分页目录导航、单文件上传和新建目录，并补齐允许扩展名、父目录归属及目录名校验；文件长度按米展示，公开 DTO 不暴露内部存储字段。新增分页参数契约测试。`npm.cmd test`（35/35）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T010 文件删除与下载正确性
 
