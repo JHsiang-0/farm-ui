@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { message } from '@/utils/message'
+import { resolveRouteAccess, ROUTE_ACCESS } from '@/utils/permissions'
 import Layout from '@/layout/index.vue' // 引入刚写的布局组件
 
 const APP_ROLES = ['ADMIN', 'OPERATOR']
@@ -94,24 +95,55 @@ const router = createRouter({
 })
 
 // 全局路由守卫（门禁系统）
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
 
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  if (requiresAuth && !userStore.token) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-
-  // 如果用户已经登录了，还想去登录页，一律踢回打印机主页
-  if (to.path === '/login' && userStore.token) {
-    return { name: 'printers' }
-  }
-
   const roleRequirements = to.matched
     .map(record => record.meta.roles)
     .filter(roles => Array.isArray(roles) && roles.length > 0)
-  const hasRequiredRoles = roleRequirements.every(roles => userStore.hasRole(roles))
-  if (roleRequirements.length > 0 && !hasRequiredRoles) {
+
+  let access = resolveRouteAccess({
+    path: to.path,
+    requiresAuth,
+    roleRequirements,
+    token: userStore.token,
+    restoreState: userStore.restoreState,
+    role: userStore.userInfo.role
+  })
+
+  if (access === ROUTE_ACCESS.LOGIN_REQUIRED) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  if (access === ROUTE_ACCESS.RESTORE_REQUIRED) {
+    const restored = await userStore.restoreSession()
+    if (!restored) {
+      return requiresAuth
+        ? { name: 'login', query: { redirect: to.fullPath } }
+        : undefined
+    }
+
+    access = resolveRouteAccess({
+      path: to.path,
+      requiresAuth,
+      roleRequirements,
+      token: userStore.token,
+      restoreState: userStore.restoreState,
+      role: userStore.userInfo.role
+    })
+  }
+
+  if (access === ROUTE_ACCESS.AUTHENTICATED_LOGIN) {
+    return { name: 'printers' }
+  }
+
+  if (access === ROUTE_ACCESS.UNKNOWN_ROLE) {
+    userStore.logout()
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  if (access === ROUTE_ACCESS.FORBIDDEN) {
     message.error('当前账号没有访问该页面的权限')
     return { name: 'printers' }
   }
