@@ -6,6 +6,9 @@ import { transitionMockJob } from './stateMachine.js'
 
 const runtimeEnv = import.meta.env || {}
 const MOCK_DELAY = 120
+const BATCH_PLAN_TTL_MS = 5 * 60 * 1000
+const BATCH_STRATEGIES = ['ONE_TO_ONE', 'ROUND_ROBIN', 'AUTO_MATCH']
+const BATCH_ACTIONS = ['UPLOAD_ONLY', 'QUEUE', 'START_AFTER_CONFIRM']
 const ATTENTION_PRINTER_STATUSES = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
 
 const wait = duration => new Promise(resolve => setTimeout(resolve, duration))
@@ -771,6 +774,227 @@ const handleUpdateJobPriority = config => {
   return null
 }
 
+const normalizeBatchIds = value => (Array.isArray(value) ? value : [])
+  .map(item => String(item).trim())
+  .filter(Boolean)
+
+const batchItemFailure = (itemId, fileId, printerId, errorCode, message, retryable = false) => ({
+  itemId,
+  fileId,
+  printerId,
+  canExecute: false,
+  reasonCode: errorCode,
+  errorCode,
+  message,
+  retryable
+})
+
+const getBatchPrinterId = (strategy, printerIds, index) => {
+  if (!printerIds.length) return null
+  if (strategy === 'ROUND_ROBIN') return printerIds[index % printerIds.length]
+  return printerIds[index] || null
+}
+
+const isPrinterAvailable = printer => Boolean(
+  printer && printer.status === 'IDLE' && !printer.currentJobId
+)
+
+const handleBatchPreview = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const body = getBody(config)
+  const fileIds = normalizeBatchIds(body.fileIds)
+  const printerIds = normalizeBatchIds(body.printerIds)
+  const strategy = String(body.strategy || '').toUpperCase()
+  const action = String(body.action || '').toUpperCase()
+
+  if (!fileIds.length || fileIds.length > 100 || new Set(fileIds).size !== fileIds.length) {
+    fail(400, 400, '批量预览文件数量必须为 1-100 个且不能重复')
+  }
+  if (!BATCH_STRATEGIES.includes(strategy) || !BATCH_ACTIONS.includes(action)) {
+    fail(400, 400, '批量预览策略或动作不合法')
+  }
+
+  const planId = `batch-plan-${nextMockId('batchPlan')}`
+  const suggestions = []
+  const items = fileIds.map((fileId, index) => {
+    const itemId = `${planId}-item-${index + 1}`
+    const file = findFile(fileId)
+    if (!file || file.folder) return batchItemFailure(itemId, fileId, null, 'FILE_NOT_AVAILABLE', '文件不存在或不是可打印文件')
+    if (!canReadResource(session, file.userId)) return batchItemFailure(itemId, fileId, null, 'FILE_FORBIDDEN', '无权使用此文件')
+
+    let printerId = getBatchPrinterId(strategy, printerIds, index)
+    if (strategy === 'AUTO_MATCH') {
+      const candidates = printerIds.map(id => findPrinter(id)).filter(isPrinterAvailable)
+      printerId = candidates[index % candidates.length]?.id || null
+      if (printerId) suggestions.push({ itemId, message: `建议匹配空闲打印机 ${printerId}` })
+    }
+    if (!printerId) return batchItemFailure(itemId, file.id, null, 'PRINTER_REQUIRED', '没有可用的打印机匹配此文件')
+
+    const printer = findPrinter(printerId)
+    if (!printer) return batchItemFailure(itemId, file.id, printerId, 'PRINTER_NOT_FOUND', '打印机不存在')
+    if (!isPrinterAvailable(printer)) {
+      return batchItemFailure(itemId, file.id, printer.id, 'PRINTER_BUSY', '打印机当前忙碌或不可用')
+    }
+    return {
+      itemId,
+      fileId: file.id,
+      printerId: printer.id,
+      canExecute: true,
+      reasonCode: null,
+      errorCode: null,
+      message: '预览可执行',
+      retryable: false
+    }
+  })
+
+  const plan = {
+    planId,
+    version: 1,
+    userId: session.userId,
+    strategy,
+    action,
+    items,
+    suggestions,
+    conflicts: items.filter(item => !item.canExecute),
+    confirmationToken: `mock-confirm-${planId}`,
+    expiresAt: new Date(Date.now() + BATCH_PLAN_TTL_MS).toISOString(),
+    status: 'PREVIEWED',
+    confirmResult: null
+  }
+  mockState.batchPlans.push(plan)
+  return {
+    planId: plan.planId,
+    version: plan.version,
+    action: plan.action,
+    strategy: plan.strategy,
+    items: cloneMockData(plan.items),
+    suggestions: cloneMockData(plan.suggestions),
+    conflicts: cloneMockData(plan.conflicts),
+    confirmationToken: plan.confirmationToken,
+    expiresAt: plan.expiresAt
+  }
+}
+
+const createBatchJob = (session, item, action) => {
+  const file = findFile(item.fileId)
+  const printer = findPrinter(item.printerId)
+  if (!file || file.folder || !canReadResource(session, file.userId)) {
+    return { success: false, errorCode: 'FILE_NOT_AVAILABLE', message: '文件已不可用', retryable: false }
+  }
+  if (!isPrinterAvailable(printer)) {
+    return { success: false, errorCode: 'PRINTER_BUSY', message: '打印机在确认时已被占用', retryable: true }
+  }
+
+  const createdAt = now()
+  const job = {
+    id: nextMockId('job'),
+    fileId: file.id,
+    printerId: printer.id,
+    userId: session.userId,
+    operatorId: null,
+    priority: 0,
+    idempotencyKey: null,
+    status: 'QUEUED',
+    progress: 0,
+    startedAt: null,
+    completedAt: null,
+    errorReason: null,
+    createdAt,
+    updatedAt: createdAt
+  }
+  mockState.jobs.push(job)
+  setJobStatus(job, 'ASSIGNED')
+  printer.currentJobId = job.id
+  printer.isSafeToPrint = false
+  printer.updatedAt = now()
+
+  if (action === 'UPLOAD_ONLY') {
+    printer.isSafeToPrint = true
+    setJobStatus(job, 'UPLOADING')
+    setJobStatus(job, 'READY')
+    job.operatorId = session.userId
+    job.startedAt = now()
+    printer.status = 'IDLE'
+    printer.isSafeToPrint = false
+    printer.updatedAt = now()
+  }
+  return { success: true, job }
+}
+
+const handleBatchConfirm = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const body = getBody(config)
+  const plan = mockState.batchPlans.find(item => item.planId === body.planId)
+  if (!plan || !canReadResource(session, plan.userId)) fail(404, 404, '批量派发计划不存在')
+  if (plan.status === 'CONFIRMED' && plan.confirmResult) {
+    return { ...cloneMockData(plan.confirmResult), idempotent: true, repeated: true }
+  }
+  if (Number(body.version) !== plan.version || body.confirmationToken !== plan.confirmationToken) {
+    fail(409, 409, '批量派发计划版本或确认令牌不匹配')
+  }
+  if (Date.parse(plan.expiresAt) <= Date.now()) fail(409, 409, '批量派发计划已过期')
+
+  const itemIds = normalizeBatchIds(body.itemIds)
+  if (!itemIds.length) fail(400, 400, '至少确认一个可执行项')
+  const planItems = new Map(plan.items.map(item => [String(item.itemId), item]))
+  const items = []
+  const seen = new Set()
+  itemIds.forEach(itemId => {
+    if (seen.has(itemId)) return
+    seen.add(itemId)
+    const previewItem = planItems.get(itemId)
+    if (!previewItem) {
+      items.push({ itemId, fileId: null, printerId: null, jobId: null, status: 'FAILED', errorCode: 'ITEM_NOT_FOUND', message: '预览项不存在', attemptCount: 1, retryable: false, success: false })
+      return
+    }
+    if (!previewItem.canExecute) {
+      items.push({ ...previewItem, jobId: null, status: 'FAILED', attemptCount: 1, success: false })
+      return
+    }
+    const result = createBatchJob(session, previewItem, plan.action)
+    if (!result.success) {
+      items.push({
+        itemId: previewItem.itemId,
+        fileId: previewItem.fileId,
+        printerId: previewItem.printerId,
+        jobId: null,
+        status: 'FAILED',
+        errorCode: result.errorCode,
+        message: result.message,
+        attemptCount: 1,
+        retryable: result.retryable,
+        success: false
+      })
+      return
+    }
+    items.push({
+      itemId: previewItem.itemId,
+      fileId: result.job.fileId,
+      printerId: result.job.printerId,
+      jobId: result.job.id,
+      status: result.job.status,
+      errorCode: null,
+      message: plan.action === 'START_AFTER_CONFIRM' ? '已创建分配任务，等待逐项安全确认' : plan.action === 'UPLOAD_ONLY' ? '已安全确认并上传' : '已创建分配任务',
+      attemptCount: 1,
+      retryable: false,
+      success: true,
+      job: toPublicJob(result.job)
+    })
+  })
+
+  const result = {
+    planId: plan.planId,
+    version: plan.version,
+    planStatus: items.every(item => item.success) ? 'CONFIRMED' : 'PARTIAL_SUCCESS',
+    idempotent: false,
+    repeated: false,
+    items
+  }
+  plan.status = 'CONFIRMED'
+  plan.confirmResult = cloneMockData(result)
+  return result
+}
+
 const handleConfirmSafe = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const printer = findPrinter(getBody(config).printerId)
@@ -882,6 +1106,8 @@ const route = async config => {
   if (key === 'DELETE /api/v1/print-files/batch') return handleBatchDeleteFiles(config)
   if (key === 'GET /api/v1/print-jobs/queue') return handleJobQueue(config)
   if (key === 'POST /api/v1/print-jobs/page') return handleJobPage(config)
+  if (key === 'POST /api/v1/print-jobs/batch/preview') return handleBatchPreview(config)
+  if (key === 'POST /api/v1/print-jobs/batch/confirm') return handleBatchConfirm(config)
   if (/^GET \/api\/v1\/print-jobs\/[^/]+$/.test(key)) return handleJobDetail(config)
   if (key === 'POST /api/v1/print-jobs/create' || key === 'POST /api/v1/print-jobs') return handleCreateJob(config)
   if (key === 'POST /api/v1/print-jobs/safe/assign') return handleAssignJob(config)

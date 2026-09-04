@@ -1,3 +1,5 @@
+import { normalizePrintJob } from './dataAdapters.js'
+
 const PREVIEW_STRATEGIES = Object.freeze(['ONE_TO_ONE', 'ROUND_ROBIN', 'AUTO_MATCH'])
 const PREVIEW_ACTIONS = Object.freeze(['UPLOAD_ONLY', 'QUEUE', 'START_AFTER_CONFIRM'])
 
@@ -51,5 +53,31 @@ export function toBatchPreviewPayload(previewRequest) {
     printerIds: previewRequest.printerIds,
     strategy: previewRequest.strategy,
     action: previewRequest.action
+  }
+}
+
+export function normalizeBatchConfirmResult(data = {}) {
+  return {
+    planId: data.planId ?? null,
+    version: data.version ?? null,
+    planStatus: data.planStatus || data.status || null,
+    idempotent: data.idempotent === true || data.repeated === true,
+    repeated: data.repeated === true || data.idempotent === true,
+    items: (Array.isArray(data.items) ? data.items : []).map((item, index) => {
+      const status = String(item?.status || (item?.success ? 'SUCCESS' : 'FAILED')).toUpperCase()
+      return {
+        itemId: item?.itemId ?? `item-${index}`,
+        fileId: item?.fileId ?? null,
+        printerId: item?.printerId ?? null,
+        jobId: item?.jobId == null ? null : String(item.jobId),
+        status,
+        errorCode: item?.errorCode ?? null,
+        message: item?.message || '',
+        attemptCount: Number.isInteger(item?.attemptCount) ? item.attemptCount : 1,
+        retryable: item?.retryable === true,
+        success: item?.success === true || (item?.success !== false && status !== 'FAILED'),
+        job: item?.job ? normalizePrintJob(item.job) : null
+      }
+    })
   }
 }

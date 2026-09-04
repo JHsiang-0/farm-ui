@@ -116,6 +116,21 @@ export const useJobStore = defineStore('job', () => {
     return updated
   }
 
+  function applyBatchConfirmResults(result = {}) {
+    const jobs = (result.items || [])
+      .map(item => item.job)
+      .filter(Boolean)
+    if (!jobs.length) return []
+
+    const jobsById = new Map(activeJobs.value.map(job => [String(job.id), job]))
+    jobs.forEach(job => jobsById.set(String(job.id), job))
+    activeJobs.value = selectActiveJobs([...jobsById.values()]).sort(sortByUpdatedAt)
+    const details = new Map(jobDetails.value)
+    jobs.forEach(job => details.set(String(job.id), job))
+    jobDetails.value = details
+    return jobs
+  }
+
   async function refresh() {
     const results = await Promise.allSettled([fetchQueue(), fetchActive()])
     const rejected = results.find(result => result.status === 'rejected')
@@ -141,6 +156,7 @@ export const useJobStore = defineStore('job', () => {
     fetchActive,
     fetchJobDetail,
     applyRealtimeJobStatus,
+    applyBatchConfirmResults,
     refresh
   }
 })

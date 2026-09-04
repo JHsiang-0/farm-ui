@@ -382,12 +382,14 @@ const createSeedData = ({ initialized = true } = {}) => ({
       updatedAt: '2026-09-01T16:10:00'
     }
   ],
+  batchPlans: [],
   nextIds: {
     users: 3,
     file: 24,
     folder: 3,
     job: 1007,
-    printer: 409
+    printer: 409,
+    batchPlan: 1
   },
   sessions: {}
 })

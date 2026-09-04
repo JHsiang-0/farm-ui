@@ -93,14 +93,25 @@
           {{ item.message || item.reasonCode || (item.canExecute ? '可执行' : '存在冲突') }}
         </t-tag>
       </div>
-      <t-button theme="primary" :disabled="previewExpired || confirming || !executableItemIds.length" :loading="confirming" @click="confirm">
+      <t-button theme="primary" :disabled="previewExpired || confirming || confirmData || !executableItemIds.length" :loading="confirming" @click="confirm">
         {{ confirming ? '执行中…' : `确认执行（${executableItemIds.length}项）` }}
       </t-button>
       <t-alert v-if="confirmData" class="mt-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '已处理'}`" :closable="false">
-        <div v-for="item in confirmData.items || []" :key="item.itemId || `${item.fileId}-${item.printerId}`">
-          文件 {{ item.fileId }}：{{ item.message || item.status }}
-        </div>
+        成功 {{ confirmSuccessCount }} 项，失败 {{ confirmFailureCount }} 项
+        <span v-if="confirmData.repeated">（重复确认已返回原结果）</span>
       </t-alert>
+      <t-table v-if="confirmData?.items?.length" class="mt-3" :data="confirmData.items" :columns="confirmColumns"
+        row-key="itemId" bordered size="small">
+        <template #status="{ row }">
+          <t-tag :theme="resultTheme(row)" variant="light">{{ row.status }}</t-tag>
+        </template>
+        <template #message="{ row }">
+          {{ row.message || row.errorCode || '—' }}
+        </template>
+        <template #retryable="{ row }">
+          {{ row.retryable ? '是' : '否' }}
+        </template>
+      </t-table>
     </t-card>
   </div>
 </template>
@@ -113,9 +124,11 @@ import { batchUploadFiles } from '@/api/printFile'
 import { getFileList } from '@/api/printFile'
 import { getPrinterList } from '@/api/printer'
 import { previewBatchDispatch, confirmBatchDispatch } from '@/api/job'
-import { createBatchPreviewRequest } from '@/utils/batchDispatch'
+import { createBatchPreviewRequest, normalizeBatchConfirmResult } from '@/utils/batchDispatch'
+import { useJobStore } from '@/stores/jobStore'
 
 const route = useRoute()
+const jobStore = useJobStore()
 const files = ref([])
 const printers = ref([])
 const selectedFileIds = ref([])
@@ -146,6 +159,20 @@ const retryableUploadFiles = computed(() => (uploadResult.value?.items || [])
   .map(item => lastBatchUploadFiles.value[item.index]))
 
 const previewSuggestions = computed(() => previewData.value?.suggestions || [])
+const confirmSuccessCount = computed(() => (confirmData.value?.items || []).filter(item => item.success).length)
+const confirmFailureCount = computed(() => (confirmData.value?.items || []).filter(item => !item.success).length)
+const confirmColumns = [
+  { colKey: 'fileId', title: '文件 ID', width: 120 },
+  { colKey: 'printerId', title: '打印机 ID', width: 120 },
+  { colKey: 'jobId', title: '任务 ID', width: 120 },
+  { colKey: 'status', title: '状态', width: 120 },
+  { colKey: 'message', title: '说明' },
+  { colKey: 'retryable', title: '可重试', width: 100 }
+]
+
+function resultTheme(item) {
+  return item.success ? 'success' : 'danger'
+}
 
 function stopPreviewExpiryTimer() {
   if (previewExpiryTimer) {
@@ -270,7 +297,7 @@ async function preview() {
 }
 
 async function confirm() {
-  if (!previewData.value || previewExpired.value || !executableItemIds.value.length) {
+  if (confirming.value || confirmData.value || !previewData.value || previewExpired.value || !executableItemIds.value.length) {
     message.warning(previewExpired.value ? '预览已过期，请重新生成' : '当前没有可执行的预览项')
     return
   }
@@ -292,7 +319,8 @@ async function confirm() {
       itemIds: executableItemIds.value,
       confirmationToken: previewData.value.confirmationToken
     })
-    confirmData.value = response?.data || {}
+    confirmData.value = normalizeBatchConfirmResult(response?.data)
+    jobStore.applyBatchConfirmResults(confirmData.value)
     message.success('批量派发已处理')
     await loadResources()
   } catch (error) {
