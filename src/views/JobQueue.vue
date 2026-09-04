@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full app-page-background flex flex-col overflow-hidden">
+  <div class="app-page-shell app-page-background">
     <div class="app-page-toolbar mb-4">
       <h1 class="app-page-toolbar__title app-route-title">生产调度队列</h1>
       <div class="app-page-toolbar__actions">
@@ -9,14 +9,14 @@
       </div>
     </div>
 
-    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <TdTable
         :data="queueData"
         :loading="loading"
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
-        height="calc(100vh - 280px)"
+        height="100%"
       >
         <TdTableColumn prop="id" label="任务单号" width="100" align="center">
           <template #default="scope">

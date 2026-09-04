@@ -8,11 +8,13 @@
       <t-content class="app-content">
         <div class="app-content__inner">
           <AppBreadcrumb />
-          <router-view v-slot="{ Component }">
-            <transition name="fade-transform" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-view>
+          <div class="app-content__view">
+            <router-view v-slot="{ Component }">
+              <transition name="fade-transform" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </router-view>
+          </div>
         </div>
       </t-content>
     </t-layout>
@@ -44,6 +46,8 @@ const toggleSidebar = () => {
 }
 
 .app-content {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -51,8 +55,21 @@ const toggleSidebar = () => {
 }
 
 .app-content__inner {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   min-height: 100%;
   padding: 1.5rem;
+}
+
+.app-content__view {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
 }
 
 .fade-transform-leave-active,

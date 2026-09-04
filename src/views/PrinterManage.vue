@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full app-page-background flex flex-col overflow-hidden">
+  <div class="app-page-shell app-page-background">
     <!-- 设备详情抽屉 -->
     <DeviceDetailDrawer
       v-model="detailDrawerVisible"
@@ -33,7 +33,7 @@
     </div>
 
     <!-- 数据表格 -->
-    <t-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mb-6">
+    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <TdTable
         :data="tableData"
         :loading="loading"
@@ -42,7 +42,7 @@
         :header-cell-style="{ background: '#f9fafb' }"
         @row-click="handleRowClick"
         row-class-name="cursor-pointer hover:bg-gray-50"
-        height="calc(100vh - 320px)"
+        height="100%"
       >
         <TdTableColumn prop="id" label="ID" width="80" align="center">
           <template #default="scope">

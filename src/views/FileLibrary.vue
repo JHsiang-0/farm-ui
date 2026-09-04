@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full app-page-background flex flex-col overflow-hidden">
+  <div class="app-page-shell app-page-background">
     <Teleport to=".app-breadcrumb__actions">
       <div class="file-library-toolbar__actions app-page-toolbar__actions">
         <t-space class="file-view-toggle">
@@ -27,7 +27,7 @@
       </div>
     </Teleport>
 
-    <div class="file-library-content-card mb-6 p-4 bg-white rounded-xl shadow-sm flex-1 min-h-0 flex flex-col">
+    <div class="file-library-content-card app-page-card p-4 bg-white rounded-xl shadow-sm">
       <!-- 搜索与筛选 -->
       <div class="file-library-filter-row mb-4">
         <t-breadcrumb separator="/" class="file-library-navigation">
@@ -207,7 +207,7 @@
       <!-- 列表视图 -->
       <div v-else class="overflow-hidden flex-1">
         <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
-          @row-click="handleTableRowClick" border stripe style="width: 100%" height="calc(100vh - 300px)">
+          @row-click="handleTableRowClick" border stripe style="width: 100%" height="100%">
           <TdTableColumn type="selection" width="50" align="center" />
 
           <TdTableColumn prop="originalName" label="文件名" min-width="200">
