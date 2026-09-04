@@ -60,7 +60,7 @@
         @row-click="openTaskDetail"
         :loading="loading"
         style="width: 100%"
-        class="rounded-lg overflow-hidden flex-1"
+        class="job-history-table rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
         height="100%"
       >
@@ -70,13 +70,13 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn prop="fileId" label="关联文件ID" width="100" align="center">
+        <TdTableColumn prop="fileId" label="关联文件ID" width="120" align="center">
           <template #default="scope">
             <t-tag size="small" variant="light-outline">{{ scope.row.fileId }}</t-tag>
           </template>
         </TdTableColumn>
 
-        <TdTableColumn prop="printerId" label="分配设备ID" width="100" align="center">
+        <TdTableColumn prop="printerId" label="分配设备ID" width="120" align="center">
           <template #default="scope">
             <t-tag size="small" variant="light-outline" v-if="scope.row.printerId">{{ scope.row.printerId }}</t-tag>
             <span v-else>-</span>
@@ -87,6 +87,25 @@
           <template #default="scope">
             <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
               {{ getStatusLabel(scope.row.status) }}
+            </t-tag>
+          </template>
+        </TdTableColumn>
+
+        <TdTableColumn prop="priority" label="优先级" width="110" align="center">
+          <template #default="scope">
+            <t-input-number
+              v-if="scope.row.status === 'QUEUED'"
+              :value="Number(scope.row.priority ?? 0)"
+              :min="0"
+              :max="100"
+              :step="1"
+              :decimal-places="0"
+              size="small"
+              style="width: 88px"
+              @change="value => handlePriority(scope.row, value)"
+            />
+            <t-tag v-else :theme="getPriorityType(scope.row.priority)" variant="light" size="small">
+              {{ scope.row.priority ?? 0 }}
             </t-tag>
           </template>
         </TdTableColumn>
@@ -134,27 +153,20 @@
                 @click="handleRetry(scope.row.id)">重试</t-button>
               <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
                 @click="handleRequeue(scope.row.id)">重新排队</t-button>
-              <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
-                @change="value => handlePriority(scope.row, value)" style="width: 88px">
-                <t-option label="普通" :value="0" />
-                <t-option label="优先" :value="50" />
-                <t-option label="加急" :value="100" />
-              </t-select>
-              <t-popconfirm content="确定要取消这个任务吗？"
+              <t-popconfirm v-if="canCancel(scope.row.status)" content="确定要取消这个任务吗？"
                 theme="danger"
                 @confirm="handleCancel(scope.row.id)"
-                :disabled="!canCancel(scope.row.status)"
               >
                 <template>
                   <t-button
                     size="small" theme="danger" variant="outline"
-                    :disabled="!canCancel(scope.row.status)"
                   >
                     <span><circle-close /></span>
                     取消
                   </t-button>
                 </template>
               </t-popconfirm>
+              <span v-if="!hasAvailableAction(scope.row.status)" class="no-action">—</span>
             </div>
           </template>
         </TdTableColumn>
@@ -285,11 +297,23 @@ const getStatusLabel = (status) => {
   return map[status] || status
 }
 
+const getPriorityType = priority => {
+  const value = Number(priority)
+  if (value >= 80) return 'danger'
+  if (value >= 50) return 'warning'
+  if (value >= 20) return 'primary'
+  return 'default'
+}
+
 // 判断任务是否可以取消
 const canCancel = (status) => {
   const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
   return cancelableStatuses.includes(status)
 }
+
+const hasAvailableAction = status => status === 'FAILED'
+  || ['ASSIGNED', 'READY'].includes(status)
+  || canCancel(status)
 
 // 获取进度条状态
 const getProgressStatus = (status, progress) => {
@@ -416,11 +440,19 @@ fetchData()
 </script>
 
 <style scoped>
+.job-history-table :deep(th) {
+  white-space: nowrap;
+}
+
 .history-action-group {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
   white-space: nowrap;
+}
+
+.no-action {
+  color: var(--app-text-placeholder);
 }
 </style>
