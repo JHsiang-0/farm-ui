@@ -58,6 +58,7 @@
 import { ref, computed, watch } from 'vue'
 import { confirmMessage } from '@/utils/message'
 import { getUnallocatedPrinters } from '@/api/printer'
+import { PRINTER_STATUS_MAP } from '@/utils/constants'
 import { SearchIcon as Search } from 'tdesign-icons-vue-next'
 import TdTable from './TdTable.vue'
 import TdTableColumn from './TdTableColumn.vue'
@@ -95,13 +96,7 @@ const searchKeyword = ref('')
 // ============================================
 
 /** 状态映射配置 */
-const STATUS_MAP = {
-  ONLINE: { label: '在线', type: 'success' },
-  OFFLINE: { label: '离线', type: 'default' },
-  PRINTING: { label: '打印中', type: 'primary' },
-  ERROR: { label: '故障', type: 'danger' },
-  IDLE: { label: '空闲', type: 'success' }
-}
+const STATUS_MAP = PRINTER_STATUS_MAP
 
 // ============================================
 // Computed Properties
@@ -146,13 +141,7 @@ watch(() => props.visible, (newVal) => {
  * @returns {string} TDesign 标签主题
  */
 function getStatusType(status) {
-  const typeMap = {
-    ONLINE: 'success',
-    OFFLINE: 'default',
-    PRINTING: 'primary',
-    ERROR: 'danger'
-  }
-  return typeMap[status] || 'default'
+  return STATUS_MAP[String(status || '').toUpperCase()]?.type || 'default'
 }
 
 /**
@@ -161,7 +150,7 @@ function getStatusType(status) {
  * @returns {string} 状态中文标签
  */
 function getStatusLabel(status) {
-  return STATUS_MAP[status]?.label || status
+  return STATUS_MAP[String(status || '').toUpperCase()]?.label || status
 }
 
 /**

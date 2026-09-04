@@ -285,7 +285,7 @@ const handleAddPrinter = config => {
     ipAddress: body.ipAddress || '192.168.1.100',
     macAddress: body.macAddress || 'AA:BB:CC:DD:EE:99',
     firmwareType: body.firmwareType || 'KLIPPER',
-    status: 'IDLE',
+    status: 'UNKNOWN',
     isSafeToPrint: false,
     currentJobId: null,
     currentMaterial: body.currentMaterial || 'PLA',
@@ -311,8 +311,12 @@ const handleUpdatePrinter = config => {
 const handleDeletePrinter = config => {
   requireSession(config, ['ADMIN'])
   const id = getPath(config.url).split('/').pop()
-  const index = mockState.printers.findIndex(item => String(item.id) === String(id))
-  if (index === -1) fail(404, 404, '打印机不存在')
+  const printer = findPrinter(id)
+  if (!printer) fail(404, 404, '打印机不存在')
+  if (printer.currentJobId || ['PREPARING', 'PRINTING', 'PAUSED'].includes(printer.status)) {
+    fail(409, 10002, '打印机正在执行任务，暂不可删除')
+  }
+  const index = mockState.printers.indexOf(printer)
   mockState.printers.splice(index, 1)
   return null
 }
@@ -325,7 +329,8 @@ const handleScanPrinters = config => {
       ipAddress: `${subnet}.90`,
       macAddress: 'AA:BB:CC:DD:EE:90',
       isNewDevice: true,
-      status: 'IDLE',
+      firmwareType: 'KLIPPER',
+      status: 'UNKNOWN',
       suggestedName: 'Mock_Scanned_Printer'
     }
   ]
@@ -334,10 +339,13 @@ const handleScanPrinters = config => {
 const handleBatchAddPrinters = config => {
   requireSession(config, ['ADMIN'])
   const devices = Array.isArray(config.data) ? config.data : []
+  let insertedCount = 0
+  let updatedCount = 0
   const items = devices.map(device => {
     const existing = mockState.printers.find(item => item.ipAddress === device.ipAddress)
     if (existing) {
       Object.assign(existing, device, { updatedAt: now() })
+      updatedCount += 1
       return existing
     }
 
@@ -347,7 +355,7 @@ const handleBatchAddPrinters = config => {
       ipAddress: device.ipAddress,
       macAddress: device.macAddress,
       firmwareType: device.firmwareType || 'KLIPPER',
-      status: 'IDLE',
+      status: 'UNKNOWN',
       isSafeToPrint: false,
       currentJobId: null,
       currentMaterial: 'PLA',
@@ -358,10 +366,13 @@ const handleBatchAddPrinters = config => {
       updatedAt: now()
     }
     mockState.printers.push(printer)
+    insertedCount += 1
     return printer
   })
   return {
-    successCount: items.length,
+    totalCount: items.length,
+    insertedCount,
+    updatedCount,
     failedCount: 0,
     items: items.map(toPublicPrinter)
   }
@@ -633,22 +644,43 @@ const handleStartJob = config => {
 const handlePrinterControl = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const pathParts = getPath(config.url).split('/')
+  const action = pathParts.at(-1)
   const printer = findPrinter(pathParts.at(-2))
   if (!printer) fail(404, 404, '打印机不存在')
   if (!printer.currentJobId) fail(422, 422, '打印机当前没有任务')
   const job = findJob(printer.currentJobId)
-  if (pathParts.at(-1) === 'pause') {
-    if (job) job.status = 'PAUSED'
+  if (!job) fail(422, 422, '打印机当前任务不存在')
+  if (!canReadResource(session, job.userId)) fail(403, 403, '无权操作此任务')
+
+  if (action === 'pause') {
+    if (job.status !== 'PRINTING') fail(422, 422, '当前任务状态不允许暂停')
+    job.status = 'PAUSED'
+    job.updatedAt = now()
     printer.status = 'PAUSED'
-  } else {
-    if (job) {
-      if (!canReadResource(session, job.userId)) fail(403, 403, '无权操作此任务')
-      job.status = 'CANCELLED'
-      job.updatedAt = now()
+  } else if (action === 'resume') {
+    if (job.status !== 'PAUSED') fail(422, 422, '当前任务状态不允许恢复')
+    job.status = 'PRINTING'
+    job.updatedAt = now()
+    printer.status = 'PRINTING'
+  } else if (action === 'cancel') {
+    if (!['PRINTING', 'PAUSED', 'ASSIGNED', 'READY'].includes(job.status)) {
+      fail(422, 422, '当前任务状态不允许取消')
     }
+    job.status = 'CANCELLED'
+    job.updatedAt = now()
     printer.status = 'IDLE'
     printer.currentJobId = null
     printer.isSafeToPrint = false
+  } else if (action === 'emergency-stop') {
+    if (!['PRINTING', 'PAUSED'].includes(job.status)) {
+      fail(422, 422, '当前任务状态不允许急停')
+    }
+    job.status = 'RECONCILING'
+    job.errorReason = '紧急停机，等待现场核对'
+    job.updatedAt = now()
+    printer.status = 'ERROR'
+  } else {
+    fail(404, 404, `Mock 未实现设备操作：${action}`)
   }
   printer.updatedAt = now()
   return null
@@ -688,7 +720,7 @@ const route = async config => {
   if (key === 'POST /api/v1/print-jobs/safe/assign') return handleAssignJob(config)
   if (key === 'POST /api/v1/print-jobs/safe/confirm') return handleConfirmSafe(config)
   if (key === 'POST /api/v1/print-jobs/safe/start') return handleStartJob(config)
-  if (/^POST \/api\/v1\/control\/\d+\/(pause|emergency-stop)$/.test(key)) return handlePrinterControl(config)
+  if (/^POST \/api\/v1\/control\/[^/]+\/(pause|resume|cancel|emergency-stop)$/.test(key)) return handlePrinterControl(config)
   if (/^DELETE \/api\/v1\/printers\/delete\/[^/]+$/.test(key)) return handleDeletePrinter(config)
   if (/^GET \/api\/v1\/print-files\/[^/]+\/download$/.test(key)) return handleDownload(config)
   if (/^DELETE \/api\/v1\/print-files\/[^/]+$/.test(key)) return handleDeleteFile(config)

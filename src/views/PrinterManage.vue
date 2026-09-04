@@ -301,7 +301,7 @@
         >
           <TdTableColumn type="selection" width="50" align="center" />
 
-          <TdTableColumn label="状态" width="120" align="center">
+          <TdTableColumn label="设备类型" width="120" align="center">
             <template #default="scope">
               <t-tag
                 :theme="scope.row.isNewDevice ? 'success' : 'primary'"
@@ -313,9 +313,25 @@
             </template>
           </TdTableColumn>
 
+          <TdTableColumn prop="status" label="设备状态" width="120" align="center">
+            <template #default="scope">
+              <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
+                {{ getStatusLabel(scope.row.status) }}
+              </t-tag>
+            </template>
+          </TdTableColumn>
+
           <TdTableColumn label="MAC 地址" width="140" align="center">
             <template #default="scope">
               <span class="font-mono text-sm font-medium text-gray-700">{{ scope.row.macAddress }}</span>
+            </template>
+          </TdTableColumn>
+
+          <TdTableColumn prop="firmwareType" label="协议" width="130" align="center">
+            <template #default="scope">
+              <t-tag size="small" variant="light-outline" theme="default">
+                {{ scope.row.firmwareType || '-' }}
+              </t-tag>
             </template>
           </TdTableColumn>
 
@@ -771,7 +787,8 @@ const handleBatchAdd = async () => {
   const devicesToSubmit = selectedDevices.value.map(device => ({
     ipAddress: device.ipAddress,
     macAddress: device.macAddress,
-    name: device.name || device.suggestedName
+    name: device.name || device.suggestedName,
+    firmwareType: device.firmwareType
   }))
 
   isBatchAdding.value = true
@@ -781,9 +798,9 @@ const handleBatchAdd = async () => {
     const result = res.data || {}
     const resultMessage = res.message || result.message || '批量处理完成'
     if (result.failedCount > 0) {
-      message.warning(`${resultMessage}：成功 ${result.successCount || 0} 台，失败 ${result.failedCount} 台`)
+      message.warning(`${resultMessage}：新增 ${result.insertedCount || 0} 台，更新 ${result.updatedCount || 0} 台，失败 ${result.failedCount} 台`)
     } else {
-      message.success(resultMessage)
+      message.success(`${resultMessage}：新增 ${result.insertedCount || 0} 台，更新 ${result.updatedCount || 0} 台`)
     }
     scanDialogVisible.value = false
     fetchData() // 刷新设备列表

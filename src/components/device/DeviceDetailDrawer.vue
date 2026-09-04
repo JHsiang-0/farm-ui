@@ -242,12 +242,6 @@
                             </span>
                             取消
                         </t-button>
-                        <t-button theme="default" :disabled="actionLoading" @click="handleAction('reboot')">
-                            <span>
-                                <Refresh />
-                            </span>
-                            重启
-                         </t-button>
                     </div>
 
                     <div v-if="isFatalError" class="mt-3">

@@ -1,7 +1,7 @@
 import { mockState } from './data'
 
 const toState = status => ({
-  unifiedState: status === 'IDLE' ? 'STANDBY' : status === 'ERROR' ? 'FAULT' : status === 'OFFLINE' ? 'UNKNOWN' : status,
+  unifiedState: status,
   state: status
 })
 
