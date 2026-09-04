@@ -55,15 +55,17 @@
       </div>
 
       <!-- 数据表格区 -->
-      <TdTable
-        :data="tableData"
-        @row-click="openTaskDetail"
-        :loading="loading"
-        style="width: 100%"
-        class="job-history-table rounded-lg overflow-hidden flex-1"
-        :header-cell-style="{ background: '#f9fafb' }"
-        height="100%"
-      >
+      <div class="job-history-table-panel">
+        <TdTable
+          v-if="loading || tableData.length > 0"
+          :data="tableData"
+          @row-click="openTaskDetail"
+          :loading="loading"
+          style="width: 100%"
+          class="job-history-table rounded-lg overflow-hidden flex-1"
+          :header-cell-style="{ background: '#f9fafb' }"
+          height="100%"
+        >
         <TdTableColumn prop="id" label="任务ID" width="100" align="center">
           <template #default="scope">
             <span class="font-mono font-semibold text-gray-700">#{{ scope.row.id }}</span>
@@ -146,41 +148,42 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="操作" width="200" align="center" fixed="right">
-          <template #default="scope">
-            <div class="history-action-group">
-              <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
-                @click="handleRetry(scope.row.id)">重试</t-button>
-              <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
-                @click="handleRequeue(scope.row.id)">重新排队</t-button>
-              <t-popconfirm v-if="canCancel(scope.row.status)" content="确定要取消这个任务吗？"
-                theme="danger"
-                @confirm="handleCancel(scope.row.id)"
-              >
-                <template>
-                  <t-button
-                    size="small" theme="danger" variant="outline"
-                  >
-                    <span><circle-close /></span>
-                    取消
-                  </t-button>
-                </template>
-              </t-popconfirm>
-              <span v-if="!hasAvailableAction(scope.row.status)" class="no-action">—</span>
-            </div>
-          </template>
-        </TdTableColumn>
-      </TdTable>
+          <TdTableColumn label="操作" width="200" align="center" fixed="right">
+            <template #default="scope">
+              <div class="history-action-group">
+                <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
+                  @click="handleRetry(scope.row.id)">重试</t-button>
+                <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
+                  @click="handleRequeue(scope.row.id)">重新排队</t-button>
+                <t-popconfirm v-if="canCancel(scope.row.status)" content="确定要取消这个任务吗？"
+                  theme="danger"
+                  @confirm="handleCancel(scope.row.id)"
+                >
+                  <template>
+                    <t-button
+                      size="small" theme="danger" variant="outline"
+                    >
+                      <span><circle-close /></span>
+                      取消
+                    </t-button>
+                  </template>
+                </t-popconfirm>
+                <span v-if="!hasAvailableAction(scope.row.status)" class="no-action">—</span>
+              </div>
+            </template>
+          </TdTableColumn>
+        </TdTable>
 
-      <!-- 空状态 -->
-      <t-empty
-        v-if="tableData.length === 0 && !loading"
-        description="暂无打印历史记录"
-      >
-        <template #image>
-          <document :size="64" class="text-gray-400" />
-        </template>
-      </t-empty>
+        <!-- 空状态 -->
+        <t-empty
+          v-else
+          class="job-history-empty"
+        >
+          <template #image>
+            <document :size="64" class="text-gray-400" />
+          </template>
+        </t-empty>
+      </div>
 
       <!-- 底部分页区 -->
       <div class="mt-4 flex justify-center px-4">
@@ -440,6 +443,24 @@ fetchData()
 </script>
 
 <style scoped>
+.job-history-table-panel {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.job-history-table {
+  min-width: 0;
+}
+
+.job-history-empty {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+}
+
 .job-history-table :deep(th) {
   white-space: nowrap;
 }
