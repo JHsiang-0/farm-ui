@@ -33,17 +33,18 @@
     </div>
 
     <!-- 数据表格 -->
-    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
-      <TdTable
-        :data="tableData"
-        :loading="loading"
-        style="width: 100%"
-        class="rounded-lg overflow-hidden flex-1"
-        :header-cell-style="{ background: '#f9fafb' }"
-        @row-click="handleRowClick"
-        row-class-name="cursor-pointer hover:bg-gray-50"
-        height="100%"
-      >
+    <t-card class="printer-manage-card app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+      <div class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+        <TdTable
+          :data="tableData"
+          :loading="loading"
+          style="width: 100%"
+          class="min-h-0 flex-1 overflow-hidden rounded-lg"
+          :header-cell-style="{ background: '#f9fafb' }"
+          @row-click="handleRowClick"
+          row-class-name="cursor-pointer hover:bg-gray-50"
+          height="100%"
+        >
         <TdTableColumn prop="id" label="ID" width="80" align="center">
           <template #default="scope">
             <span class="font-mono font-semibold text-gray-600">{{ scope.row.id }}</span>
@@ -169,10 +170,10 @@
             </div>
           </template>
         </TdTableColumn>
-      </TdTable>
+        </TdTable>
+      </div>
 
-      <!-- 分页 -->
-      <div class="flex justify-end mt-5">
+      <template #footer>
         <t-pagination
           v-model:current="queryParams.pageNum"
           v-model:pageSize="queryParams.pageSize"
@@ -180,7 +181,7 @@
           :show-page-size="false"
           @change="fetchData"
         />
-      </div>
+      </template>
     </t-card>
 
     <!-- 新增/编辑弹窗 -->
@@ -816,3 +817,26 @@ onMounted(() => {
   fetchData()
 })
 </script>
+
+<style scoped>
+.printer-manage-card {
+  height: 100%;
+}
+
+.printer-manage-card :deep(.t-card__body) {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.printer-manage-card :deep(.t-card__footer) {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--app-border);
+}
+
+.printer-manage-card__table {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+</style>
