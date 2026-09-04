@@ -205,6 +205,93 @@
                 </t-descriptions>
             </div>
 
+            <!-- 历史与统计 -->
+            <div class="flex flex-col gap-fluid-sm">
+                <div class="flex items-center justify-between gap-2 text-fluid-sm font-semibold text-gray-900">
+                    <span class="flex items-center gap-2">
+                        <span class="text-gray-600"><InfoFilled /></span>
+                        状态历史与统计
+                    </span>
+                    <t-tag v-if="historyIncrementNotice" theme="primary" variant="light" size="small">
+                        实时状态已更新
+                    </t-tag>
+                </div>
+
+                <t-card class="border-gray-200">
+                    <template #header>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-sm font-semibold text-gray-900">打印统计</span>
+                            <span class="text-xs text-gray-500">时长单位：秒</span>
+                        </div>
+                    </template>
+                    <t-alert v-if="statisticsError" theme="error" :title="statisticsError" :closable="false" />
+                    <t-skeleton v-else-if="statisticsLoading" :loading="true" theme="paragraph" />
+                    <div v-else-if="statistics" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div v-for="item in statisticCards" :key="item.key" class="rounded-lg bg-gray-100 p-3">
+                            <div class="text-xs text-gray-600">{{ item.label }}</div>
+                            <div class="mt-1 text-lg font-bold text-gray-900">{{ item.value }}</div>
+                        </div>
+                    </div>
+                    <t-empty v-else description="暂无统计数据" />
+                </t-card>
+
+                <t-card class="border-gray-200">
+                    <template #header>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-sm font-semibold text-gray-900">状态历史</span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <t-date-range-picker
+                                    v-model="historyRangeModel"
+                                    separator="至"
+                                    :placeholder="['开始日期', '结束日期']"
+                                    value-type="YYYY-MM-DD HH:mm:ss"
+                                    style="width: 260px"
+                                    :default-time="['00:00:00', '23:59:59']"
+                                />
+                                <t-button size="small" theme="primary" :loading="historyLoading" @click="handleHistoryQuery">
+                                    查询
+                                </t-button>
+                                <t-button v-if="historyIncrementNotice" size="small" variant="outline" @click="handleHistoryQuery">
+                                    刷新历史
+                                </t-button>
+                            </div>
+                        </div>
+                    </template>
+                    <t-alert v-if="historyError" theme="error" :title="historyError" :closable="false" />
+                    <t-skeleton v-else-if="historyLoading" :loading="true" theme="paragraph" />
+                    <t-table
+                        v-else-if="statusHistory.length > 0"
+                        :data="statusHistory"
+                        :columns="historyColumns"
+                        row-key="id"
+                        size="small"
+                        bordered
+                    >
+                        <template #status="slotProps">
+                            <t-tag :theme="getHistoryStatusType(slotProps.row.status)" size="small">
+                                {{ getHistoryStatusLabel(slotProps.row.status) }}
+                            </t-tag>
+                        </template>
+                        <template #progress="slotProps">
+                            {{ slotProps.row.progress ?? 0 }}%
+                        </template>
+                        <template #recordedAt="slotProps">
+                            {{ formatDateTime(slotProps.row.recordedAt) }}
+                        </template>
+                    </t-table>
+                    <t-empty v-else description="暂无状态历史" />
+                    <t-pagination
+                        v-if="historyTotal > historyPageSize"
+                        class="mt-3"
+                        :current="historyPageNum"
+                        :page-size="historyPageSize"
+                        :total="historyTotal"
+                        :show-page-size="false"
+                        @change="handleHistoryPageChange"
+                    />
+                </t-card>
+            </div>
+
             <!-- Moonraker / Mainsail 快捷操作 -->
             <div class="flex flex-col gap-fluid-sm">
                 <div class="flex items-center gap-2 text-fluid-sm font-semibold text-gray-900">
@@ -383,6 +470,46 @@ const props = defineProps({
     detailError: {
         type: String,
         default: ''
+    },
+    statusHistory: {
+        type: Array,
+        default: () => []
+    },
+    historyLoading: {
+        type: Boolean,
+        default: false
+    },
+    historyError: {
+        type: String,
+        default: ''
+    },
+    historyTotal: {
+        type: Number,
+        default: 0
+    },
+    historyPageNum: {
+        type: Number,
+        default: 1
+    },
+    historyPageSize: {
+        type: Number,
+        default: 10
+    },
+    historyRange: {
+        type: Array,
+        default: () => []
+    },
+    statistics: {
+        type: Object,
+        default: null
+    },
+    statisticsLoading: {
+        type: Boolean,
+        default: false
+    },
+    statisticsError: {
+        type: String,
+        default: ''
     }
 })
 
@@ -395,8 +522,44 @@ const emit = defineEmits([
     'action',
     'emergency-stop',
     'remove',
-    'closed'
+    'closed',
+    'history-query',
+    'history-page-change'
 ])
+
+const historyRangeModel = ref([])
+const historyIncrementNotice = ref(false)
+const historyColumns = [
+    { colKey: 'status', title: '状态', width: 100 },
+    { colKey: 'filename', title: '文件', ellipsis: true },
+    { colKey: 'progress', title: '进度', width: 70 },
+    { colKey: 'recordedAt', title: '记录时间', width: 150 }
+]
+
+const statisticCards = computed(() => {
+    const stats = props.statistics || {}
+    return [
+        { key: 'totalJobs', label: '总任务', value: stats.totalJobs ?? 0 },
+        { key: 'completedJobs', label: '已完成', value: stats.completedJobs ?? 0 },
+        { key: 'failedJobs', label: '失败', value: stats.failedJobs ?? 0 },
+        { key: 'successRate', label: '成功率', value: `${Number(stats.successRate || 0).toFixed(1)}%` },
+        { key: 'activeJobs', label: '活动任务', value: stats.activeJobs ?? 0 },
+        { key: 'totalPrintSeconds', label: '总打印时长', value: `${Number(stats.totalPrintSeconds || 0).toFixed(0)} 秒` },
+        { key: 'averagePrintSeconds', label: '平均时长', value: `${Number(stats.averagePrintSeconds || 0).toFixed(0)} 秒` }
+    ]
+})
+
+watch(() => props.historyRange, value => {
+    historyRangeModel.value = Array.isArray(value) ? [...value] : []
+}, { immediate: true })
+
+watch(() => props.realTimeData?.updatedAt, (value, previousValue) => {
+    if (value && previousValue && value !== previousValue) historyIncrementNotice.value = true
+})
+
+watch(() => props.modelValue, visible => {
+    if (!visible) historyIncrementNotice.value = false
+})
 
 // ============================================
 // Computed
@@ -406,6 +569,15 @@ const emit = defineEmits([
 function handleVisibleChange(value) {
     emit('update:modelValue', value)
     if (!value) emit('closed')
+}
+
+function handleHistoryQuery() {
+    historyIncrementNotice.value = false
+    emit('history-query', [...historyRangeModel.value])
+}
+
+function handleHistoryPageChange(page) {
+    emit('history-page-change', page)
 }
 
 // 监听抽屉打开事件
@@ -562,6 +734,10 @@ async function handleStartPrint(action) {
         isLoading.value = false
     }
 }
+
+const getHistoryStatusType = status => PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.type || 'default'
+
+const getHistoryStatusLabel = status => PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.label || '未知'
 </script>
 
 <style scoped>

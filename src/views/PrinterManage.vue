@@ -7,6 +7,18 @@
       :real-time-data="selectedDeviceRealTimeData"
       :detail-loading="detailLoading"
       :detail-error="detailError"
+      :status-history="printerHistory"
+      :history-loading="historyLoading"
+      :history-error="historyError"
+      :history-total="historyTotal"
+      :history-page-num="historyPageNum"
+      :history-page-size="historyPageSize"
+      :history-range="historyRange"
+      :statistics="printerStatistics"
+      :statistics-loading="statisticsLoading"
+      :statistics-error="statisticsError"
+      @history-query="handleHistoryQuery"
+      @history-page-change="handleHistoryPageChange"
       @closed="clearPrinterDetailContext"
     />
 
@@ -417,7 +429,9 @@ import {
   deletePrinter,
   scanPrinters,
   batchAddPrinters,
-  confirmSafe
+  confirmSafe,
+  getPrinterStatusHistory,
+  getPrinterStatistics
 } from '@/api/printer'
 import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
@@ -466,6 +480,16 @@ const selectedDeviceRealTimeData = ref(null)
 const detailLoading = ref(false)
 const detailError = ref('')
 const PRINTER_DETAIL_CONTEXT_KEY = 'farm-ui:printer-detail'
+const printerHistory = ref([])
+const historyLoading = ref(false)
+const historyError = ref('')
+const historyTotal = ref(0)
+const historyPageNum = ref(1)
+const historyPageSize = ref(10)
+const historyRange = ref([])
+const printerStatistics = ref(null)
+const statisticsLoading = ref(false)
+const statisticsError = ref('')
 
 // ===== 表单与弹窗状态 =====
 const dialogVisible = ref(false)
@@ -611,8 +635,16 @@ const handleRowClick = (row) => {
   sessionStorage.setItem(PRINTER_DETAIL_CONTEXT_KEY, String(row.id))
   selectedDeviceRealTimeData.value = realtimeStore.getDeviceRealTimeStatus(row.id)
   detailError.value = ''
+  historyPageNum.value = 1
+  historyRange.value = []
+  printerHistory.value = []
+  historyTotal.value = 0
+  historyError.value = ''
+  printerStatistics.value = null
+  statisticsError.value = ''
   detailDrawerVisible.value = true
   loadPrinterDetail(row.id)
+  loadPrinterAnalytics(row.id)
 }
 
 const loadPrinterDetail = async deviceId => {
@@ -632,6 +664,55 @@ const loadPrinterDetail = async deviceId => {
   }
 }
 
+const loadPrinterAnalytics = async deviceId => {
+  historyLoading.value = true
+  statisticsLoading.value = true
+  historyError.value = ''
+  statisticsError.value = ''
+  const params = {
+    pageNum: historyPageNum.value,
+    pageSize: historyPageSize.value
+  }
+  if (historyRange.value.length === 2) {
+    params.from = historyRange.value[0]
+    params.to = historyRange.value[1]
+  }
+  const [historyResult, statisticsResult] = await Promise.allSettled([
+    getPrinterStatusHistory(deviceId, params),
+    getPrinterStatistics(deviceId, {
+      ...(params.from ? { from: params.from } : {}),
+      ...(params.to ? { to: params.to } : {})
+    })
+  ])
+  if (String(selectedDevice.value?.id) !== String(deviceId)) return
+
+  if (historyResult.status === 'fulfilled') {
+    printerHistory.value = historyResult.value.data?.records || []
+    historyTotal.value = historyResult.value.data?.total || 0
+  } else {
+    historyError.value = historyResult.reason?.message || '状态历史加载失败，请重试'
+  }
+  if (statisticsResult.status === 'fulfilled') {
+    printerStatistics.value = statisticsResult.value.data || null
+  } else {
+    statisticsError.value = statisticsResult.reason?.message || '打印机统计加载失败，请重试'
+  }
+  historyLoading.value = false
+  statisticsLoading.value = false
+}
+
+const handleHistoryQuery = range => {
+  historyRange.value = Array.isArray(range) ? range : []
+  historyPageNum.value = 1
+  if (selectedDevice.value?.id) loadPrinterAnalytics(selectedDevice.value.id)
+}
+
+const handleHistoryPageChange = ({ current, pageSize }) => {
+  historyPageNum.value = current
+  historyPageSize.value = pageSize
+  if (selectedDevice.value?.id) loadPrinterAnalytics(selectedDevice.value.id)
+}
+
 const clearPrinterDetailContext = () => {
   detailDrawerVisible.value = false
   sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
@@ -639,6 +720,14 @@ const clearPrinterDetailContext = () => {
   selectedDeviceRealTimeData.value = null
   detailLoading.value = false
   detailError.value = ''
+  printerHistory.value = []
+  historyLoading.value = false
+  historyError.value = ''
+  historyTotal.value = 0
+  historyPageNum.value = 1
+  printerStatistics.value = null
+  statisticsLoading.value = false
+  statisticsError.value = ''
 }
 
 const restorePrinterDetailContext = () => {

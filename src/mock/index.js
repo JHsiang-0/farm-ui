@@ -287,6 +287,111 @@ const handlePrinterDetail = config => {
   return toPublicPrinter(printer)
 }
 
+const getPrinterForAnalytics = config => {
+  requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  if (!/^\d+$/.test(String(id)) || Number(id) <= 0) fail(400, 400, '打印机 ID 不合法')
+  const printer = findPrinter(id)
+  if (!printer) fail(404, 404, '打印机不存在')
+  return printer
+}
+
+const getAnalyticsTimeRange = config => {
+  const params = getParams(config)
+  const from = params.from || null
+  const to = params.to || null
+  if (from && to && new Date(from) > new Date(to)) fail(400, 400, '开始时间不能晚于结束时间')
+  return { from, to }
+}
+
+const isInTimeRange = (value, range) => {
+  const time = new Date(value).getTime()
+  if (!Number.isFinite(time)) return false
+  if (range.from && time < new Date(range.from).getTime()) return false
+  if (range.to && time > new Date(range.to).getTime()) return false
+  return true
+}
+
+const handlePrinterHistory = config => {
+  const printer = getPrinterForAnalytics(config)
+  const range = getAnalyticsTimeRange(config)
+  const fileById = new Map(mockState.files.map(file => [String(file.id), file]))
+  const jobs = mockState.jobs
+    .filter(job => String(job.printerId) === String(printer.id))
+    .map(job => {
+      const file = fileById.get(String(job.fileId))
+      return {
+        id: `${printer.id}-${job.id}`,
+        printerId: printer.id,
+        status: job.status,
+        rawState: String(job.status || '').toLowerCase(),
+        systemMessage: job.errorReason || null,
+        filename: file?.originalName || null,
+        progress: job.progress || 0,
+        nozzleTargetTemperature: null,
+        nozzleTemperature: null,
+        bedTargetTemperature: null,
+        bedTemperature: null,
+        filamentUsed: null,
+        printDuration: job.startedAt && job.completedAt
+          ? Math.max(new Date(job.completedAt) - new Date(job.startedAt), 0) / 1000
+          : null,
+        recordedAt: job.updatedAt || job.createdAt
+      }
+    })
+  const currentRecord = {
+    id: `${printer.id}-current`,
+    printerId: printer.id,
+    status: printer.status,
+    rawState: String(printer.status || '').toLowerCase(),
+    systemMessage: null,
+    filename: printer.currentJobFileName || null,
+    progress: 0,
+    nozzleTargetTemperature: null,
+    nozzleTemperature: null,
+    bedTargetTemperature: null,
+    bedTemperature: null,
+    filamentUsed: null,
+    printDuration: null,
+    recordedAt: printer.updatedAt || printer.createdAt
+  }
+  const records = [currentRecord, ...jobs]
+    .filter(record => isInTimeRange(record.recordedAt, range))
+    .sort((left, right) => new Date(right.recordedAt) - new Date(left.recordedAt))
+  return createMockPage(records, getParams(config))
+}
+
+const handlePrinterStatistics = config => {
+  const printer = getPrinterForAnalytics(config)
+  const range = getAnalyticsTimeRange(config)
+  const jobs = mockState.jobs.filter(job => (
+    String(job.printerId) === String(printer.id) && isInTimeRange(job.createdAt, range)
+  ))
+  const completedJobs = jobs.filter(job => job.status === 'COMPLETED')
+  const failedJobs = jobs.filter(job => job.status === 'FAILED')
+  const cancelledJobs = jobs.filter(job => job.status === 'CANCELLED')
+  const activeJobs = jobs.filter(job => !['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status))
+  const durations = completedJobs
+    .filter(job => job.startedAt && job.completedAt)
+    .map(job => Math.max(new Date(job.completedAt) - new Date(job.startedAt), 0) / 1000)
+  const totalPrintSeconds = durations.reduce((total, seconds) => total + seconds, 0)
+  const denominator = completedJobs.length + failedJobs.length
+
+  return {
+    printerId: printer.id,
+    from: range.from,
+    to: range.to,
+    totalJobs: jobs.length,
+    completedJobs: completedJobs.length,
+    failedJobs: failedJobs.length,
+    cancelledJobs: cancelledJobs.length,
+    activeJobs: activeJobs.length,
+    successRate: denominator > 0 ? (completedJobs.length / denominator) * 100 : 0,
+    totalPrintSeconds,
+    averagePrintSeconds: durations.length > 0 ? totalPrintSeconds / durations.length : 0
+  }
+}
+
 const handleAddPrinter = config => {
   requireSession(config, ['ADMIN'])
   const body = getBody(config)
@@ -1157,6 +1262,8 @@ const route = async config => {
   if (/^(GET|PUT) \/api\/v1\/auth\/[^/]+\/profile$/.test(key)) return handleProfile(config)
   if (/^POST \/api\/v1\/auth\/[^/]+\/change-password$/.test(key)) return handleChangePassword(config)
   if (key === 'GET /api/v1/printers/page') return handlePrinterPage(config)
+  if (/^GET \/api\/v1\/printers\/[^/]+\/history$/.test(key)) return handlePrinterHistory(config)
+  if (/^GET \/api\/v1\/printers\/[^/]+\/statistics$/.test(key)) return handlePrinterStatistics(config)
   if (/^GET \/api\/v1\/printers\/[^/]+$/.test(key)) return handlePrinterDetail(config)
   if (key === 'POST /api/v1/printers/add') return handleAddPrinter(config)
   if (key === 'PUT /api/v1/printers/update') return handleUpdatePrinter(config)

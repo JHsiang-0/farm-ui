@@ -3,7 +3,9 @@ import {
   mapResponseData,
   normalizePageParams,
   normalizePageResponse,
-  normalizePrinter
+  normalizePrinter,
+  normalizeId,
+  normalizePrinterStatus
 } from '@/utils/dataAdapters'
 
 /**
@@ -47,6 +49,66 @@ export function getPrinterDetail(id) {
  */
 function normalizePrinterResponse(response) {
   return mapResponseData(response, normalizePrinter)
+}
+
+const normalizeStatusHistory = record => {
+  if (!record || typeof record !== 'object') return record
+  const normalized = { ...record }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'id')) normalized.id = normalizeId(normalized.id)
+  if (Object.prototype.hasOwnProperty.call(normalized, 'printerId')) normalized.printerId = normalizeId(normalized.printerId)
+  if (Object.prototype.hasOwnProperty.call(normalized, 'status')) normalized.status = normalizePrinterStatus(normalized.status)
+  if (Object.prototype.hasOwnProperty.call(normalized, 'progress')) {
+    const progress = Number(normalized.progress)
+    normalized.progress = Number.isFinite(progress) ? Math.min(Math.max(progress, 0), 100) : 0
+  }
+  return normalized
+}
+
+const normalizeStatistics = data => {
+  if (!data || typeof data !== 'object') return data
+  const normalized = { ...data }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'printerId')) normalized.printerId = normalizeId(normalized.printerId)
+  const numberFields = ['totalJobs', 'completedJobs', 'failedJobs', 'cancelledJobs', 'activeJobs', 'totalPrintSeconds', 'averagePrintSeconds']
+  numberFields.forEach(field => {
+    if (Object.prototype.hasOwnProperty.call(normalized, field)) {
+      const value = Number(normalized[field])
+      normalized[field] = Number.isFinite(value) && value >= 0 ? value : 0
+    }
+  })
+  if (Object.prototype.hasOwnProperty.call(normalized, 'successRate')) {
+    const successRate = Number(normalized.successRate)
+    normalized.successRate = Number.isFinite(successRate) ? Math.min(Math.max(successRate, 0), 100) : 0
+  }
+  return normalized
+}
+
+/** 查询打印机状态历史，记录按 recordedAt 倒序返回。 */
+export function getPrinterStatusHistory(id, params = {}) {
+  const query = normalizePageParams(params)
+  return request({
+    url: `/api/v1/printers/${id}/history`,
+    method: 'get',
+    params: {
+      ...query,
+      ...(params.from ? { from: params.from } : {}),
+      ...(params.to ? { to: params.to } : {})
+    }
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizeStatusHistory)
+  ))
+}
+
+/** 查询打印机任务统计，时长单位为秒。 */
+export function getPrinterStatistics(id, params = {}) {
+  return request({
+    url: `/api/v1/printers/${id}/statistics`,
+    method: 'get',
+    params: {
+      ...(params.from ? { from: params.from } : {}),
+      ...(params.to ? { to: params.to } : {})
+    }
+  }).then(response => mapResponseData(response, normalizeStatistics))
 }
 
 /**
