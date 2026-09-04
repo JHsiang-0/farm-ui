@@ -12,8 +12,8 @@
         <!-- 缩略图 -->
         <div class="w-24 h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-100 flex-shrink-0">
           <t-image
-            v-if="file.thumbnail_url"
-            :src="file.thumbnail_url"
+            v-if="file.thumbnailUrl"
+            :src="file.thumbnailUrl"
             fit="cover"
             class="w-full h-full"
           >
@@ -30,11 +30,11 @@
 
         <!-- 文件信息 -->
         <div class="flex-1 min-w-0">
-          <h2 class="text-xl font-bold text-gray-900 mb-2 truncate" :title="file.original_name">
-            {{ file.original_name }}
+          <h2 class="text-xl font-bold text-gray-900 mb-2 truncate" :title="file.originalName">
+            {{ file.originalName }}
           </h2>
-          <t-tag :theme="getMaterialTagType(file.material_type)" class="mr-2">
-            {{ file.material_type || 'PLA' }}
+          <t-tag :theme="getMaterialTagType(file.materialType)" class="mr-2">
+            {{ file.materialType || 'PLA' }}
           </t-tag>
         </div>
 
@@ -58,7 +58,7 @@
             <IconClock />
             <span class="text-xs font-medium">预估耗时</span>
           </div>
-          <span class="text-lg font-bold text-gray-900">{{ formatEstTime(file.est_time) }}</span>
+          <span class="text-lg font-bold text-gray-900">{{ formatEstTime(file.estTime) }}</span>
         </div>
 
         <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -66,7 +66,7 @@
             <IconWeight />
             <span class="text-xs font-medium">耗材重量</span>
           </div>
-          <span class="text-lg font-bold text-gray-900">{{ formatWeight(file.filament_weight) }}</span>
+          <span class="text-lg font-bold text-gray-900">{{ formatWeight(file.filamentWeight) }}</span>
         </div>
 
         <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -74,7 +74,7 @@
             <IconLength />
             <span class="text-xs font-medium">所需线长</span>
           </div>
-          <span class="text-lg font-bold text-gray-900">{{ formatLength(file.filament_length) }}</span>
+          <span class="text-lg font-bold text-gray-900">{{ formatLength(file.filamentLength) }}</span>
         </div>
 
         <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -82,7 +82,7 @@
             <IconNozzle />
             <span class="text-xs font-medium">喷嘴要求</span>
           </div>
-          <span class="text-lg font-bold text-gray-900">{{ formatNozzle(file.nozzle_size) }}</span>
+          <span class="text-lg font-bold text-gray-900">{{ formatNozzle(file.nozzleSize) }}</span>
         </div>
       </div>
 
@@ -98,22 +98,22 @@
           </template>
           <t-descriptions :column="2" size="small" bordered>
             <t-descriptions-item label="常规层高">
-              {{ formatHeight(file.layer_height) }}
+              {{ formatHeight(file.layerHeight) }}
             </t-descriptions-item>
             <t-descriptions-item label="首层层高">
-              {{ formatHeight(file.first_layer_height) }}
+              {{ formatHeight(file.firstLayerHeight) }}
             </t-descriptions-item>
             <t-descriptions-item label="喷嘴温度">
-              {{ formatTemperature(file.nozzle_temp) }}
+              {{ formatTemperature(file.nozzleTemp) }}
             </t-descriptions-item>
             <t-descriptions-item label="首层喷嘴温度">
-              {{ formatTemperature(file.first_layer_nozzle_temp) }}
+              {{ formatTemperature(file.firstLayerNozzleTemp) }}
             </t-descriptions-item>
             <t-descriptions-item label="热床温度">
-              {{ formatTemperature(file.bed_temp) }}
+              {{ formatTemperature(file.bedTemp) }}
             </t-descriptions-item>
             <t-descriptions-item label="首层热床温度">
-              {{ formatTemperature(file.first_layer_bed_temp) }}
+              {{ formatTemperature(file.firstLayerBedTemp) }}
             </t-descriptions-item>
           </t-descriptions>
         </t-card>
@@ -128,16 +128,13 @@
           </template>
           <t-descriptions :column="1" size="small" bordered>
             <t-descriptions-item label="文件大小">
-              {{ formatFileSize(file.file_size) }}
+              {{ formatFileSize(file.fileSize) }}
             </t-descriptions-item>
             <t-descriptions-item label="上传时间">
-              {{ formatDateTime(file.created_at) }}
-            </t-descriptions-item>
-            <t-descriptions-item label="系统存储名">
-              <span class="text-xs text-gray-600 font-mono">{{ file.safe_name }}</span>
+              {{ formatDateTime(file.createdAt) }}
             </t-descriptions-item>
             <t-descriptions-item label="上传用户ID">
-              {{ file.user_id || '-' }}
+              {{ file.userId || '-' }}
             </t-descriptions-item>
           </t-descriptions>
         </t-card>
@@ -162,6 +159,7 @@ import IconLength from '../icons/IconLength.vue'
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconTemperature from '../icons/IconTemperature.vue'
 import IconInfo from '../icons/IconInfo.vue'
+import { formatDuration, formatFileSize, formatDateTime } from '@/utils/formatters'
 
 // Props
 const props = defineProps({
@@ -186,29 +184,7 @@ const visible = computed({
 
 // Methods
 const handlePrint = () => {
-  // 将 snake_case 转换为 camelCase 以适配 FileLibrary 组件
-  const fileData = {
-    id: props.file.id,
-    originalName: props.file.original_name,
-    safeName: props.file.safe_name,
-    fileUrl: props.file.file_url,
-    fileSize: props.file.file_size,
-    userId: props.file.user_id,
-    createdAt: props.file.created_at,
-    thumbnailUrl: props.file.thumbnail_url,
-    estTime: props.file.est_time,
-    materialType: props.file.material_type,
-    filamentWeight: props.file.filament_weight,
-    filamentLength: props.file.filament_length,
-    nozzleSize: props.file.nozzle_size,
-    layerHeight: props.file.layer_height,
-    firstLayerHeight: props.file.first_layer_height,
-    bedTemp: props.file.bed_temp,
-    nozzleTemp: props.file.nozzle_temp,
-    firstLayerNozzleTemp: props.file.first_layer_nozzle_temp,
-    firstLayerBedTemp: props.file.first_layer_bed_temp
-  }
-  emit('print', fileData)
+  emit('print', props.file)
 }
 
 const handleDownload = () => {
@@ -220,56 +196,33 @@ const handleClosed = () => {
 }
 
 const formatEstTime = (seconds) => {
-  if (!seconds) return '未知'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) {
-    return `${h}h ${m}m`
-  }
-  return `${m}m`
+  return formatDuration(seconds)
 }
 
 const formatWeight = (grams) => {
   if (grams === undefined || grams === null) return '-'
-  return `${grams.toFixed(1)}g`
+  return `${Number(grams).toFixed(1)}g`
 }
 
 const formatLength = (millimeters) => {
   if (millimeters === undefined || millimeters === null) return '-'
   const meters = millimeters / 1000
-  return `${meters.toFixed(2)}m`
+  return `${Number(meters).toFixed(2)}m`
 }
 
 const formatNozzle = (millimeters) => {
   if (millimeters === undefined || millimeters === null) return '-'
-  return `${millimeters.toFixed(1)}mm`
+  return `${Number(millimeters).toFixed(1)}mm`
 }
 
 const formatHeight = (millimeters) => {
   if (millimeters === undefined || millimeters === null) return '-'
-  return `${millimeters.toFixed(2)}mm`
+  return `${Number(millimeters).toFixed(2)}mm`
 }
 
 const formatTemperature = (celsius) => {
   if (celsius === undefined || celsius === null) return '-'
-  return `${celsius.toFixed(0)}°C`
-}
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return '-'
-  const mb = bytes / (1024 * 1024)
-  return `${mb.toFixed(2)} MB`
-}
-
-const formatDateTime = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}`
+  return `${Number(celsius).toFixed(0)}°C`
 }
 
 const getMaterialTagType = (materialType) => {

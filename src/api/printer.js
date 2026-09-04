@@ -1,4 +1,10 @@
 import request from '@/utils/request'
+import {
+  mapResponseData,
+  normalizePageParams,
+  normalizePageResponse,
+  normalizePrinter
+} from '@/utils/dataAdapters'
 
 /**
  * 打印机设备 API 模块
@@ -12,54 +18,54 @@ import request from '@/utils/request'
  * @param {number} [params.pageSize=10] - 每页条数
  * @returns {Promise<{code: number, message: string, data: {records: Array<Printer>, total: number, pageNum: number, pageSize: number}}>} 分页结果
  */
-export function getPrinterList(params) {
+export function getPrinterList(params = {}) {
   return request({
     url: '/api/v1/printers/page',
     method: 'get',
-    params
-  })
+    params: normalizePageParams(params)
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizePrinter)
+  ))
+}
+
+/**
+ * 规范化单个打印机响应中的 Long 类型 ID。
+ */
+function normalizePrinterResponse(response) {
+  return mapResponseData(response, normalizePrinter)
 }
 
 /**
  * 新增打印机设备
  * @param {Object} data - 打印机数据
- * @param {string} data.name - 设备名称
- * @param {string} data.ipAddress - IP地址
- * @param {string} data.macAddress - MAC地址
- * @param {string} [data.firmwareType] - 固件类型
- * @param {string} [data.nozzleSize] - 喷头尺寸
- * @returns {Promise<{code: number, message: string, data: Printer}>} 创建结果
+ * @returns {Promise<Object>} 新增结果
  */
 export function addPrinter(data) {
   return request({
     url: '/api/v1/printers/add',
     method: 'post',
     data
-  })
+  }).then(normalizePrinterResponse)
 }
 
 /**
  * 更新打印机信息
  * @param {Object} data - 打印机数据
- * @param {number} data.id - 设备ID
- * @param {string} [data.name] - 设备名称
- * @param {string} [data.machineNumber] - 机器编号
- * @param {string} [data.ipAddress] - IP地址
- * @param {string} [data.status] - 设备状态
- * @returns {Promise<{code: number, message: string, data: Printer}>} 更新结果
+ * @returns {Promise<Object>} 更新结果
  */
 export function updatePrinter(data) {
   return request({
     url: '/api/v1/printers/update',
     method: 'put',
     data
-  })
+  }).then(normalizePrinterResponse)
 }
 
 /**
  * 删除打印机设备
- * @param {number} id - 设备ID
- * @returns {Promise<{code: number, message: string}>} 删除结果
+ * @param {number|string} id - 设备ID
+ * @returns {Promise<Object>} 删除结果
  */
 export function deletePrinter(id) {
   return request({
@@ -109,7 +115,10 @@ export function getUnallocatedPrinters() {
   return request({
     url: '/api/v1/printers/unallocated',
     method: 'get'
-  })
+  }).then(response => mapResponseData(
+    response,
+    data => Array.isArray(data) ? data.map(normalizePrinter) : []
+  ))
 }
 
 /**
@@ -129,6 +138,46 @@ export function batchUpdatePositions(positions) {
 }
 
 /**
+ * 暂停打印机当前任务。
+ * @param {number|string} printerId - 打印机ID
+ * @returns {Promise<{code: number, message: string, data: null}>} 操作结果
+ */
+export function pausePrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/pause`,
+    method: 'post'
+  })
+}
+
+/** 恢复打印机当前暂停任务。 */
+export function resumePrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/resume`,
+    method: 'post'
+  })
+}
+
+/** 取消打印机当前任务。 */
+export function cancelPrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/cancel`,
+    method: 'post'
+  })
+}
+
+/**
+ * 对打印机执行紧急停机。
+ * @param {number|string} printerId - 打印机ID
+ * @returns {Promise<{code: number, message: string, data: null}>} 操作结果
+ */
+export function emergencyStopPrinter(printerId) {
+  return request({
+    url: `/api/v1/control/${printerId}/emergency-stop`,
+    method: 'post'
+  })
+}
+
+/**
  * 确认打印机热床已清理完毕 - 安全模式第二步之一
  * @param {number} printerId - 打印机ID
  * @returns {Promise<{code: number, message: string, data: Printer}>} 更新结果
@@ -138,7 +187,7 @@ export function confirmSafe(printerId) {
     url: '/api/v1/print-jobs/safe/confirm',
     method: 'post',
     data: { printerId }
-  })
+  }).then(normalizePrinterResponse)
 }
 
 // ============================================

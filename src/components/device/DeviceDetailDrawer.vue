@@ -183,7 +183,7 @@
                 </div>
                 <t-descriptions :column="descriptionColumn" size="small" bordered>
                     <t-descriptions-item label="机器编号" :span="descriptionColumn">
-                        {{ device.machineNumber || '-' }}
+                        {{ device.machineNumber || `#${device.id}` }}
                     </t-descriptions-item>
                     <t-descriptions-item label="设备名称" :span="descriptionColumn">
                         {{ device.name || '-' }}
@@ -206,10 +206,10 @@
                     <span class="text-gray-600">
                         <Monitor />
                     </span>
-                    远程控制 (Moonraker / Mainsail)
+                    远程控制
                 </div>
                 <div class="flex flex-col gap-fluid-sm">
-                    <t-button v-if="device.ipAddress" theme="primary" size="large" tag="a" :href="mainsailUrl"
+                    <t-button v-if="device.ipAddress && device.firmwareType !== 'RRF'" theme="primary" size="large" tag="a" :href="mainsailUrl"
                         target="_blank" rel="noopener noreferrer" class="w-full justify-center h-11 text-fluid-sm">
                         <span>
                             <Monitor />
@@ -217,31 +217,25 @@
                         打开 Mainsail 界面
                     </t-button>
 
-                    <!-- 操作按钮网格 - 移动端 2列，桌面 4列 -->
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                        <t-button theme="warning" :disabled="!canPause" @click="handleAction('pause')" class="h-10">
+                    <!-- 操作按钮网格 - 移动端 2列，桌面 3列 -->
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                        <t-button theme="warning" :disabled="actionLoading || !canPause" :loading="actionLoading" @click="handleAction('pause')" class="h-10">
                             <span>
                                 <VideoPause />
                             </span>
                             暂停
                         </t-button>
-                        <t-button theme="success" :disabled="!canResume" @click="handleAction('resume')" class="h-10">
+                        <t-button theme="success" :disabled="actionLoading || !canResume" :loading="actionLoading" @click="handleAction('resume')" class="h-10">
                             <span>
                                 <VideoPlay />
                             </span>
                             恢复
                         </t-button>
-                        <t-button theme="danger" :disabled="!canCancel" @click="handleAction('cancel')" class="h-10">
+                        <t-button theme="danger" :disabled="actionLoading || !canCancel" :loading="actionLoading" @click="handleAction('cancel')" class="h-10">
                             <span>
                                 <CircleClose />
                             </span>
                             取消
-                        </t-button>
-                        <t-button theme="default" @click="handleAction('reboot')" class="h-10">
-                            <span>
-                                <Refresh />
-                            </span>
-                            重启
                         </t-button>
                     </div>
 
@@ -250,6 +244,7 @@
                             <t-tag theme="danger" variant="dark">紧急操作</t-tag>
                         </t-divider>
                         <t-button theme="danger" size="large" class="w-full h-12 text-fluid-base font-bold"
+                            :disabled="actionLoading" :loading="actionLoading"
                             @click="handleEmergencyStop">
                             <span>
                                 <Warning />
@@ -264,7 +259,7 @@
         <!-- 抽屉底部操作区 -->
         <template #footer>
             <div class="flex justify-end p-fluid-md border-t border-gray-200">
-                <t-popconfirm content="确定要将此设备从该物理位置下架吗？" confirm-btn="确认下架" cancel-btn="取消"
+                <t-popconfirm v-if="canManageDevice" content="确定要将此设备从该物理位置下架吗？" confirm-btn="确认下架" cancel-btn="取消"
                     theme="danger" @confirm="handleRemove">
                     <template>
                         <t-button theme="danger" variant="outline">
@@ -290,7 +285,6 @@ import {
     PauseIcon as VideoPause,
     PlayIcon as VideoPlay,
     CloseCircleIcon as CircleClose,
-    RefreshIcon as Refresh,
     ErrorCircleFilledIcon as Warning,
     LockOnIcon as Lock,
     FileAddIcon as DocumentAdd
@@ -363,6 +357,16 @@ const props = defineProps({
     realTimeData: {
         type: Object,
         default: null
+    },
+    /** 是否允许维护设备和网格位置 */
+    canManageDevice: {
+        type: Boolean,
+        default: false
+    },
+    /** 是否正在执行暂停、取消或急停 */
+    actionLoading: {
+        type: Boolean,
+        default: false
     }
 })
 

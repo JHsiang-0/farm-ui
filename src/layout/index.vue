@@ -50,6 +50,11 @@
           机器管理
         </t-menu-item>
 
+        <t-menu-item v-if="userStore.isAdmin" value="/users" to="/users">
+          <template #icon><User /></template>
+          用户管理
+        </t-menu-item>
+
         <t-menu-item value="/files" to="/files">
           <template #icon><FolderOpened /></template>
           文件库
@@ -67,6 +72,10 @@
           <t-menu-item value="/tasks/history" to="/tasks/history">
             <template #icon><Document /></template>
             打印记录
+          </t-menu-item>
+          <t-menu-item value="/batch-dispatch" to="/batch-dispatch">
+            <template #icon><List /></template>
+            批量派发
           </t-menu-item>
         </t-submenu>
       </t-menu>
@@ -188,10 +197,12 @@ const currentRoute = computed(() => {
   const map = {
     '/': { name: '监控大屏', icon: 'Odometer' },
     '/printers': { name: '机器管理', icon: 'Printer' },
+    '/profile': { name: '个人中心', icon: 'User' },
     '/files': { name: '切片文件库', icon: 'FolderOpened' },
     '/tasks': { name: '任务管理', icon: 'List' },
     '/tasks/queue': { name: '任务队列', icon: 'List' },
-    '/tasks/history': { name: '打印记录', icon: 'Document' }
+    '/tasks/history': { name: '打印记录', icon: 'Document' },
+    '/batch-dispatch': { name: '批量派发', icon: 'List' }
   }
   return map[route.path] || { name: '', icon: '' }
 })
@@ -214,7 +225,7 @@ const handleCommand = (item) => {
   const command = typeof item === 'string' ? item : item?.value
   switch (command) {
     case 'profile':
-      message.info('个人中心功能开发中...')
+      router.push('/profile')
       break
     case 'settings':
       message.info('系统设置功能开发中...')

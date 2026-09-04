@@ -6,14 +6,32 @@
         :last-update-time="lastUpdateTime" @refresh="handleRefresh">
       <!-- 布局锁定/编辑模式切换按钮 -->
       <template #actions>
-        <t-button v-if="!isEditMode" theme="default" :icon="renderIcon(Lock)" @click="toggleEditMode">
+        <t-button v-if="canManageLayout && !isEditMode" theme="default" :icon="renderIcon(Lock)" @click="toggleEditMode">
           解锁布局
         </t-button>
-        <t-button v-else theme="primary" :icon="renderIcon(Unlock)" @click="saveLayout">
+        <t-button v-else-if="canManageLayout" theme="primary" :icon="renderIcon(Unlock)" @click="saveLayout">
           保存布局
         </t-button>
       </template>
       </dashboard-header>
+      <t-alert
+        v-if="store.wsConnectionState !== 'OPEN'"
+        class="mt-2"
+        theme="warning"
+        title="实时连接未建立，当前看板数据可能不是最新"
+        :closable="false"
+      />
+      <div v-if="store.alerts.length" class="mt-2 space-y-2" aria-live="polite">
+        <t-alert
+          v-for="alert in store.alerts"
+          :key="alert.id"
+          :theme="alert.theme"
+          :title="alert.title"
+          :message="alert.message"
+          closable
+          @close="store.dismissAlert(alert.id)"
+        />
+      </div>
     </div>
 
     <!-- 独立车间看板容器 - 响应式布局，与状态栏对齐 -->
@@ -36,17 +54,20 @@
 
     <!-- 设备详情抽屉 - 使用 DeviceDetailDrawer 组件 -->
     <device-detail-drawer v-model="drawerVisible" :device="activeDevice" :real-time-data="activeRealTimeData"
+      :can-manage-device="userStore.isAdmin" :action-loading="controlLoading"
       @action="handlePrinterAction" @emergency-stop="handleEmergencyStop" @remove="handleRemoveFromBoard"
       @closed="handleDrawerClosed" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { message } from '@/utils/message'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { message, confirmMessage } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
+import { useUserStore } from '@/stores/user'
 import { LockOnIcon as Lock, LockOffIcon as Unlock } from 'tdesign-icons-vue-next'
 import { usePrinterStore } from '@/stores/printer'
+import { emergencyStopPrinter, pausePrinter, resumePrinter, cancelPrinter } from '@/api/printer'
 import DashboardHeader from './DashboardHeader.vue'
 import GridMap from './grid/GridMap.vue'
 import BindDeviceDialog from './BindDeviceDialog.vue'
@@ -59,6 +80,8 @@ defineOptions({ name: 'FarmDashboard' })
 // ============================================
 
 const store = usePrinterStore()
+const userStore = useUserStore()
+const controlLoading = ref(false)
 
 // ============================================
 // Reactive State
@@ -66,6 +89,11 @@ const store = usePrinterStore()
 
 /** 编辑模式状态 - 默认锁定监控模式 */
 const isEditMode = ref(false)
+const canManageLayout = computed(() => userStore.isAdmin)
+
+watch(canManageLayout, canManage => {
+  if (!canManage) isEditMode.value = false
+})
 
 /** 拖拽相关状态 */
 const draggedDevice = ref(null)
@@ -298,6 +326,11 @@ function handleCellClick(device, rowIndex, colIndex) {
  * @param {number} deviceId - 设备ID
  */
 async function performBind(deviceId) {
+  if (!canManageLayout.value) {
+    message.error('当前账号没有绑定设备的权限')
+    return
+  }
+
   try {
     // 先调用位置更新 API
     const positionPayload = [{
@@ -331,27 +364,62 @@ async function performBind(deviceId) {
  * @param {string} action - 操作类型
  * @param {Object} device - 设备对象
  */
-function handlePrinterAction(action, device) {
+async function handlePrinterAction(action, device) {
   const actionMap = {
     pause: '暂停打印',
     resume: '恢复打印',
-    cancel: '取消任务',
-    reboot: '重启主机'
+    cancel: '取消任务'
   }
 
-  // TODO: 调用 Moonraker API
-  message.info(`正在发送 ${actionMap[action]} 指令到 ${device.machineNumber}...`)
-  console.log(`[Printer Action] ${action} -> ${device.ipAddress}`)
+  try {
+    await confirmMessage(`确定要对 ${device.machineNumber || device.name} 执行“${actionMap[action]}”吗？`, '操作确认', {
+      confirmButtonText: actionMap[action],
+      cancelButtonText: '取消',
+      type: action === 'cancel' ? 'danger' : 'warning'
+    })
+
+    controlLoading.value = true
+    if (action === 'pause') {
+      await pausePrinter(device.id)
+    } else if (action === 'resume') {
+      await resumePrinter(device.id)
+    } else if (action === 'cancel') {
+      if (!device.currentJobId && !store.realTimeStatus[device.id]?.currentJobId) {
+        message.warning('该设备当前没有可取消的任务')
+        return
+      }
+      await cancelPrinter(device.id)
+    }
+
+    await store.fetchDeviceData()
+    message.success(`${actionMap[action]}成功`)
+  } catch (error) {
+    if (error !== 'cancel') console.error(`${actionMap[action]}失败:`, error)
+  } finally {
+    controlLoading.value = false
+  }
 }
 
 /**
  * 处理紧急停机
  * @param {Object} device - 设备对象
  */
-function handleEmergencyStop(device) {
-  // TODO: 调用 Moonraker ESTOP API
-  message.warning(`正在发送紧急停机指令到 ${device.machineNumber}...`)
-  console.log(`[Emergency Stop] ESTOP -> ${device.ipAddress}`)
+async function handleEmergencyStop(device) {
+  try {
+    await confirmMessage(
+      `紧急停机会立即停止 ${device.machineNumber || device.name}，确定继续吗？`,
+      '紧急停机确认',
+      { confirmButtonText: '确认急停', cancelButtonText: '取消', type: 'danger' }
+    )
+    controlLoading.value = true
+    await emergencyStopPrinter(device.id)
+    await store.fetchDeviceData()
+    message.success('紧急停机成功')
+  } catch (error) {
+    if (error !== 'cancel') console.error('紧急停机失败:', error)
+  } finally {
+    controlLoading.value = false
+  }
 }
 
 /**
@@ -359,6 +427,11 @@ function handleEmergencyStop(device) {
  * @param {Object} device - 设备对象
  */
 async function handleRemoveFromBoard(device) {
+  if (!canManageLayout.value) {
+    message.error('当前账号没有下架设备的权限')
+    return
+  }
+
   try {
     await store.removeDeviceFromBoard(device.id)
 
@@ -388,6 +461,10 @@ function handleDrawerClosed() {
  * 切换编辑模式
  */
 function toggleEditMode() {
+  if (!canManageLayout.value) {
+    message.error('当前账号没有维护网格布局的权限')
+    return
+  }
   isEditMode.value = true
   message.info('已进入编辑模式，现在可以拖拽设备调整位置')
 }
@@ -397,14 +474,19 @@ function toggleEditMode() {
  * 预留函数桩，用于后续对接保存到数据库的 API
  */
 async function saveLayoutPositions() {
-  // TODO: 实现保存布局到数据库的逻辑
-  console.log('[saveLayoutPositions] 保存布局位置到数据库...')
+  if (!canManageLayout.value) return
+  // 拖拽时已经通过 /printers/positions 持久化，这里只负责结束编辑状态。
 }
 
 /**
  * 保存布局并退出编辑模式
  */
 async function saveLayout() {
+  if (!canManageLayout.value) {
+    isEditMode.value = false
+    return
+  }
+
   try {
     await saveLayoutPositions()
     isEditMode.value = false

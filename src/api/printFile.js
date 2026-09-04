@@ -1,4 +1,10 @@
 import request from '@/utils/request'
+import {
+  mapResponseData,
+  normalizePageParams,
+  normalizePageResponse,
+  normalizePrintFile
+} from '@/utils/dataAdapters'
 
 /**
  * 打印文件管理 API 模块
@@ -10,7 +16,7 @@ import request from '@/utils/request'
  * @param {Object} params - 查询参数
  * @param {number} [params.pageNum=1] - 页码
  * @param {number} [params.pageSize=10] - 每页条数
- * @param {string} [params.keyword] - 搜索关键词
+ * @param {string} [params.fileName] - 文件名搜索关键词
  * @returns {Promise<{code: number, message: string, data: {records: Array<PrintFile>, total: number}}>} 文件列表
  *
  * @typedef {Object} PrintFile
@@ -26,12 +32,32 @@ import request from '@/utils/request'
  * @property {number} nozzleSize - 喷嘴尺寸(mm)
  * @property {string} createdAt - 创建时间
  */
-export function getFileList(params) {
+export function getFileList(params = {}) {
   return request({
     url: '/api/v1/print-files/page',
     method: 'post',
-    data: params
-  })
+    data: normalizePageParams(params)
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizePrintFile)
+  ))
+}
+
+/** 获取文件的安全预览元数据，不返回文件内容或存储内部字段。 */
+export function getFilePreview(id) {
+  return request({
+    url: `/api/v1/print-files/${id}/preview`,
+    method: 'get'
+  }).then(response => mapResponseData(response, normalizePrintFile))
+}
+
+/** 获取短期缩略图预签名 URL；没有缩略图时 data 为 null。 */
+export function getThumbnailUrl(id, expires = 60) {
+  return request({
+    url: `/api/v1/print-files/${id}/thumbnail`,
+    method: 'get',
+    params: { expires }
+  }).then(response => mapResponseData(response, data => typeof data === 'string' ? data : null))
 }
 
 /**
@@ -46,7 +72,7 @@ export function createFolder(data) {
     url: '/api/v1/print-files/folder/create',
     method: 'post',
     data
-  })
+  }).then(response => mapResponseData(response, normalizePrintFile))
 }
 
 /**
@@ -54,14 +80,38 @@ export function createFolder(data) {
  * @param {FormData} formData - 包含文件的 FormData 对象
  * @returns {Promise<{code: number, message: string, data: PrintFile}>} 上传结果
  */
-export function uploadFile(formData) {
+export function uploadFile(formData, onUploadProgress, options = {}) {
   return request({
     url: '/api/v1/print-files/upload',
     method: 'post',
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    onUploadProgress,
+    ...options
+  }).then(response => mapResponseData(response, normalizePrintFile))
+}
+
+/**
+ * 批量上传切片文件。后端会逐文件返回成功/失败结果，不会因为单个文件失败而丢失整批结果。
+ * @param {File[]} files - 文件列表，后端字段名固定为 files
+ * @param {number|string|null} [parentId] - 目标虚拟目录
+ */
+export function batchUploadFiles(files, parentId = null, onUploadProgress, options = {}) {
+  const formData = new FormData()
+  files.forEach(file => formData.append('files', file))
+  if (parentId !== null && parentId !== undefined && parentId !== '') {
+    formData.append('parentId', parentId)
+  }
+
+  return request({
+    url: '/api/v1/print-files/batch-upload',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress,
+    ...options
   })
 }
 
@@ -90,36 +140,57 @@ export function deleteBatchFiles(ids) {
   })
 }
 
+export class DownloadFileError extends Error {
+  constructor(message, code, status) {
+    super(message)
+    this.name = 'DownloadFileError'
+    this.code = code
+    this.status = status
+  }
+}
+
+const getDownloadUrl = data => {
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  if (data && typeof data === 'object') {
+    const url = data.url || data.downloadUrl
+    if (typeof url === 'string' && url.trim()) return url.trim()
+  }
+  return ''
+}
+
 /**
- * 下载文件
- * @param {number} id - 文件ID
+ * 下载文件：先获取预签名 URL，再通过 Blob 下载；跨域不支持时回退到该预签名 URL。
+ * @param {number|string} id - 文件ID
  * @param {string} [fileName] - 下载后的文件名
  */
 export async function downloadFile(id, fileName) {
+  const response = await request({
+    url: `/api/v1/print-files/${id}/download`,
+    method: 'get'
+  })
+  const downloadUrl = getDownloadUrl(response.data)
+
+  if (!downloadUrl) {
+    throw new DownloadFileError('下载链接为空，请稍后重试', 'DOWNLOAD_URL_EMPTY')
+  }
+
   try {
-    // 第一步：获取下载链接
-    const response = await request({
-      url: `/api/v1/print-files/${id}/download`,
-      method: 'get'
-    })
-
-    const downloadUrl = response.data
-
-    if (!downloadUrl) {
-      throw new Error('未获取到下载链接')
-    }
-
-    // 第二步：通过 fetch 获取文件流（跨域需要 CORS 支持）
     const fileResponse = await fetch(downloadUrl, {
       method: 'GET',
       mode: 'cors'
     })
 
     if (!fileResponse.ok) {
-      throw new Error(`下载文件失败: ${fileResponse.status}`)
+      const isExpiredOrForbidden = [401, 403, 410].includes(fileResponse.status)
+      throw new DownloadFileError(
+        isExpiredOrForbidden
+          ? '下载链接已过期或无权访问，请重新下载'
+          : `下载文件失败（${fileResponse.status}）`,
+        isExpiredOrForbidden ? 'DOWNLOAD_URL_EXPIRED' : 'DOWNLOAD_FAILED',
+        fileResponse.status
+      )
     }
 
-    // 第三步：创建 Blob 并触发下载
     const blob = await fileResponse.blob()
     const blobUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -128,38 +199,14 @@ export async function downloadFile(id, fileName) {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    window.URL.revokeObjectURL(blobUrl)
+    window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0)
   } catch (error) {
-    console.error('下载文件失败:', error)
-    // 降级方案：直接在新窗口打开
-    try {
-      const response = await request({
-        url: `/api/v1/print-files/${id}/download`,
-        method: 'get'
-      })
-      if (response.data) {
-        window.open(response.data, '_blank')
-      }
-    } catch {
-      window.open(`/api/v1/print-files/${id}/download`, '_blank')
+    if (error instanceof DownloadFileError) throw error
+
+    // 预签名 URL 仍然有效时，浏览器可直接跳转完成下载，避免受 Blob CORS 限制。
+    const opened = window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+    if (!opened) {
+      throw new DownloadFileError('无法打开下载链接，请检查浏览器拦截设置', 'DOWNLOAD_OPEN_FAILED')
     }
   }
-}
-
-/**
- * 创建打印任务
- * @param {Object} data - 任务参数
- * @param {number} data.fileId - 文件ID
- * @param {string} [data.materialType] - 耗材类型
- * @param {number} [data.nozzleSize] - 喷嘴尺寸
- * @param {number} [data.priority] - 优先级
- * @param {boolean} [data.autoAssign] - 是否自动分配
- * @returns {Promise<{code: number, message: string, data: any}>} 创建结果
- */
-export function createPrintJob(data) {
-  return request({
-    url: '/api/v1/print-jobs/create',
-    method: 'post',
-    data
-  })
 }

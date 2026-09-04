@@ -36,12 +36,6 @@
           <t-option label="TPU" value="TPU" />
           <t-option label="尼龙" value="尼龙" />
         </t-select>
-        <t-select v-model="tagFilter" placeholder="标签筛选" clearable class="w-40" size="medium" @change="handleSearch">
-          <t-option label="常用模型" value="常用模型" />
-          <t-option label="测试件" value="测试件" />
-          <t-option label="原型件" value="原型件" />
-          <t-option label="量产件" value="量产件" />
-        </t-select>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <t-space class="border border-gray-300 rounded overflow-hidden">
@@ -172,7 +166,7 @@
             <div class="flex gap-2 mb-2">
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <Clock :size="14" class="text-gray-600" />
-                <span>{{ formatTime(file.estTime) }}</span>
+                <span>{{ formatDuration(file.estTime) }}</span>
               </div>
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <ScaleToOriginal :size="14" class="text-gray-600" />
@@ -181,6 +175,9 @@
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <FullScreen :size="14" class="text-gray-600" />
                 <span>{{ file.filamentLength || 0 }}m</span>
+              </div>
+              <div class="flex items-center gap-1 text-xs text-gray-600">
+                <span>{{ formatFileSize(file.fileSize) }}</span>
               </div>
             </div>
 
@@ -223,7 +220,7 @@
             <template #default="{ row }">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                  <span v-if="row.isFolder === 1" class="text-blue-500">
+                  <span v-if="row.folder" class="text-blue-500">
                     <IconFolder />
                   </span>
                   <t-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="w-full h-full" />
@@ -235,7 +232,7 @@
                   :title="row.originalName">{{
                     row.originalName
                   }}</span>
-                <t-tag v-if="row.isFolder === 1" size="small" class="flex-shrink-0">
+                <t-tag v-if="row.folder" size="small" class="flex-shrink-0">
                   文件夹
                 </t-tag>
                 <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
@@ -245,19 +242,23 @@
             </template>
           </TdTableColumn>
 
+          <TdTableColumn prop="fileSize" label="文件大小" width="100" v-if="currentParentId">
+            <template #default="{ row }">{{ row.folder ? '-' : formatFileSize(row.fileSize) }}</template>
+          </TdTableColumn>
+
           <TdTableColumn prop="estTime" label="预计耗时" width="85" v-if="currentParentId">
-            <template #default="{ row }">{{ row.isFolder === 1 ? '文件夹' : formatTime(row.estTime) }}</template>
+            <template #default="{ row }">{{ row.folder ? '文件夹' : formatDuration(row.estTime) }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="filamentWeight" label="耗材重量" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.isFolder === 1 ? '-' : (row.filamentWeight || 0) + 'g'
+              row.folder ? '-' : (row.filamentWeight || 0) + 'g'
               }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="filamentLength" label="所需线长" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.isFolder === 1 ? '-' : (row.filamentLength || 0) + 'm'
+              row.folder ? '-' : (row.filamentLength || 0) + 'm'
               }}</template>
           </TdTableColumn>
 
@@ -265,7 +266,7 @@
 
           <TdTableColumn prop="successRate" label="成功率" width="100" v-if="currentParentId">
             <template #default="{ row }">
-              <div class="flex items-center gap-2" v-if="row.isFolder !== 1">
+              <div class="flex items-center gap-2" v-if="!row.folder">
                 <t-progress :percentage="row.successRate || 0" :stroke-width="6" :label="false"
                   :class="getSuccessRateClass(row.successRate)" class="w-16" />
                 <span class="text-sm">{{ row.successRate || 0 }}%</span>
@@ -277,7 +278,7 @@
           <TdTableColumn label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <div class="flex items-center gap-1">
-                <t-button v-if="row.isFolder === 1" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
+                <t-button v-if="row.folder" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
                   打开
                 </t-button>
                 <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
@@ -322,7 +323,7 @@
 
     <!-- 文件上传对话框 -->
     <t-dialog v-model:visible="uploadDialogVisible" header="上传 G-Code 文件" width="500px" :footer="false">
-      <t-upload theme="custom" draggable :auto-upload="false" accept=".gcode,.bgcode"
+      <t-upload theme="custom" draggable :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
         @change="handleFileChange" class="p-4">
         <span class="farm-icon--upload">
           <UploadFilled />
@@ -332,10 +333,22 @@
         </div>
         <template #tips>
           <div class="farm-upload__tip">
-            支持 .gcode 和 .bgcode 格式文件，文件大小不超过 100MB
+            支持 .gcode、.g、.3mf、.stl 格式文件，文件大小不超过 200MB
           </div>
         </template>
       </t-upload>
+      <div v-if="uploadingFile" class="px-4 pb-4">
+        <div class="flex justify-between text-sm text-gray-600 mb-2">
+          <span>正在上传：{{ uploadingFile.name }}</span>
+          <span>{{ uploadProgress }}%</span>
+        </div>
+        <t-progress :percentage="uploadProgress" />
+        <t-button class="mt-3" variant="outline" size="small" @click="cancelUpload">取消上传</t-button>
+      </div>
+      <div v-if="uploadError" class="px-4 pb-4">
+        <t-alert theme="error" :title="uploadError" :closable="false" />
+        <t-button class="mt-3" size="small" theme="primary" @click="retryUpload">重新上传</t-button>
+      </div>
     </t-dialog>
 
     <!-- 新建文件夹对话框 -->
@@ -377,8 +390,8 @@
           <div class="flex items-start gap-3">
             <div class="w-12 h-12 rounded border border-gray-200 overflow-hidden bg-white flex-shrink-0">
               <t-image
-                v-if="jobForm.file?.thumbnailUrl || jobForm.file?.thumbnail_url"
-                :src="jobForm.file?.thumbnailUrl || jobForm.file?.thumbnail_url"
+                v-if="jobForm.file?.thumbnailUrl"
+                :src="jobForm.file?.thumbnailUrl"
                 fit="cover"
                 class="w-full h-full"
               >
@@ -394,8 +407,8 @@
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-sm text-gray-500 mb-1">当前选中文件</div>
-              <div class="text-base font-semibold text-gray-900 truncate" :title="jobForm.file?.originalName || jobForm.file?.original_name">
-                {{ jobForm.file?.originalName || jobForm.file?.original_name }}
+              <div class="text-base font-semibold text-gray-900 truncate" :title="jobForm.file?.originalName">
+                {{ jobForm.file?.originalName }}
               </div>
             </div>
           </div>
@@ -416,6 +429,19 @@
                 <span class="text-red-600">加急</span>
               </t-radio>
             </t-radio-group>
+          </t-form-item>
+
+          <t-form-item label="打印机">
+            <t-select v-model="jobForm.printerId" placeholder="不指定，创建后进入队列" clearable :loading="loadingPrinters">
+              <t-option label="不指定（进入队列）" value="" />
+              <t-option
+                v-for="printer in availablePrinters"
+                :key="printer.id"
+                :label="`${printer.name}（${printer.machineNumber || `#${printer.id}`}）`"
+                :value="printer.id"
+              />
+            </t-select>
+            <div class="text-xs text-gray-500 mt-1">指定打印机只记录分配目标，不会跳过安全确认流程</div>
           </t-form-item>
 
           <!-- 打印份数 -->
@@ -471,9 +497,13 @@ import {
   deleteFile,
   deleteBatchFiles,
   downloadFile,
-  createFolder
+  createFolder,
+  getFilePreview,
+  getThumbnailUrl
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
+import { getPrinterList } from '@/api/printer'
+import { formatDuration, formatFileSize } from '@/utils/formatters'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -487,16 +517,24 @@ const fileList = ref([])
 const selectedIds = ref([])
 const searchKeyword = ref('')
 const materialFilter = ref('')
-const tagFilter = ref('')
+// 后端当前不支持标签筛选，避免向接口发送未定义参数。
 const viewMode = ref('grid')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
+const uploadingFile = ref(null)
+const uploadProgress = ref(0)
+const uploadError = ref('')
+const lastUploadFile = ref(null)
+let uploadController = null
 // 打印任务对话框状态
 const createJobDialogVisible = ref(false)
 const submittingJob = ref(false)
+const availablePrinters = ref([])
+const loadingPrinters = ref(false)
 const jobForm = reactive({
   file: null,
+  printerId: '',
   priority: 0, // 0-普通, 1-优先, 2-加急
   copies: 1
 })
@@ -504,6 +542,7 @@ const jobForm = reactive({
 // 文件详情抽屉状态
 const detailDrawerVisible = ref(false)
 const selectedFile = ref(null)
+const FILE_DETAIL_CONTEXT_KEY = 'farm-ui:file-detail'
 // 批量操作模式
 const isBatchMode = ref(false)
 
@@ -534,12 +573,20 @@ const pagination = reactive({
 
 // 计算文件夹和文件列表
 const folderList = computed(() => {
-  return fileList.value.filter(file => file.isFolder === 1)
+  return fileList.value.filter(file => file.folder)
 })
 
 const fileItemsList = computed(() => {
-  return fileList.value.filter(file => file.isFolder !== 1)
+  return fileList.value.filter(file => !file.folder)
 })
+
+const restoreFileDetailContext = () => {
+  const fileId = sessionStorage.getItem(FILE_DETAIL_CONTEXT_KEY)
+  if (!fileId || selectedFile.value) return
+
+  const file = fileList.value.find(item => String(item.id) === fileId)
+  if (file) openFileDetail(file)
+}
 
 // ============ 方法定义 ============
 
@@ -552,9 +599,8 @@ const fetchData = async () => {
     const params = {
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize,
-      keyword: searchKeyword.value || undefined,
+      fileName: searchKeyword.value || undefined,
       materialType: materialFilter.value || undefined,
-      tag: tagFilter.value || undefined,
       parentId: currentParentId.value
     }
     const res = await getFileList(params)
@@ -563,6 +609,7 @@ const fetchData = async () => {
 
     // 清空选中状态（如果当前页数据变化）
     selectedIds.value = []
+    restoreFileDetailContext()
   } catch (error) {
     console.error('获取文件列表失败:', error)
     message.error('获取文件列表失败')
@@ -675,28 +722,62 @@ const handleSelectionChange = (selection) => {
  * 文件上传处理
  */
 const handleFileChange = async (files) => {
+  if (uploadingFile.value) return
   const latestFile = Array.isArray(files) ? files.at(-1) : files
   const file = latestFile?.raw || latestFile
   if (!file) return
 
   // 验证文件类型
-  if (!file.name.endsWith('.gcode') && !file.name.endsWith('.bgcode')) {
-    message.warning('请上传 .gcode 或 .bgcode 文件')
+  if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) {
+    message.warning('请上传 .gcode、.g、.3mf 或 .stl 文件')
+    return
+  }
+
+  if (file.size > 200 * 1024 * 1024) {
+    message.warning('文件大小不能超过 200MB')
+    return
+  }
+  if (fileList.value.some(item => !item.folder && item.originalName === file.name)) {
+    message.warning('当前目录已存在同名文件，请先重命名后再上传')
     return
   }
 
   const formData = new FormData()
   formData.append('file', file)
+  if (currentParentId.value !== null) formData.append('parentId', String(currentParentId.value))
 
+  uploadingFile.value = file
+  lastUploadFile.value = file
+  uploadError.value = ''
+  uploadProgress.value = 0
+  uploadController = new AbortController()
   try {
-    await uploadPrintFile(formData)
+    await uploadPrintFile(formData, event => {
+      if (event?.total) uploadProgress.value = Math.min(Math.round((event.loaded / event.total) * 100), 99)
+    }, { signal: uploadController.signal })
     message.success('文件上传成功')
     uploadDialogVisible.value = false
+    uploadingFile.value = null
+    uploadProgress.value = 0
     fetchData()
   } catch (error) {
     console.error('上传失败:', error)
-    message.error('上传失败')
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+      message.info('上传已取消')
+    } else {
+      uploadError.value = error?.message || '上传失败，可重试'
+      message.error('上传失败，可点击重试')
+    }
   }
+  uploadController = null
+}
+
+const cancelUpload = () => {
+  uploadController?.abort()
+}
+
+const retryUpload = () => {
+  if (lastUploadFile.value) handleFileChange([lastUploadFile.value])
 }
 
 /**
@@ -764,7 +845,9 @@ const handlePrint = (file) => {
   jobForm.file = file
   jobForm.priority = 0
   jobForm.copies = 1
+  jobForm.printerId = ''
   createJobDialogVisible.value = true
+  loadAssignablePrinters()
 }
 
 /**
@@ -774,12 +857,27 @@ const handlePrintFromDetail = (file) => {
   jobForm.file = file
   jobForm.priority = 0
   jobForm.copies = 1
+  jobForm.printerId = ''
   createJobDialogVisible.value = true
+  loadAssignablePrinters()
 }
 
 /**
  * 提交创建打印任务
  */
+const loadAssignablePrinters = async () => {
+  loadingPrinters.value = true
+  try {
+    const res = await getPrinterList({ pageNum: 1, pageSize: 100, status: 'IDLE' })
+    availablePrinters.value = (res.data?.records || []).filter(printer => printer.status === 'IDLE')
+  } catch (error) {
+    availablePrinters.value = []
+    console.error('获取可用打印机失败:', error)
+  } finally {
+    loadingPrinters.value = false
+  }
+}
+
 const handleSubmitCreateJob = async () => {
   if (!jobForm.file) {
     message.error('未选择文件')
@@ -789,15 +887,19 @@ const handleSubmitCreateJob = async () => {
   submittingJob.value = true
   try {
     // 构建请求数据 - 直接使用数字优先级 (0-普通, 1-优先, 2-加急)
-    const jobData = {
+    const baseJobData = {
       fileId: jobForm.file.id,
-      priority: jobForm.priority
+      priority: jobForm.priority,
+      ...(jobForm.printerId ? { printerId: jobForm.printerId } : {})
     }
 
     // 根据打印份数创建任务
     const promises = []
     for (let i = 0; i < jobForm.copies; i++) {
-      promises.push(createPrintJob(jobData))
+      const idempotencyKey = `file-${jobForm.file.id}-${Date.now()}-${i}`
+      promises.push(createPrintJob({ ...baseJobData, idempotencyKey }, {
+        dedupeKey: idempotencyKey
+      }))
     }
 
     // 并发执行所有请求
@@ -817,20 +919,11 @@ const handleSubmitCreateJob = async () => {
  * 打开上传对话框
  */
 const handleUpload = () => {
+  uploadingFile.value = null
+  uploadProgress.value = 0
+  uploadError.value = ''
+  lastUploadFile.value = null
   uploadDialogVisible.value = true
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (seconds) => {
-  if (!seconds) return '未知'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) {
-    return `${h}h ${m}m`
-  }
-  return `${m}m`
 }
 
 /**
@@ -861,29 +954,24 @@ const getSuccessRateClass = (successRate) => {
  */
 const openFileDetail = (file, event) => {
   if (event) event.stopPropagation()
-  // 将 camelCase 转换为 snake_case 以适配详情组件
-  selectedFile.value = {
-    id: file.id,
-    original_name: file.originalName,
-    safe_name: file.safeName || file.originalName,
-    file_url: file.fileUrl,
-    file_size: file.fileSize,
-    user_id: file.userId,
-    created_at: file.createdAt,
-    thumbnail_url: file.thumbnailUrl,
-    est_time: file.estTime,
-    material_type: file.materialType,
-    filament_weight: file.filamentWeight,
-    filament_length: file.filamentLength,
-    nozzle_size: file.nozzleSize,
-    layer_height: file.layerHeight,
-    first_layer_height: file.firstLayerHeight,
-    bed_temp: file.bedTemp,
-    nozzle_temp: file.nozzleTemp,
-    first_layer_nozzle_temp: file.firstLayerNozzleTemp,
-    first_layer_bed_temp: file.firstLayerBedTemp
-  }
+  selectedFile.value = { ...file, thumbnailUrl: null }
+  sessionStorage.setItem(FILE_DETAIL_CONTEXT_KEY, String(file.id))
   detailDrawerVisible.value = true
+
+  Promise.all([
+    getFilePreview(file.id),
+    getThumbnailUrl(file.id).catch(() => ({ data: null }))
+  ]).then(([preview, thumbnail]) => {
+    if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
+      selectedFile.value = {
+        ...selectedFile.value,
+        ...preview.data,
+        thumbnailUrl: thumbnail.data || null
+      }
+    }
+  }).catch(() => {
+    // 列表数据仍可用于展示，详情接口错误由请求层统一提示。
+  })
 }
 
 /**
@@ -891,6 +979,7 @@ const openFileDetail = (file, event) => {
  */
 const closeFileDetail = () => {
   selectedFile.value = null
+  sessionStorage.removeItem(FILE_DETAIL_CONTEXT_KEY)
 }
 
 /**
@@ -901,7 +990,14 @@ const handleFileDownload = async (file) => {
     message.error('文件信息不完整')
     return
   }
-  await downloadFile(file.id, file.original_name || file.originalName)
+  try {
+    await downloadFile(file.id, file.originalName)
+  } catch (error) {
+    // 下载接口本身的鉴权错误已由请求拦截器提示；这里处理预签名 URL 阶段的错误。
+    if (error?.name === 'DownloadFileError') {
+      message.error(error.message)
+    }
+  }
 }
 
 /**
@@ -913,7 +1009,7 @@ const handleFileClick = (file) => {
     toggleSelection(file.id)
   } else {
     // 详情查看模式：如果是文件夹则打开，否则显示详情
-    if (file.isFolder === 1) {
+    if (file.folder) {
       navigateToFolder(file)
     } else {
       openFileDetail(file)
@@ -929,7 +1025,7 @@ const handleTableRowClick = (row) => {
     // 批量操作模式：表格有内置的选择功能，不额外处理
   } else {
     // 详情查看模式：如果是文件夹则打开，否则显示详情
-    if (row.isFolder === 1) {
+    if (row.folder) {
       navigateToFolder(row)
     } else {
       openFileDetail(row)

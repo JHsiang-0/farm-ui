@@ -5,6 +5,7 @@
       v-model="detailDrawerVisible"
       :device="selectedDevice"
       :real-time-data="selectedDeviceRealTimeData"
+      @closed="clearPrinterDetailContext"
     />
 
     <!-- 操作栏 -->
@@ -17,11 +18,11 @@
           </t-button>
         </div>
         <div class="flex items-center gap-3">
-          <t-button theme="warning" @click="openScanDialog">
+          <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
             <span><aim /></span>
             扫描局域网设备
           </t-button>
-          <t-button theme="success" @click="handleAdd">
+          <t-button v-if="isAdmin" theme="success" @click="handleAdd">
             <span><plus /></span>
             新增打印机
           </t-button>
@@ -56,6 +57,12 @@
           </template>
         </TdTableColumn>
 
+        <TdTableColumn prop="machineNumber" label="机器编号" width="110" align="center">
+          <template #default="scope">
+            <span class="font-mono text-sm">{{ scope.row.machineNumber || `#${scope.row.id}` }}</span>
+          </template>
+        </TdTableColumn>
+
         <TdTableColumn prop="ipAddress" label="IP 地址" width="160">
           <template #default="scope">
             <t-tag size="small" variant="light-outline" theme="default">{{ scope.row.ipAddress }}</t-tag>
@@ -65,9 +72,13 @@
         <TdTableColumn prop="status" label="当前状态" width="120" align="center">
           <template #default="scope">
             <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-              {{ scope.row.status || '未知' }}
+              {{ getStatusLabel(scope.row.status) }}
             </t-tag>
           </template>
+        </TdTableColumn>
+
+        <TdTableColumn prop="firmwareType" label="协议" width="100" align="center">
+          <template #default="scope">{{ scope.row.firmwareType || '-' }}</template>
         </TdTableColumn>
 
         <!-- 安全状态列 -->
@@ -135,12 +146,12 @@
                 启动打印
               </t-button>
               <!-- 编辑按钮 -->
-              <t-button size="small" theme="primary" @click="handleEdit(scope.row)">
+              <t-button v-if="isAdmin" size="small" theme="primary" @click="handleEdit(scope.row)">
                 <span><edit /></span>
                 编辑
               </t-button>
               <!-- 删除按钮 -->
-              <t-popconfirm content="确定要删除这台机器吗？"
+              <t-popconfirm v-if="isAdmin" content="确定要删除这台机器吗？"
                 theme="danger"
                 @confirm="handleDelete(scope.row.id)"
               >
@@ -187,6 +198,13 @@
               <span><link /></span>
             </template>
           </t-input>
+        </t-form-item>
+
+        <t-form-item label="设备协议" name="firmwareType">
+          <t-select v-model="form.firmwareType" placeholder="请选择设备协议" style="width: 100%">
+            <t-option label="RRF 3.7" value="RRF" />
+            <t-option label="Klipper / Moonraker" value="KLIPPER" />
+          </t-select>
         </t-form-item>
 
         <t-form-item label="当前耗材" name="currentMaterial">
@@ -384,6 +402,7 @@ import {
 } from '@/api/printer'
 import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
+import { useUserStore } from '@/stores/user'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
@@ -392,6 +411,8 @@ defineOptions({ name: 'PrinterManage' })
 
 // ===== 列表与分页状态 =====
 const loading = ref(false)
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.isAdmin)
 const tableData = ref([])
 const total = ref(0)
 const queryParams = reactive({
@@ -403,6 +424,7 @@ const queryParams = reactive({
 const detailDrawerVisible = ref(false)
 const selectedDevice = ref(null)
 const selectedDeviceRealTimeData = ref(null)
+const PRINTER_DETAIL_CONTEXT_KEY = 'farm-ui:printer-detail'
 
 // ===== 表单与弹窗状态 =====
 const dialogVisible = ref(false)
@@ -414,6 +436,7 @@ const defaultForm = {
   id: null,
   name: '',
   ipAddress: '',
+  firmwareType: 'KLIPPER',
   currentMaterial: 'ABS',
   nozzleSize: 1.2
 }
@@ -469,10 +492,23 @@ const getStatusType = (status) => {
   return map[status.toUpperCase()] || 'default'
 }
 
+const getStatusLabel = (status) => {
+  const map = {
+    OFFLINE: '离线',
+    IDLE: '待机',
+    PREPARING: '准备中',
+    PRINTING: '打印中',
+    PAUSED: '已暂停',
+    ERROR: '错误',
+    UNKNOWN: '未知'
+  }
+  return map[String(status || '').toUpperCase()] || '未知'
+}
+
 // 获取任务状态标签类型
 const getJobStatusType = (status) => {
   const map = {
-    'PENDING': 'primary',
+    'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
     'COMPLETED': 'default',
@@ -557,6 +593,7 @@ const handleStartJob = async (printer) => {
 // 表格行点击事件
 const handleRowClick = (row) => {
   selectedDevice.value = row
+  sessionStorage.setItem(PRINTER_DETAIL_CONTEXT_KEY, String(row.id))
   // 为设备添加实时数据（这里可以根据实际情况获取真实数据）
   selectedDeviceRealTimeData.value = {
     state: row.currentJobStatus === 'ASSIGNED' ? 'ASSIGNED' : (row.status || 'IDLE'),
@@ -572,13 +609,28 @@ const handleRowClick = (row) => {
   detailDrawerVisible.value = true
 }
 
+const clearPrinterDetailContext = () => {
+  sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
+  selectedDevice.value = null
+  selectedDeviceRealTimeData.value = null
+}
+
+const restorePrinterDetailContext = () => {
+  const printerId = sessionStorage.getItem(PRINTER_DETAIL_CONTEXT_KEY)
+  if (!printerId || selectedDevice.value) return
+
+  const printer = tableData.value.find(item => String(item.id) === printerId)
+  if (printer) handleRowClick(printer)
+}
+
 // 加载分页数据
 const fetchData = async () => {
   loading.value = true
   try {
     const res = await getPrinterList(queryParams)
-    tableData.value = res.data.records || []
-    total.value = res.data.total || 0
+    tableData.value = res.data?.records || []
+    total.value = res.data?.total || 0
+    restorePrinterDetailContext()
   } catch {
     // 错误在拦截器处理
   } finally {
@@ -600,6 +652,7 @@ const handleEdit = (row) => {
     id: row.id,
     name: row.name,
     ipAddress: row.ipAddress,
+    firmwareType: row.firmwareType || 'KLIPPER',
     currentMaterial: row.currentMaterial,
     nozzleSize: row.nozzleSize
   })
@@ -615,6 +668,7 @@ const submitForm = async () => {
       id: form.id,
       name: form.name,
       ipAddress: form.ipAddress,
+      firmwareType: form.firmwareType,
       currentMaterial: form.currentMaterial,
       nozzleSize: form.nozzleSize
     }
@@ -699,8 +753,13 @@ const handleBatchAdd = async () => {
   try {
     const res = await batchAddPrinters(devicesToSubmit)
     // 解析后端返回的 message
-    const message = res.message || res.data?.message || '批量处理完成'
-    message.success(message)
+    const result = res.data || {}
+    const resultMessage = res.message || result.message || '批量处理完成'
+    if (result.failedCount > 0) {
+      message.warning(`${resultMessage}：成功 ${result.successCount || 0} 台，失败 ${result.failedCount} 台`)
+    } else {
+      message.success(resultMessage)
+    }
     scanDialogVisible.value = false
     fetchData() // 刷新设备列表
   } catch (error) {

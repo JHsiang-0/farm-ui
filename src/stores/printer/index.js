@@ -42,6 +42,7 @@ export function usePrinterStore() {
   const {
     wsConnectionState,
     isWsConnected,
+    alerts,
   } = storeToRefs(realtime)
 
   // realTimeStatus 是 computed 返回的 Proxy，不是 ref，需要特殊处理
@@ -77,6 +78,7 @@ export function usePrinterStore() {
     realTimeStatus: realTimeStatusRef,
     wsConnectionState,
     isWsConnected,
+    alerts,
 
     // ============================================
     // Getters (来自 gridStore)
@@ -104,6 +106,7 @@ export function usePrinterStore() {
     disconnectWs: realtime.disconnectWs,
     getDeviceRealTimeStatus: realtime.getDeviceRealTimeStatus,
     clearRealTimeStatus: realtime.clearRealTimeStatus,
+    dismissAlert: realtime.dismissAlert,
 
     // ============================================
     // Utilities (来自 gridStore)

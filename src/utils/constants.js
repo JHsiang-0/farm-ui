@@ -18,7 +18,10 @@ export const HTTP_STATUS = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
-  SERVER_ERROR: 500
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503
 }
 
 // ============================================
@@ -31,9 +34,40 @@ export const HTTP_STATUS = {
  */
 export const BUSINESS_CODE = {
   SUCCESS: 200,
+  BAD_REQUEST: 400,
   UNAUTHORIZED: 401,
-  ERROR: 500
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  ERROR: 500,
+  PRINTER_OFFLINE: 10001,
+  PRINTER_BUSY: 10002,
+  DATABASE_ERROR: 5001,
+  REDIS_ERROR: 5002,
+  STORAGE_ERROR: 5003,
+  DEVICE_NETWORK_ERROR: 5004
 }
+
+/**
+ * 统一错误提示兜底文案。
+ * @constant {Object}
+ */
+export const ERROR_MESSAGE_MAP = Object.freeze({
+  [BUSINESS_CODE.BAD_REQUEST]: '请求参数错误，请检查后重试',
+  [BUSINESS_CODE.UNAUTHORIZED]: '登录已过期，请重新登录',
+  [BUSINESS_CODE.FORBIDDEN]: '当前账号没有执行此操作的权限',
+  [BUSINESS_CODE.NOT_FOUND]: '请求的资源不存在',
+  [BUSINESS_CODE.CONFLICT]: '当前资源存在冲突，请刷新后重试',
+  [BUSINESS_CODE.UNPROCESSABLE_ENTITY]: '当前状态不允许执行此操作',
+  [BUSINESS_CODE.ERROR]: '服务器内部错误，请稍后重试',
+  [BUSINESS_CODE.PRINTER_OFFLINE]: '打印机当前离线或不可用',
+  [BUSINESS_CODE.PRINTER_BUSY]: '打印机当前忙碌，请稍后重试',
+  [BUSINESS_CODE.DATABASE_ERROR]: '数据库服务异常，请稍后重试',
+  [BUSINESS_CODE.REDIS_ERROR]: '缓存服务异常，请稍后重试',
+  [BUSINESS_CODE.STORAGE_ERROR]: '文件存储服务异常，请稍后重试',
+  [BUSINESS_CODE.DEVICE_NETWORK_ERROR]: '打印设备网络异常，请检查设备连接'
+})
 
 // ============================================
 // 打印机状态 - 10个高层聚合标准状态（纯大写）
@@ -125,11 +159,15 @@ export const PROGRESS_STATUS_MAP = {
  * @constant {Object}
  */
 export const JOB_STATUS = {
+  UPLOADING: 'UPLOADING',
   QUEUED: 'QUEUED',
-  MANUAL: 'MANUAL',
+  ASSIGNED: 'ASSIGNED',
+  READY: 'READY',
+  PAUSED: 'PAUSED',
   PRINTING: 'PRINTING',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
+  RECONCILING: 'RECONCILING',
   CANCELLED: 'CANCELLED'
 }
 
@@ -185,7 +223,7 @@ export const ASCII = {
 export const PAGINATION = {
   DEFAULT_PAGE_NUM: 1,
   DEFAULT_PAGE_SIZE: 10,
-  MAX_PAGE_SIZE: 1000,
+  MAX_PAGE_SIZE: 100,
   PAGE_SIZE_OPTIONS: [10, 20, 50, 100]
 }
 

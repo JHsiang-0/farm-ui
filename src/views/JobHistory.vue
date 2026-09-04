@@ -20,14 +20,15 @@
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">任务状态</span>
             <t-select v-model="queryForm.status" placeholder="请选择状态" clearable style="width: 160px">
-              <t-option label="待分配" value="PENDING" />
               <t-option label="排队中" value="QUEUED" />
+              <t-option label="上传中" value="UPLOADING" />
               <t-option label="已分配待确认" value="ASSIGNED" />
               <t-option label="已上传待机" value="READY" />
               <t-option label="打印中" value="PRINTING" />
               <t-option label="已暂停" value="PAUSED" />
               <t-option label="已完成" value="COMPLETED" />
               <t-option label="失败" value="FAILED" />
+              <t-option label="状态核对中" value="RECONCILING" />
               <t-option label="已取消" value="CANCELLED" />
             </t-select>
           </div>
@@ -60,6 +61,7 @@
       <!-- 数据表格区 -->
       <TdTable
         :data="tableData"
+        @row-click="openTaskDetail"
         :loading="loading"
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
@@ -108,7 +110,7 @@
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><clock /></span>
-              <span>{{ formatTime(scope.row.createdAt) }}</span>
+              <span>{{ formatDateTime(scope.row.createdAt) }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -117,7 +119,7 @@
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><timer /></span>
-              <span>{{ scope.row.endedAt ? formatTime(scope.row.endedAt) : '-' }}</span>
+              <span>{{ scope.row.endedAt ? formatDateTime(scope.row.endedAt) : '-' }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -129,8 +131,18 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="操作" width="120" align="center" fixed="right">
+        <TdTableColumn label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
+            <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
+              @click="handleRetry(scope.row.id)">重试</t-button>
+            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
+              @click="handleRequeue(scope.row.id)">重新排队</t-button>
+            <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
+              @change="value => handlePriority(scope.row, value)" style="width: 88px">
+              <t-option label="普通" :value="0" />
+              <t-option label="优先" :value="50" />
+              <t-option label="加急" :value="100" />
+            </t-select>
             <t-popconfirm content="确定要取消这个任务吗？"
               theme="danger"
               @confirm="handleCancel(scope.row.id)"
@@ -171,6 +183,11 @@
         />
       </div>
     </t-card>
+    <TaskDetailDrawer
+      v-model="detailDrawerVisible"
+      :task="selectedJob"
+      @update:model-value="handleTaskDetailVisibility"
+    />
   </div>
 </template>
 
@@ -184,15 +201,41 @@ import {
   TaskTimeIcon as Timer,
   CloseCircleIcon as CircleClose
 } from 'tdesign-icons-vue-next'
-import { getJobPage, cancelJob } from '@/api/job'
+import { getJobPage, cancelJob, retryJob, requeueJob, updateJobPriority } from '@/api/job'
 import { message } from '@/utils/message'
+import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 
 defineOptions({ name: 'JobHistory' })
 
 const loading = ref(false)
 const tableData = ref([])
+const detailDrawerVisible = ref(false)
+const selectedJob = ref(null)
+const JOB_HISTORY_DETAIL_CONTEXT_KEY = 'farm-ui:job-history-detail'
+
+const openTaskDetail = job => {
+  selectedJob.value = job
+  sessionStorage.setItem(JOB_HISTORY_DETAIL_CONTEXT_KEY, String(job.id))
+  detailDrawerVisible.value = true
+}
+
+const handleTaskDetailVisibility = visible => {
+  if (!visible) {
+    selectedJob.value = null
+    sessionStorage.removeItem(JOB_HISTORY_DETAIL_CONTEXT_KEY)
+  }
+}
+
+const restoreTaskDetailContext = () => {
+  const jobId = sessionStorage.getItem(JOB_HISTORY_DETAIL_CONTEXT_KEY)
+  if (!jobId || selectedJob.value) return
+
+  const job = tableData.value.find(item => String(item.id) === jobId)
+  if (job) openTaskDetail(job)
+}
 
 // 查询表单
 const queryForm = reactive({
@@ -211,7 +254,7 @@ const pagination = reactive({
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
-    'PENDING': 'primary',
+    'UPLOADING': 'warning',
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'READY': 'default',
@@ -219,7 +262,8 @@ const getStatusType = (status) => {
     'PAUSED': 'warning',
     'COMPLETED': 'success',
     'FAILED': 'danger',
-    'CANCELLED': 'default'
+    'CANCELLED': 'default',
+    'RECONCILING': 'warning'
   }
   return map[status] || 'default'
 }
@@ -227,7 +271,7 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
-    'PENDING': '待分配',
+    'UPLOADING': '上传中',
     'QUEUED': '排队中',
     'ASSIGNED': '已分配待确认',
     'READY': '已上传待机',
@@ -235,14 +279,15 @@ const getStatusLabel = (status) => {
     'PAUSED': '已暂停',
     'COMPLETED': '已完成',
     'FAILED': '失败',
-    'CANCELLED': '已取消'
+    'CANCELLED': '已取消',
+    'RECONCILING': '状态核对中'
   }
   return map[status] || status
 }
 
 // 判断任务是否可以取消
 const canCancel = (status) => {
-  const cancelableStatuses = ['PENDING', 'QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
   return cancelableStatuses.includes(status)
 }
 
@@ -267,16 +312,36 @@ const handleCancel = async (id) => {
   }
 }
 
-// 格式化时间
-const formatTime = (timeStr) => {
-  if (!timeStr) return '-'
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const handleRetry = async id => {
+  try {
+    await retryJob(id)
+    message.success('任务已重新加入队列')
+    fetchData()
+  } catch (error) {
+    console.error('重试任务失败:', error)
+  }
+}
+
+const handleRequeue = async id => {
+  try {
+    await requeueJob(id)
+    message.success('任务已重新排队')
+    fetchData()
+  } catch (error) {
+    console.error('重新排队失败:', error)
+  }
+}
+
+const handlePriority = async (job, value) => {
+  const priority = Number(value)
+  try {
+    await updateJobPriority(job.id, priority)
+    job.priority = priority
+    message.success('优先级已更新')
+  } catch (error) {
+    console.error('更新优先级失败:', error)
+    fetchData()
+  }
 }
 
 // 构建请求参数
@@ -330,9 +395,11 @@ const fetchData = async () => {
   try {
     const params = buildParams()
     const res = await getJobPage(params)
-    if (res.code === 200 && res.data) {
-      tableData.value = res.data.records || []
-      pagination.total = res.data.total || 0
+    if (res.code === 200) {
+      // 成功响应允许 data=null，按空结果处理，不提示接口异常。
+      tableData.value = res.data?.records || []
+      pagination.total = res.data?.total || 0
+      restoreTaskDetailContext()
     } else {
       message.error(res.message || '获取数据失败')
     }

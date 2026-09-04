@@ -13,10 +13,15 @@ dist
 dist-ssr
 coverage
 *.local
+.env
+.env.*
+!.env.example
+!.env.*.example
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/mcp.json
 .idea
 *.suo
 *.ntvs*

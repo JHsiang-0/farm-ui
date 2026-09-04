@@ -88,7 +88,7 @@ export const useDeviceStore = defineStore('device', () => {
   async function fetchDeviceData() {
     loading.value = true
     try {
-      const response = await getPrinterList({ pageSize: 1000 })
+      const response = await getPrinterList({ pageSize: 100 })
       const records = response.data?.records || []
 
       // 只保留有有效坐标的设备

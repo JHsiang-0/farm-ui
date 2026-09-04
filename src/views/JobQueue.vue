@@ -50,7 +50,13 @@
 
         <TdTableColumn prop="priority" label="优先级" width="100" align="center">
           <template #default="scope">
-            <t-tag
+            <t-select v-if="scope.row.status === 'QUEUED'" :value="scope.row.priority" size="small"
+              @change="value => handlePriority(scope.row, value)" style="width: 88px">
+              <t-option label="普通" :value="0" />
+              <t-option label="优先" :value="50" />
+              <t-option label="加急" :value="100" />
+            </t-select>
+            <t-tag v-else
               :theme="getPriorityType(scope.row.priority)"
               variant="dark"
               size="small"
@@ -64,7 +70,7 @@
         <TdTableColumn prop="status" label="状态" width="140" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2">
-              <span v-if="scope.row.status === 'PENDING'" class="text-sm animate-spin"><loading /></span>
+              <span v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><loading /></span>
               <span v-else-if="scope.row.status === 'ASSIGNED'" class="text-sm text-yellow-600"><pointer /></span>
               <span v-else-if="scope.row.status === 'PRINTING'" class="text-sm text-gray-600"><printer /></span>
               <span v-else-if="scope.row.status === 'COMPLETED'" class="text-sm text-green-600"><check /></span>
@@ -80,20 +86,37 @@
           <template #default="scope">
             <div class="flex items-center justify-center gap-2 text-sm text-gray-600">
               <span><clock /></span>
-              <span>{{ formatTime(scope.row.createdAt) }}</span>
+              <span>{{ formatDateTime(scope.row.createdAt) }}</span>
             </div>
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="调度操作" width="220" align="center" fixed="right">
+        <TdTableColumn label="调度操作" width="300" align="center" fixed="right">
           <template #default="scope">
+            <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" variant="text"
+              @click="handleRequeue(scope.row.id)">重新排队</t-button>
             <t-button
               size="small" theme="primary"
               @click="openAssignDialog(scope.row)"
-              :disabled="scope.row.status !== 'PENDING'"
+              :disabled="scope.row.status !== 'QUEUED'"
             >
               <span><promotion /></span>
               分配机器
+            </t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
+              size="small" theme="warning" variant="outline"
+              @click="handleConfirmSafe(scope.row)"
+            >
+              确认安全
+            </t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
+              size="small" theme="success"
+              @click="handleStart(scope.row)"
+            >
+              启动打印
             </t-button>
             <t-popconfirm content="确定要取消这个任务吗？"
               theme="danger"
@@ -178,6 +201,11 @@
         </div>
       </template>
     </t-dialog>
+    <TaskDetailDrawer
+      v-model="detailDrawerVisible"
+      :task="selectedJob"
+      @update:model-value="handleTaskDetailVisibility"
+    />
   </div>
 </template>
 
@@ -194,11 +222,13 @@ import {
   FileIcon as Coffee,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
-import { getJobQueue, cancelJob, assignJobToPrinter } from '@/api/job'
-import { getPrinterList } from '@/api/printer'
-import { message } from '@/utils/message'
+import { getJobQueue, cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob } from '@/api/job'
+import { confirmSafe, getPrinterList } from '@/api/printer'
+import { message, confirmMessage } from '@/utils/message'
+import { formatDateTime } from '@/utils/formatters'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 
 defineOptions({ name: 'JobQueue' })
 
@@ -212,6 +242,30 @@ const currentJob = ref(null)
 const selectedPrinterId = ref(null)
 const idlePrinters = ref([])
 const loadingPrinters = ref(false)
+const detailDrawerVisible = ref(false)
+const selectedJob = ref(null)
+const JOB_QUEUE_DETAIL_CONTEXT_KEY = 'farm-ui:job-queue-detail'
+
+const openTaskDetail = job => {
+  selectedJob.value = job
+  sessionStorage.setItem(JOB_QUEUE_DETAIL_CONTEXT_KEY, String(job.id))
+  detailDrawerVisible.value = true
+}
+
+const handleTaskDetailVisibility = visible => {
+  if (!visible) {
+    selectedJob.value = null
+    sessionStorage.removeItem(JOB_QUEUE_DETAIL_CONTEXT_KEY)
+  }
+}
+
+const restoreTaskDetailContext = () => {
+  const jobId = sessionStorage.getItem(JOB_QUEUE_DETAIL_CONTEXT_KEY)
+  if (!jobId || selectedJob.value) return
+
+  const job = queueData.value.find(item => String(item.id) === jobId)
+  if (job) openTaskDetail(job)
+}
 
 // 获取优先级标签类型
 const getPriorityType = (priority) => {
@@ -224,11 +278,13 @@ const getPriorityType = (priority) => {
 // 获取状态标签类型
 const getStatusType = (status) => {
   const map = {
-    'PENDING': 'primary',
+    'UPLOADING': 'warning',
+    'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
     'COMPLETED': 'default',
-    'FAILED': 'danger'
+    'FAILED': 'danger',
+    'RECONCILING': 'warning'
   }
   return map[status] || 'default'
 }
@@ -236,7 +292,7 @@ const getStatusType = (status) => {
 // 获取状态显示文本
 const getStatusLabel = (status) => {
   const map = {
-    'PENDING': '待分配',
+    'UPLOADING': '上传中',
     'QUEUED': '排队中',
     'ASSIGNED': '已分配待确认',
     'READY': '已上传待机',
@@ -244,27 +300,16 @@ const getStatusLabel = (status) => {
     'PAUSED': '已暂停',
     'COMPLETED': '已完成',
     'FAILED': '失败',
-    'CANCELLED': '已取消'
+    'CANCELLED': '已取消',
+    'RECONCILING': '状态核对中'
   }
   return map[status] || status
 }
 
 // 判断任务是否可以取消
 const canCancel = (status) => {
-  const cancelableStatuses = ['PENDING', 'QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
   return cancelableStatuses.includes(status)
-}
-
-// 格式化时间
-const formatTime = (timeStr) => {
-  if (!timeStr) return '-'
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 const fetchQueue = async () => {
@@ -272,6 +317,7 @@ const fetchQueue = async () => {
   try {
     const res = await getJobQueue()
     queueData.value = res.data || []
+    restoreTaskDetailContext()
   } catch {
     // 忽略
   } finally {
@@ -289,6 +335,27 @@ const handleCancel = async (id) => {
   }
 }
 
+const handleRequeue = async id => {
+  try {
+    await requeueJob(id)
+    message.success('任务已重新排队')
+    fetchQueue()
+  } catch {
+    // 错误在拦截器处理
+  }
+}
+
+const handlePriority = async (job, value) => {
+  const priority = Number(value)
+  try {
+    await updateJobPriority(job.id, priority)
+    job.priority = priority
+    message.success('优先级已更新')
+  } catch {
+    fetchQueue()
+  }
+}
+
 const openAssignDialog = async (job) => {
   currentJob.value = job
   selectedPrinterId.value = null
@@ -296,8 +363,8 @@ const openAssignDialog = async (job) => {
 
   loadingPrinters.value = true
   try {
-    const res = await getPrinterList({ pageNum: 1, pageSize: 500 })
-    const allPrinters = res.data.records || []
+    const res = await getPrinterList({ pageNum: 1, pageSize: 100 })
+    const allPrinters = res.data?.records || []
     idlePrinters.value = allPrinters.filter(p => p.status === 'IDLE')
   } catch {
     message.error('获取打印机列表失败')
@@ -318,6 +385,36 @@ const submitAssign = async () => {
     // 报错信息会被拦截器弹窗
   } finally {
     assigning.value = false
+  }
+}
+
+const handleConfirmSafe = async job => {
+  try {
+    await confirmMessage(
+      `请确认打印机 ${job.printerName || job.printerId} 的热床已清理且可以安全打印。`,
+      '现场安全确认',
+      { confirmButtonText: '确认安全', cancelButtonText: '返回检查', type: 'warning' }
+    )
+    await confirmSafe(job.printerId)
+    message.success('已确认安全，可以启动打印')
+    await fetchQueue()
+  } catch (error) {
+    if (error !== 'cancel') console.error('确认打印安全失败:', error)
+  }
+}
+
+const handleStart = async job => {
+  try {
+    await confirmMessage(
+      `确认启动任务 #${job.id}？这会向打印机发送上传并启动请求。`,
+      '启动打印确认',
+      { confirmButtonText: '启动打印', cancelButtonText: '取消', type: 'danger' }
+    )
+    await startJob(job.id, 'START_PRINT')
+    message.success('启动请求已发送，请观察设备状态')
+    await fetchQueue()
+  } catch (error) {
+    if (error !== 'cancel') console.error('启动打印失败:', error)
   }
 }
 

@@ -42,3 +42,15 @@ npm run build
 ```sh
 npm run lint
 ```
+# Mock 开发模式
+
+复制 `.env.example` 为本地环境文件并设置 `VITE_USE_MOCK=true`，即可在不依赖后端的情况下开发页面。
+
+内置演示账号：
+
+- ADMIN：`admin` / `Admin123`
+- OPERATOR：`operator` / `Operator123`
+
+以上账号仅用于本地 Mock，不得用于真实环境。开发者可在浏览器控制台执行 `window.__FARM_RESET_MOCK__()` 重置当前 Mock 数据。
+
+Mock 错误演示可在请求参数中加入 `mockError=401`、`403`、`404`、`409`、`422`、`10001`、`10002`、`5003` 或 `5004`。
