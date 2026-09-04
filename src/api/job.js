@@ -40,9 +40,10 @@ export function getJobDetail(id) {
  * @param {number|string} data.fileId - 文件ID
  * @param {string} [data.materialType] - 耗材类型
  * @param {string} [data.nozzleSize] - 喷头尺寸
- * @param {string} [data.priority='NORMAL'] - 优先级（HIGH/NORMAL/LOW）
- * @param {boolean} [data.autoAssign=false] - 是否自动分配打印机
- * @returns {Promise<{code: number, message: string, data: string|Object}>} 创建结果，data 为新任务 ID
+ * @param {number} [data.priority=0] - 优先级（0-100）
+ * @param {number|string} [data.printerId] - 指定打印机，仅进入 ASSIGNED，不直接启动
+ * @param {string} [data.idempotencyKey] - 幂等键
+ * @returns {Promise<{code: number, message: string, data: string}>} 创建结果，data 为新任务 ID
  */
 export function createPrintJob(data, options = {}) {
   return request({
@@ -177,7 +178,7 @@ export function getJobPage(params = {}) {
  * @property {number} [printerId] - 分配的打印机ID
  * @property {string} [printerName] - 打印机名称
  * @property {string} status - 任务状态（UPLOADING/QUEUED/ASSIGNED/READY/PRINTING/PAUSED/COMPLETED/RECONCILING/FAILED/CANCELLED）
- * @property {string} priority - 优先级（HIGH/NORMAL/LOW）
+ * @property {number} priority - 优先级（0-100）
  * @property {string} [materialType] - 耗材类型
  * @property {string} [nozzleSize] - 喷头尺寸
  * @property {number} progress - 打印进度（0-100）

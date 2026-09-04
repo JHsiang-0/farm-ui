@@ -163,7 +163,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否，P0 用 Mock；真实控制后续人工验收。
 - 风险：指定同一 printerId 并发创建多份会出现部分成功。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。标准 `POST /api/v1/print-jobs` 现返回 scalar Long ID；指定打印机创建后进入 ASSIGNED 并绑定设备，不指定则进入 QUEUED；FileLibrary 多份任务改为串行创建并准确提示部分成功。补齐活动列表中的安全确认/启动入口，Mock 对齐幂等键、设备占用、assign→confirm→start、取消、重试、重新排队和优先级状态矩阵，旧 `/create` 无新业务引用。`npm.cmd test`（37/37）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T013 P0 Mock 业务契约
 

@@ -583,18 +583,43 @@ const handleJobDetail = config => {
 const handleCreateJob = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const body = getBody(config)
-  const file = findFile(body.fileId)
+  const fileId = Number(body.fileId)
+  const priority = Number(body.priority)
+  const printerId = body.printerId === undefined || body.printerId === null || body.printerId === ''
+    ? null
+    : Number(body.printerId)
+  if (!Number.isInteger(fileId) || fileId <= 0 || !Number.isInteger(priority) || priority < 0 || priority > 100) {
+    fail(400, 400, '任务参数不合法')
+  }
+  if (body.idempotencyKey) {
+    const previous = mockState.jobs.find(job => (
+      job.userId === session.userId && job.idempotencyKey === body.idempotencyKey
+    ))
+    if (previous) {
+      if (previous.fileId !== fileId || previous.printerId !== printerId || previous.priority !== priority) {
+        fail(409, 409, '幂等键对应的任务参数不一致')
+      }
+      return previous.id
+    }
+  }
+  const file = findFile(fileId)
   if (!file || file.folder) fail(404, 404, '打印文件不存在')
   if (!canReadResource(session, file.userId)) fail(403, 403, '无权使用此文件创建任务')
+  const printer = printerId === null ? null : findPrinter(printerId)
+  if (printerId !== null && !printer) fail(404, 404, '打印机不存在')
+  if (printer && (printer.status !== 'IDLE' || printer.currentJobId)) {
+    fail(409, 10002, '打印机当前忙碌')
+  }
   const createdAt = now()
   const job = {
     id: nextMockId('job'),
-    fileId: Number(body.fileId),
-    printerId: body.printerId ? Number(body.printerId) : null,
+    fileId,
+    printerId,
     userId: session.userId,
     operatorId: null,
-    priority: Number(body.priority) || 0,
-    status: 'QUEUED',
+    priority,
+    idempotencyKey: body.idempotencyKey || null,
+    status: printer ? 'ASSIGNED' : 'QUEUED',
     progress: 0,
     startedAt: null,
     completedAt: null,
@@ -603,7 +628,12 @@ const handleCreateJob = config => {
     updatedAt: createdAt
   }
   mockState.jobs.push(job)
-  return { id: job.id }
+  if (printer) {
+    printer.currentJobId = job.id
+    printer.isSafeToPrint = false
+    printer.updatedAt = createdAt
+  }
+  return job.id
 }
 
 const handleCancelJob = config => {
@@ -612,7 +642,7 @@ const handleCancelJob = config => {
   const job = findJob(id)
   if (!job) fail(404, 404, '任务不存在')
   if (!canReadResource(session, job.userId)) fail(403, 403, '无权操作此任务')
-  if (!['QUEUED', 'ASSIGNED', 'READY', 'PAUSED'].includes(job.status)) {
+  if (!['QUEUED', 'ASSIGNED', 'READY', 'PRINTING', 'PAUSED'].includes(job.status)) {
     fail(422, 422, '当前任务状态不允许取消')
   }
   job.status = 'CANCELLED'
@@ -647,11 +677,65 @@ const handleAssignJob = config => {
   return toPublicJob(job)
 }
 
+const handleRetryJob = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  const job = findJob(id)
+  if (!job || !canReadResource(session, job.userId)) fail(404, 404, '任务不存在')
+  if (job.status !== 'FAILED') fail(422, 422, '当前任务状态不允许重试')
+  Object.assign(job, {
+    printerId: null,
+    operatorId: null,
+    startedAt: null,
+    completedAt: null,
+    errorReason: null,
+    progress: 0,
+    status: 'QUEUED',
+    updatedAt: now()
+  })
+  return null
+}
+
+const handleRequeueJob = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  const job = findJob(id)
+  if (!job || !canReadResource(session, job.userId)) fail(404, 404, '任务不存在')
+  if (!['ASSIGNED', 'READY'].includes(job.status)) fail(422, 422, '当前任务状态不允许重新排队')
+  if (job.printerId) {
+    const printer = findPrinter(job.printerId)
+    if (printer?.currentJobId === job.id) {
+      printer.currentJobId = null
+      printer.isSafeToPrint = false
+      printer.status = 'IDLE'
+      printer.updatedAt = now()
+    }
+  }
+  Object.assign(job, { printerId: null, status: 'QUEUED', progress: 0, updatedAt: now() })
+  return null
+}
+
+const handleUpdateJobPriority = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const id = getPath(config.url).split('/').at(-2)
+  const job = findJob(id)
+  const priority = Number(getBody(config).priority)
+  if (!job || !canReadResource(session, job.userId)) fail(404, 404, '任务不存在')
+  if (!Number.isInteger(priority) || priority < 0 || priority > 100) fail(400, 400, '优先级必须为 0-100')
+  if (job.status !== 'QUEUED') fail(422, 422, '只有排队任务可以调整优先级')
+  job.priority = priority
+  job.updatedAt = now()
+  return null
+}
+
 const handleConfirmSafe = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const printer = findPrinter(getBody(config).printerId)
   if (!printer) fail(404, 404, '打印机不存在')
-  if (session.role !== 'ADMIN' && !printer.currentJobId) fail(422, 422, '打印机没有待确认任务')
+  if (!printer.currentJobId) fail(422, 422, '打印机没有待确认任务')
+  const job = findJob(printer.currentJobId)
+  if (!job || !canReadResource(session, job.userId)) fail(404, 404, '任务不存在')
+  if (!['ASSIGNED', 'READY'].includes(job.status)) fail(422, 422, '当前任务状态不允许安全确认')
   printer.isSafeToPrint = true
   printer.updatedAt = now()
   return toPublicPrinter(printer)
@@ -667,6 +751,9 @@ const handleStartJob = config => {
   if (!printer) fail(422, 422, '任务尚未分配打印机')
   if (!printer.isSafeToPrint) fail(422, 422, '请先完成设备安全确认')
   if (!['ASSIGNED', 'READY'].includes(job.status)) fail(422, 422, '当前任务状态不允许启动')
+  if (!['START_PRINT', 'UPLOAD_ONLY'].includes(body.action || 'START_PRINT')) {
+    fail(400, 400, '启动 action 不合法')
+  }
   job.status = body.action === 'UPLOAD_ONLY' ? 'READY' : 'PRINTING'
   job.operatorId = session.userId
   job.startedAt = job.startedAt || now()
@@ -757,6 +844,9 @@ const route = async config => {
   if (key === 'POST /api/v1/print-jobs/safe/assign') return handleAssignJob(config)
   if (key === 'POST /api/v1/print-jobs/safe/confirm') return handleConfirmSafe(config)
   if (key === 'POST /api/v1/print-jobs/safe/start') return handleStartJob(config)
+  if (/^POST \/api\/v1\/print-jobs\/[^/]+\/retry$/.test(key)) return handleRetryJob(config)
+  if (/^POST \/api\/v1\/print-jobs\/[^/]+\/requeue$/.test(key)) return handleRequeueJob(config)
+  if (/^PUT \/api\/v1\/print-jobs\/[^/]+\/priority$/.test(key)) return handleUpdateJobPriority(config)
   if (/^POST \/api\/v1\/control\/[^/]+\/(pause|resume|cancel|emergency-stop)$/.test(key)) return handlePrinterControl(config)
   if (/^DELETE \/api\/v1\/printers\/delete\/[^/]+$/.test(key)) return handleDeletePrinter(config)
   if (/^GET \/api\/v1\/print-files\/[^/]+\/download$/.test(key)) return handleDownload(config)

@@ -418,10 +418,10 @@
               <t-radio :value="0">
                 <span class="text-gray-700">普通</span>
               </t-radio>
-              <t-radio :value="1">
+              <t-radio :value="50">
                 <span class="text-yellow-600">优先</span>
               </t-radio>
-              <t-radio :value="2">
+              <t-radio :value="100">
                 <span class="text-red-600">加急</span>
               </t-radio>
             </t-radio-group>
@@ -531,7 +531,7 @@ const loadingPrinters = ref(false)
 const jobForm = reactive({
   file: null,
   printerId: '',
-  priority: 0, // 0-普通, 1-优先, 2-加急
+  priority: 0, // 0-普通, 50-优先, 100-加急
   copies: 1
 })
 
@@ -895,31 +895,32 @@ const handleSubmitCreateJob = async () => {
   }
 
   submittingJob.value = true
+  let successCount = 0
   try {
-    // 构建请求数据 - 直接使用数字优先级 (0-普通, 1-优先, 2-加急)
+    // 构建请求数据 - 直接使用数字优先级 (0-普通, 50-优先, 100-加急)
     const baseJobData = {
       fileId: jobForm.file.id,
       priority: jobForm.priority,
       ...(jobForm.printerId ? { printerId: jobForm.printerId } : {})
     }
 
-    // 根据打印份数创建任务
-    const promises = []
+    // 多份任务串行创建，指定同一打印机时后端可明确返回部分成功，而不会并发争抢设备。
     for (let i = 0; i < jobForm.copies; i++) {
       const idempotencyKey = `file-${jobForm.file.id}-${Date.now()}-${i}`
-      promises.push(createPrintJob({ ...baseJobData, idempotencyKey }, {
-        dedupeKey: idempotencyKey
-      }))
+      await createPrintJob({ ...baseJobData, idempotencyKey }, { dedupeKey: idempotencyKey })
+      successCount += 1
     }
 
-    // 并发执行所有请求
-    await Promise.all(promises)
-
-    message.success('任务已成功加入队列')
+    message.success(`已创建 ${successCount} 个任务`)
     createJobDialogVisible.value = false
   } catch (error) {
     console.error('创建打印任务失败:', error)
-    message.error(error.message || '创建打印任务失败')
+    const messageText = error.message || '创建任务失败'
+    if (successCount > 0) {
+      message.warning(`已创建 ${successCount} 个任务，剩余任务未完成：${messageText}`)
+    } else {
+      message.error(messageText)
+    }
   } finally {
     submittingJob.value = false
   }

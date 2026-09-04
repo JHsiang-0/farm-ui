@@ -171,9 +171,40 @@
         <TdTableColumn prop="updatedAt" label="最近更新" min-width="160" align="center">
           <template #default="scope">{{ formatDateTime(scope.row.updatedAt) }}</template>
         </TdTableColumn>
-        <TdTableColumn label="操作" width="100" align="center">
+        <TdTableColumn label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
             <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status)"
+              size="small"
+              theme="warning"
+              variant="text"
+              @click="handleRequeue(scope.row.id)">
+              重新排队
+            </t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status)"
+              size="small"
+              theme="warning"
+              variant="text"
+              @click="handleConfirmSafe(scope.row)">
+              确认安全
+            </t-button>
+            <t-button
+              v-if="['ASSIGNED', 'READY'].includes(scope.row.status)"
+              size="small"
+              theme="success"
+              variant="text"
+              @click="handleStart(scope.row)">
+              启动打印
+            </t-button>
+            <t-popconfirm
+              v-if="canCancel(scope.row.status)"
+              content="确定要取消这个任务吗？"
+              theme="danger"
+              @confirm="handleCancel(scope.row.id)">
+              <t-button size="small" theme="danger" variant="outline">取消</t-button>
+            </t-popconfirm>
           </template>
         </TdTableColumn>
       </TdTable>
