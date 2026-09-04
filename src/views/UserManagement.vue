@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full app-page-background p-6">
+  <div class="h-full app-page-background">
     <div class="app-page-toolbar mb-4">
       <h1 class="app-page-toolbar__title app-route-title">用户管理</h1>
       <div class="app-page-toolbar__actions">

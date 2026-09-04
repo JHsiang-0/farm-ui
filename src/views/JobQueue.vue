@@ -1,6 +1,6 @@
 <template>
   <div class="h-full app-page-background flex flex-col overflow-hidden">
-    <div class="app-page-toolbar m-6 mb-4">
+    <div class="app-page-toolbar mb-4">
       <h1 class="app-page-toolbar__title app-route-title">生产调度队列</h1>
       <div class="app-page-toolbar__actions">
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchQueue" size="medium">
@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
+    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200">
       <TdTable
         :data="queueData"
         :loading="loading"

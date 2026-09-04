@@ -1,30 +1,7 @@
 <template>
   <div class="h-full app-page-background flex flex-col overflow-hidden">
-    <!-- 页面标题与操作栏 -->
-    <div class="app-page-toolbar file-library-page-toolbar m-6 mb-4">
-      <div class="file-library-toolbar__title-row">
-        <h1 class="file-library-toolbar__title app-page-toolbar__title app-route-title">
-          <FolderOpened :size="22" />
-          <span>文件库</span>
-        </h1>
-
-        <!-- 面包屑导航 -->
-        <t-breadcrumb separator="/" class="hidden sm:block">
-          <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
-            <span><folder-opened /></span>
-            <span>根目录</span>
-          </t-breadcrumb-item>
-          <t-breadcrumb-item
-            v-for="(breadcrumb, index) in breadcrumbs"
-            :key="breadcrumb.id"
-            @click.prevent="navigateTo(index)"
-          >
-            {{ breadcrumb.name }}
-          </t-breadcrumb-item>
-        </t-breadcrumb>
-      </div>
-      <Teleport to=".app-breadcrumb__actions">
-        <div class="file-library-toolbar__actions app-page-toolbar__actions">
+    <Teleport to=".app-breadcrumb__actions">
+      <div class="file-library-toolbar__actions app-page-toolbar__actions">
         <t-space class="file-view-toggle">
           <t-button variant="text" size="small" @click="viewMode = 'grid'"
             :class="{ 'file-view-toggle__active': viewMode === 'grid' }" aria-label="网格视图">
@@ -35,7 +12,6 @@
             <List />
           </t-button>
         </t-space>
-        <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
         <t-button variant="outline" theme="default" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
           新建文件夹
         </t-button>
@@ -48,14 +24,27 @@
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
           刷新
         </t-button>
-        </div>
-      </Teleport>
-    </div>
+      </div>
+    </Teleport>
 
-    <div class="file-library-content-card mx-6 mb-6 p-4 bg-white rounded-xl shadow-sm flex-1 min-h-0 flex flex-col">
+    <div class="file-library-content-card mb-6 p-4 bg-white rounded-xl shadow-sm flex-1 min-h-0 flex flex-col">
       <!-- 搜索与筛选 -->
       <div class="file-library-filter-row mb-4">
+        <t-breadcrumb separator="/" class="file-library-navigation">
+          <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
+            <span><folder-opened /></span>
+            <span>根目录</span>
+          </t-breadcrumb-item>
+          <t-breadcrumb-item
+            v-for="(breadcrumb, index) in breadcrumbs"
+            :key="breadcrumb.id"
+            @click.prevent="navigateTo(index)"
+          >
+            {{ breadcrumb.name }}
+          </t-breadcrumb-item>
+        </t-breadcrumb>
         <div class="file-library-toolbar__filters">
+          <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
           <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-full sm:w-52" size="medium"
             @keyup.enter="handleSearch">
             <template #prefixIcon>
@@ -1044,32 +1033,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.file-library-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  border: 1px solid var(--app-border);
-}
-
-.file-library-toolbar__title-row,
-.file-library-toolbar__filters,
-.file-library-toolbar__actions {
+.file-library-filter-row {
   display: flex;
   align-items: center;
-}
-
-.file-library-toolbar__title-row {
+  justify-content: space-between;
   gap: 1rem;
   min-width: 0;
 }
 
-.file-library-toolbar__title {
-  display: inline-flex;
+.file-library-navigation {
+  min-width: 0;
+  flex: 1;
+}
+
+.file-library-toolbar__filters,
+.file-library-toolbar__actions {
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-  margin: 0;
-  color: var(--app-text-primary);
 }
 
 .file-library-toolbar__filters,
@@ -1079,8 +1059,8 @@ onMounted(() => {
 }
 
 .file-library-toolbar__filters {
-  min-width: 0;
-  flex: 1;
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .file-library-toolbar__actions {
@@ -1164,18 +1144,19 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .file-library-toolbar {
-    padding: 1rem;
-  }
-
-  .file-library-toolbar__title-row {
+  .file-library-filter-row {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .file-library-navigation,
   .file-library-toolbar__filters,
   .file-library-toolbar__actions {
     width: 100%;
+  }
+
+  .file-library-toolbar__filters {
+    justify-content: flex-end;
   }
 
   .file-library-toolbar__actions {

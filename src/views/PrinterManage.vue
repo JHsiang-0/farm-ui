@@ -9,7 +9,7 @@
     />
 
     <!-- 页面标题与操作栏 -->
-    <div class="app-page-toolbar m-6 mb-4">
+    <div class="app-page-toolbar mb-4">
       <h1 class="app-page-toolbar__title app-route-title">打印机管理</h1>
       <div v-if="activeStatusFilter" class="app-page-toolbar__filter">
         <t-tag :theme="activeStatusFilter.theme" variant="light">
@@ -33,7 +33,7 @@
     </div>
 
     <!-- 数据表格 -->
-    <t-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mx-6 mb-6">
+    <t-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mb-6">
       <TdTable
         :data="tableData"
         :loading="loading"
