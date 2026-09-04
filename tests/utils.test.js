@@ -13,6 +13,7 @@ import {
   normalizePrintFile
 } from '../src/utils/dataAdapters.js'
 import { formatFileSize, normalizeProgress } from '../src/utils/formatters.js'
+import { shouldRefreshPresignedUrl } from '../src/utils/fileDownload.js'
 import {
   getRealtimeAlertClearId,
   toRealtimeAlert,
@@ -64,6 +65,14 @@ test('normalizes file page query with contract fields', () => {
     materialType: 'PLA',
     parentId: 1
   })
+})
+
+test('refreshes an expired presigned URL at most once', () => {
+  assert.equal(shouldRefreshPresignedUrl(401, false), true)
+  assert.equal(shouldRefreshPresignedUrl(403, false), true)
+  assert.equal(shouldRefreshPresignedUrl(410, false), true)
+  assert.equal(shouldRefreshPresignedUrl(410, true), false)
+  assert.equal(shouldRefreshPresignedUrl(500, false), false)
 })
 
 test('uses one canonical printer status set and never persists ONLINE', () => {

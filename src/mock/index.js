@@ -519,6 +519,10 @@ const handleDownload = config => {
 const handleDeleteFile = config => {
   const id = getPath(config.url).split('/').pop()
   const file = getFileForSession(config, id)
+  if (file.folder) fail(422, 422, '文件夹不能删除')
+  if (mockState.jobs.some(job => String(job.fileId) === String(file.id))) {
+    fail(409, 409, '文件已关联打印任务，无法删除')
+  }
   mockState.files.splice(mockState.files.indexOf(file), 1)
   return null
 }
@@ -526,13 +530,23 @@ const handleDeleteFile = config => {
 const handleBatchDeleteFiles = config => {
   const session = requireSession(config, ['ADMIN', 'OPERATOR'])
   const ids = getBody(config).ids || []
-  ids.forEach(id => {
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100) {
+    fail(400, 400, '批量删除文件数量必须为 1-100 个')
+  }
+
+  const items = ids.map(id => {
     const file = findFile(id)
-    if (file && canReadResource(session, file.userId)) {
-      mockState.files.splice(mockState.files.indexOf(file), 1)
+    if (!file || !canReadResource(session, file.userId)) {
+      return { id, success: false, reason: '文件不存在' }
     }
+    if (file.folder) return { id, success: false, reason: '文件夹不能删除' }
+    if (mockState.jobs.some(job => String(job.fileId) === String(file.id))) {
+      return { id, success: false, reason: '文件已关联打印任务，无法删除' }
+    }
+    mockState.files.splice(mockState.files.indexOf(file), 1)
+    return { id, success: true, reason: null }
   })
-  return null
+  return { items }
 }
 
 const handleJobPage = config => {

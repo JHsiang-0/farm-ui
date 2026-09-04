@@ -6,6 +6,7 @@ import {
   normalizePrintFile
 } from '@/utils/dataAdapters'
 import { REQUEST_TIMEOUT } from '@/utils/constants'
+import { shouldRefreshPresignedUrl } from '@/utils/fileDownload'
 
 /**
  * 打印文件管理 API 模块
@@ -160,29 +161,50 @@ const getDownloadUrl = data => {
   return ''
 }
 
+const requestDownloadUrl = async id => {
+  const response = await request({
+    url: `/api/v1/print-files/${id}/download`,
+    method: 'get'
+  })
+  const downloadUrl = getDownloadUrl(response.data)
+  if (!downloadUrl) {
+    throw new DownloadFileError('下载链接为空，请稍后重试', 'DOWNLOAD_URL_EMPTY')
+  }
+  return downloadUrl
+}
+
 /**
  * 下载文件：先获取预签名 URL，再通过 Blob 下载；跨域不支持时回退到该预签名 URL。
  * @param {number|string} id - 文件ID
  * @param {string} [fileName] - 下载后的文件名
  */
 export async function downloadFile(id, fileName) {
-  const response = await request({
-    url: `/api/v1/print-files/${id}/download`,
-    method: 'get'
-  })
-  const downloadUrl = getDownloadUrl(response.data)
+  let downloadUrl = await requestDownloadUrl(id)
+  let hasRetried = false
 
-  if (!downloadUrl) {
-    throw new DownloadFileError('下载链接为空，请稍后重试', 'DOWNLOAD_URL_EMPTY')
-  }
-
-  try {
-    const fileResponse = await fetch(downloadUrl, {
-      method: 'GET',
-      mode: 'cors'
-    })
+  while (true) {
+    let fileResponse
+    try {
+      fileResponse = await fetch(downloadUrl, {
+        method: 'GET',
+        mode: 'cors'
+      })
+    } catch {
+      // 预签名 URL 仍然有效时，浏览器可直接跳转完成下载，避免受 Blob CORS 限制。
+      const opened = window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+      if (!opened) {
+        throw new DownloadFileError('下载失败，可能是跨域或网络异常，请重试', 'DOWNLOAD_CORS_OR_NETWORK')
+      }
+      return
+    }
 
     if (!fileResponse.ok) {
+      if (shouldRefreshPresignedUrl(fileResponse.status, hasRetried)) {
+        hasRetried = true
+        downloadUrl = await requestDownloadUrl(id)
+        continue
+      }
+
       const isExpiredOrForbidden = [401, 403, 410].includes(fileResponse.status)
       throw new DownloadFileError(
         isExpiredOrForbidden
@@ -202,13 +224,6 @@ export async function downloadFile(id, fileName) {
     link.click()
     document.body.removeChild(link)
     window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0)
-  } catch (error) {
-    if (error instanceof DownloadFileError) throw error
-
-    // 预签名 URL 仍然有效时，浏览器可直接跳转完成下载，避免受 Blob CORS 限制。
-    const opened = window.open(downloadUrl, '_blank', 'noopener,noreferrer')
-    if (!opened) {
-      throw new DownloadFileError('无法打开下载链接，请检查浏览器拦截设置', 'DOWNLOAD_OPEN_FAILED')
-    }
+    return
   }
 }

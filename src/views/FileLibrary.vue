@@ -77,7 +77,8 @@
         >
           <!-- 卡片选中状态 -->
           <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
-            <t-checkbox :checked="selectedIds.includes(file.id)" @click.stop="toggleSelection(file.id)"
+            <t-checkbox :checked="selectedIds.includes(file.id)" disabled
+              @click.stop="toggleSelection(file.id)"
               size="small" />
           </div>
 
@@ -107,7 +108,7 @@
                 class="flex-1 text-xs px-1 py-1">
                 打开
               </t-button>
-              <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
+              <t-button v-if="!file.folder" theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
                 class="flex-1 text-xs px-1 py-1">
                 删除
               </t-button>
@@ -278,7 +279,7 @@
                 <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
                   打印
                 </t-button>
-                <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click="handleDelete(row.id)">
+                <t-button v-if="!row.folder" theme="danger" size="small" :icon="renderIcon(Delete)" @click="handleDelete(row.id)">
                   删除
                 </t-button>
               </div>
@@ -710,7 +711,7 @@ const toggleSelection = (id) => {
  * 列表视图选中处理
  */
 const handleSelectionChange = (selection) => {
-  selectedIds.value = selection.map((item) => item.id)
+  selectedIds.value = selection.filter(item => !item.folder).map(item => item.id)
 }
 
 /**
@@ -779,6 +780,12 @@ const retryUpload = () => {
  * 删除单个文件
  */
 const handleDelete = async (id) => {
+  const file = fileList.value.find(item => String(item.id) === String(id))
+  if (!file || file.folder) {
+    message.warning('文件夹不能删除')
+    return
+  }
+
   try {
     await confirmMessage('确定要删除吗？', '提示', {
       confirmButtonText: '确定',
@@ -799,7 +806,7 @@ const handleDelete = async (id) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
-      message.error('删除失败')
+      message.error(error?.message || '删除失败')
     }
   }
 }
@@ -821,14 +828,22 @@ const handleBatchDelete = async () => {
       }
     )
 
-    await deleteBatchFiles(selectedIds.value)
-    message.success('批量删除成功')
-    selectedIds.value = []
+    const response = await deleteBatchFiles(selectedIds.value)
+    const items = response.data?.items || []
+    const failedItems = items.filter(item => !item.success)
+    const successItems = items.filter(item => item.success)
+    selectedIds.value = failedItems.map(item => item.id)
+    if (failedItems.length > 0) {
+      const reasons = failedItems.map(item => `${item.id}: ${item.reason || '删除失败'}`).join('；')
+      message.warning(`已删除 ${successItems.length} 项，${failedItems.length} 项失败：${reasons}`)
+    } else {
+      message.success(`批量删除成功，共 ${successItems.length} 项`)
+    }
     fetchData()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('批量删除失败:', error)
-      message.error('批量删除失败')
+      message.error(error?.message || '批量删除失败')
     }
   }
 }
@@ -1001,6 +1016,7 @@ const handleFileDownload = async (file) => {
  */
 const handleFileClick = (file) => {
   if (isBatchMode.value) {
+    if (file.folder) return
     // 批量操作模式：执行选择操作
     toggleSelection(file.id)
   } else {
