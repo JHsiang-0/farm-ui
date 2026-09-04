@@ -7,6 +7,7 @@ import {
 } from '@/utils/dataAdapters'
 import { REQUEST_TIMEOUT } from '@/utils/constants'
 import { shouldRefreshPresignedUrl } from '@/utils/fileDownload'
+import { normalizeBatchUploadResult } from '@/utils/batchUpload'
 
 /**
  * 打印文件管理 API 模块
@@ -114,8 +115,9 @@ export function batchUploadFiles(files, parentId = null, onUploadProgress, optio
     data: formData,
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress,
+    timeout: REQUEST_TIMEOUT.UPLOAD,
     ...options
-  })
+  }).then(response => mapResponseData(response, normalizeBatchUploadResult))
 }
 
 /**

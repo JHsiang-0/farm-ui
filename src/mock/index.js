@@ -20,6 +20,7 @@ const getBody = config => {
   if (config.data instanceof FormData) {
     return {
       file: config.data.get('file'),
+      files: config.data.getAll('files'),
       parentId: config.data.get('parentId')
     }
   }
@@ -427,17 +428,11 @@ const handleFilePage = config => {
   return createMockPage(records.map(toPublicFile), params)
 }
 
-const handleUpload = config => {
-  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
-  const body = getBody(config)
-  const file = body.file
-  if (!file?.name) fail(400, 400, '请选择要上传的文件')
-  if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) fail(400, 400, '仅支持 .gcode、.g、.3mf 或 .stl 文件')
-
+const createUploadedFile = (session, file, parentId) => {
   const createdAt = now()
   const printFile = {
     id: nextMockId('file'),
-    parentId: body.parentId == null || body.parentId === '' ? null : Number(body.parentId),
+    parentId: parentId == null || parentId === '' ? null : Number(parentId),
     folder: false,
     isFolder: 0,
     originalName: file.name,
@@ -463,6 +458,47 @@ const handleUpload = config => {
   }
   mockState.files.push(printFile)
   return toPublicFile(printFile)
+}
+
+const handleUpload = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const body = getBody(config)
+  const file = body.file
+  if (!file?.name) fail(400, 400, '请选择要上传的文件')
+  if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) fail(400, 400, '仅支持 .gcode、.g、.3mf 或 .stl 文件')
+  return createUploadedFile(session, file, body.parentId)
+}
+
+const handleBatchUpload = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const body = getBody(config)
+  const files = Array.isArray(body.files) && body.files.length > 0
+    ? body.files
+    : []
+  if (files.length === 0 || files.length > 100) fail(400, 400, '批量上传文件数量必须为 1-100 个')
+  const totalBytes = files.reduce((total, file) => total + (Number(file?.size) || 0), 0)
+  if (totalBytes > 250 * 1024 * 1024) fail(400, 400, '批量上传文件总大小不能超过 250MB')
+
+  return {
+    items: files.map((file, index) => {
+      if (!file?.name) {
+        return { index, fileId: null, fileName: '', status: 'FAILED', errorCode: 400, message: '文件不能为空', retryable: false }
+      }
+      if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) {
+        return { index, fileId: null, fileName: file.name, status: 'FAILED', errorCode: 400, message: '文件类型不支持', retryable: false }
+      }
+      const created = createUploadedFile(session, file, body.parentId)
+      return {
+        index,
+        fileId: created.id,
+        fileName: created.originalName,
+        status: 'SUCCESS',
+        errorCode: null,
+        message: '上传成功',
+        retryable: false
+      }
+    })
+  }
 }
 
 const handleCreateFolder = config => {
@@ -841,6 +877,7 @@ const route = async config => {
   if (key === 'PUT /api/v1/printers/positions') return handlePositions(config)
   if (key === 'POST /api/v1/print-files/page') return handleFilePage(config)
   if (key === 'POST /api/v1/print-files/upload') return handleUpload(config)
+  if (key === 'POST /api/v1/print-files/batch-upload') return handleBatchUpload(config)
   if (key === 'POST /api/v1/print-files/folder/create') return handleCreateFolder(config)
   if (key === 'DELETE /api/v1/print-files/batch') return handleBatchDeleteFiles(config)
   if (key === 'GET /api/v1/print-jobs/queue') return handleJobQueue(config)

@@ -217,7 +217,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：大文件和并发上传内存占用。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。文件库上传入口支持 TDesign 多文件选择，批量请求使用重复 `files` 字段和独立上传超时/AbortController；页面逐项展示成功/失败结果，仅保留 `retryable=true` 的失败项重试，部分成功会刷新当前目录但不会误报全成功。Mock 补齐 `/batch-upload` 的数量、总大小、类型校验与逐项结果。`npm.cmd test`（44/44）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T102 批量分配入口与无副作用预览
 

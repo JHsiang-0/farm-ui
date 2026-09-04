@@ -318,32 +318,54 @@
     </div>
 
     <!-- 文件上传对话框 -->
-    <t-dialog v-model:visible="uploadDialogVisible" header="上传 G-Code 文件" width="500px" :footer="false">
-      <t-upload theme="custom" draggable :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
-        @change="handleFileChange" class="p-4">
+    <t-dialog v-model:visible="uploadDialogVisible" header="批量上传切片文件" width="600px" :footer="false">
+      <t-upload theme="custom" draggable multiple :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
+        @select-change="handleFileSelect" class="p-4">
         <span class="farm-icon--upload">
           <UploadFilled />
         </span>
         <div class="farm-upload__text">
-          拖拽 G-Code 文件到此处 或 <em>点击上传</em>
+          拖拽多个切片文件到此处 或 <em>点击上传</em>
         </div>
         <template #tips>
           <div class="farm-upload__tip">
-            支持 .gcode、.g、.3mf、.stl 格式文件，文件大小不超过 200MB
+            支持 .gcode、.g、.3mf、.stl 格式，单次最多 100 个、总大小不超过 250MB
           </div>
         </template>
       </t-upload>
-      <div v-if="uploadingFile" class="px-4 pb-4">
-        <div class="flex justify-between text-sm text-gray-600 mb-2">
-          <span>正在上传：{{ uploadingFile.name }}</span>
-          <span>{{ uploadProgress }}%</span>
+      <div v-if="pendingUploadFiles.length" class="px-4 pb-4 space-y-3">
+        <div class="text-sm text-gray-600">待上传文件（{{ pendingUploadFiles.length }}）</div>
+        <div v-for="file in pendingUploadFiles" :key="`${file.name}-${file.lastModified}`"
+          class="flex items-center justify-between gap-3 text-sm">
+          <span class="min-w-0 truncate" :title="file.name">{{ file.name }}</span>
+          <span class="shrink-0 text-gray-500">{{ batchUploading ? `${uploadProgress}%` : '待上传' }}</span>
         </div>
-        <t-progress :percentage="uploadProgress" />
-        <t-button class="mt-3" variant="outline" size="small" @click="cancelUpload">取消上传</t-button>
+        <t-progress v-if="batchUploading" :percentage="uploadProgress" />
+        <div class="flex justify-end gap-2">
+          <t-button variant="outline" :disabled="batchUploading" @click="handleUpload">重新选择</t-button>
+          <t-button variant="outline" :disabled="!batchUploading" @click="cancelUpload">取消上传</t-button>
+          <t-button theme="primary" :loading="batchUploading" @click="submitBatchUpload">开始上传</t-button>
+        </div>
+      </div>
+      <div v-if="batchUploadResults.length" class="px-4 pb-4 space-y-2">
+        <t-alert
+          :theme="batchUploadResults.every(isBatchUploadSuccess) ? 'success' : 'warning'"
+          :title="batchUploadResults.every(isBatchUploadSuccess) ? '全部文件上传成功' : '部分文件未上传成功'"
+          :closable="false"
+        />
+        <div v-for="result in batchUploadResults" :key="`${result.index}-${result.fileName}`"
+          class="flex items-center justify-between gap-3 text-sm">
+          <span class="min-w-0 truncate" :title="result.fileName">{{ result.fileName || `第 ${result.index + 1} 项` }}</span>
+          <span :class="isBatchUploadSuccess(result) ? 'text-green-600' : 'text-red-600'">
+            {{ isBatchUploadSuccess(result) ? '成功' : (result.message || '失败') }}
+          </span>
+        </div>
+        <t-button v-if="pendingUploadFiles.length" size="small" theme="primary" @click="submitBatchUpload">
+          重试可重试失败项（{{ pendingUploadFiles.length }}）
+        </t-button>
       </div>
       <div v-if="uploadError" class="px-4 pb-4">
         <t-alert theme="error" :title="uploadError" :closable="false" />
-        <t-button class="mt-3" size="small" theme="primary" @click="retryUpload">重新上传</t-button>
       </div>
     </t-dialog>
 
@@ -495,7 +517,8 @@ import {
   downloadFile,
   createFolder,
   getFilePreview,
-  getThumbnailUrl
+  getThumbnailUrl,
+  batchUploadFiles
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
@@ -504,6 +527,11 @@ import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import {
+  isBatchUploadSuccess,
+  normalizeBatchUploadResult,
+  validateBatchUploadSelection
+} from '@/utils/batchUpload'
 
 defineOptions({ name: 'FileLibrary' })
 
@@ -518,10 +546,11 @@ const viewMode = ref('grid')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
-const uploadingFile = ref(null)
+const pendingUploadFiles = ref([])
+const batchUploadResults = ref([])
+const batchUploading = ref(false)
 const uploadProgress = ref(0)
 const uploadError = ref('')
-const lastUploadFile = ref(null)
 let uploadController = null
 // 打印任务对话框状态
 const createJobDialogVisible = ref(false)
@@ -715,65 +744,97 @@ const handleSelectionChange = (selection) => {
 }
 
 /**
- * 文件上传处理
+ * 选择批量上传文件
  */
-const handleFileChange = async (files) => {
-  if (uploadingFile.value) return
-  const latestFile = Array.isArray(files) ? files.at(-1) : files
-  const file = latestFile?.raw || latestFile
-  if (!file) return
-
-  // 验证文件类型
-  if (!/\.(gcode|g|3mf|stl)$/i.test(file.name)) {
-    message.warning('请上传 .gcode、.g、.3mf 或 .stl 文件')
-    return
+const handleFileSelect = (files) => {
+  if (batchUploading.value) return
+  const selectedFiles = (Array.isArray(files) ? files : [files])
+    .map(file => file?.raw || file)
+    .filter(Boolean)
+  const existingNames = fileList.value
+    .filter(item => !item.folder)
+    .map(item => item.originalName)
+  const validation = validateBatchUploadSelection(selectedFiles, existingNames)
+  pendingUploadFiles.value = validation.files
+  batchUploadResults.value = []
+  uploadError.value = validation.rejected.map(item => item.reason).join('；')
+  uploadProgress.value = 0
+  if (validation.rejected.length > 0) {
+    message.warning(`已忽略 ${validation.rejected.length} 个不可上传文件`)
   }
+}
 
-  if (file.size > 200 * 1024 * 1024) {
-    message.warning('文件大小不能超过 200MB')
-    return
-  }
-  if (fileList.value.some(item => !item.folder && item.originalName === file.name)) {
-    message.warning('当前目录已存在同名文件，请先重命名后再上传')
-    return
-  }
+const submitBatchUpload = async () => {
+  if (batchUploading.value || pendingUploadFiles.value.length === 0) return
 
-  const formData = new FormData()
-  formData.append('file', file)
-  if (currentParentId.value !== null) formData.append('parentId', String(currentParentId.value))
-
-  uploadingFile.value = file
-  lastUploadFile.value = file
+  const files = pendingUploadFiles.value.slice()
+  batchUploading.value = true
   uploadError.value = ''
   uploadProgress.value = 0
   uploadController = new AbortController()
   try {
-    await uploadPrintFile(formData, event => {
+    let result
+    const onUploadProgress = event => {
       if (event?.total) uploadProgress.value = Math.min(Math.round((event.loaded / event.total) * 100), 99)
-    }, { signal: uploadController.signal })
-    message.success('文件上传成功')
-    uploadDialogVisible.value = false
-    uploadingFile.value = null
-    uploadProgress.value = 0
-    fetchData()
+    }
+    if (files.length === 1) {
+      const formData = new FormData()
+      formData.append('file', files[0])
+      if (currentParentId.value !== null) formData.append('parentId', String(currentParentId.value))
+      const response = await uploadPrintFile(formData, onUploadProgress, { signal: uploadController.signal })
+      result = {
+        items: [{
+          index: 0,
+          fileId: response.data?.id ?? null,
+          fileName: response.data?.originalName || files[0].name,
+          status: 'SUCCESS',
+          errorCode: null,
+          message: '上传成功',
+          retryable: false
+        }]
+      }
+    } else {
+      result = await batchUploadFiles(files, currentParentId.value, onUploadProgress, {
+        signal: uploadController.signal
+      })
+    }
+
+    const items = normalizeBatchUploadResult(result).items
+    batchUploadResults.value = items
+    const successfulItems = items.filter(isBatchUploadSuccess)
+    const retryableFiles = items
+      .filter(item => !isBatchUploadSuccess(item) && item.retryable)
+      .map(item => files[item.index])
+      .filter(Boolean)
+    pendingUploadFiles.value = retryableFiles
+
+    if (successfulItems.length > 0) await fetchData()
+    if (retryableFiles.length === 0 && successfulItems.length === files.length) {
+      message.success(`已上传 ${successfulItems.length} 个文件`)
+      uploadDialogVisible.value = false
+      pendingUploadFiles.value = []
+    } else if (successfulItems.length > 0) {
+      message.warning(`已上传 ${successfulItems.length} 个文件，${files.length - successfulItems.length} 个失败`)
+    } else {
+      message.error('文件上传失败，请检查失败项')
+    }
   } catch (error) {
-    console.error('上传失败:', error)
+    console.error('批量上传失败:', error)
     if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
       message.info('上传已取消')
     } else {
       uploadError.value = error?.message || '上传失败，可重试'
-      message.error('上传失败，可点击重试')
+      message.error('上传失败，可重试')
     }
+  } finally {
+    batchUploading.value = false
+    uploadProgress.value = 0
+    uploadController = null
   }
-  uploadController = null
 }
 
 const cancelUpload = () => {
   uploadController?.abort()
-}
-
-const retryUpload = () => {
-  if (lastUploadFile.value) handleFileChange([lastUploadFile.value])
 }
 
 /**
@@ -930,10 +991,10 @@ const handleSubmitCreateJob = async () => {
  * 打开上传对话框
  */
 const handleUpload = () => {
-  uploadingFile.value = null
+  pendingUploadFiles.value = []
+  batchUploadResults.value = []
   uploadProgress.value = 0
   uploadError.value = ''
-  lastUploadFile.value = null
   uploadDialogVisible.value = true
 }
 
