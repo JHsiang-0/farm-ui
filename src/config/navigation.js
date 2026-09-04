@@ -28,6 +28,7 @@ export const navigationGroups = [
     items: [
       { key: 'files', title: '文件库', to: '/files', icon: FolderOpenIcon },
       { key: 'tasks-queue', title: '任务队列', to: '/tasks/queue', icon: ListNumberedIcon },
+      { key: 'tasks-batch', title: '批量派发', to: '/batch-dispatch', icon: ListNumberedIcon },
       { key: 'tasks-history', title: '打印历史', to: '/tasks/history', icon: FileIcon }
     ]
   },

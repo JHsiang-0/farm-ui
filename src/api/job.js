@@ -5,6 +5,7 @@ import {
   normalizePageResponse,
   normalizePrintJob
 } from '@/utils/dataAdapters'
+import { toBatchPreviewPayload } from '@/utils/batchDispatch'
 
 /**
  * 打印任务 API 模块
@@ -131,7 +132,7 @@ export function previewBatchDispatch(data) {
   return request({
     url: '/api/v1/print-jobs/batch/preview',
     method: 'post',
-    data
+    data: toBatchPreviewPayload(data)
   })
 }
 

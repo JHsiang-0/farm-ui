@@ -230,7 +230,7 @@
 - 需要后端配合：否。
 - 需要真实打印机：否。
 - 风险：预览结果短期有效，UI 必须准确表示过期。
-- 完成状态：待开始。
+- 完成状态：已完成（2026-09-04）。批量派发页已加入侧边导航入口，统一使用 TDesign 控件；预览请求构造 `items/action/requestId` 前端上下文，但发往后端的 DTO 严格保留 `fileIds/printerIds/strategy/action`。预览仅生成计划，不创建任务或占用打印机；选择、策略或动作变化会清理旧计划，过期计划禁止确认，刷新页面不会恢复确认状态。已展示建议、冲突、过期和不可分配原因；`AUTO_MATCH` 标记为“本次智能匹配”，未增加自动派单开关。`npm.cmd test`（47/47）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T103 批量确认与逐项结果
 

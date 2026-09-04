@@ -5,95 +5,115 @@
         <h1>批量手动派发</h1>
         <p>先选择文件和打印机生成预览，确认后才会创建任务或启动打印。</p>
       </div>
-      <button class="secondary-button" type="button" @click="loadResources">刷新资源</button>
+      <t-button variant="outline" @click="loadResources" :loading="loadingResources">刷新资源</t-button>
     </div>
 
-    <section class="panel">
+    <t-card class="panel" title="批量上传">
       <h2>批量上传</h2>
       <p class="hint">支持多个 .gcode、.g、.3mf、.stl 文件；上传结果按文件分别返回。</p>
-      <input ref="uploadInput" type="file" multiple accept=".gcode,.g,.3mf,.stl" @change="handleFileChange">
-      <button class="primary-button" type="button" :disabled="uploading || !uploadFiles.length" @click="uploadSelected">
-        {{ uploading ? '上传中…' : '批量上传' }}
-      </button>
-      <button v-if="uploading" class="secondary-button" type="button" @click="cancelUpload">取消上传</button>
-      <div v-if="uploadResult" class="result-box">
-        上传完成：成功 {{ uploadResult.successCount ?? 0 }} 个，失败 {{ uploadResult.failureCount ?? 0 }} 个
-        <button v-if="retryableUploadFiles.length" class="secondary-button" type="button" @click="retryFailedUploads">
-          重试失败项（{{ retryableUploadFiles.length }}）
-        </button>
-      </div>
-    </section>
+      <t-upload theme="file" multiple :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
+        :files="uploadFiles" @select-change="handleFileChange" />
+      <t-space class="mt-3">
+        <t-button theme="primary" :loading="uploading" :disabled="!uploadFiles.length" @click="uploadSelected">
+          {{ uploading ? '上传中…' : '批量上传' }}
+        </t-button>
+        <t-button v-if="uploading" variant="outline" @click="cancelUpload">取消上传</t-button>
+      </t-space>
+      <t-alert v-if="uploadResult" class="mt-3" :theme="uploadResult.failureCount ? 'warning' : 'success'"
+        :title="`上传完成：成功 ${uploadResult.successCount ?? 0} 个，失败 ${uploadResult.failureCount ?? 0} 个`"
+        :closable="false">
+        <template #operation>
+          <t-button v-if="retryableUploadFiles.length" variant="text" size="small" @click="retryFailedUploads">
+            重试失败项（{{ retryableUploadFiles.length }}）
+          </t-button>
+        </template>
+      </t-alert>
+    </t-card>
 
     <div class="selection-grid">
-      <section class="panel">
-        <h2>选择文件（{{ selectedFileIds.length }}）</h2>
-        <label v-for="file in files" :key="file.id" class="selection-row">
-          <input v-model="selectedFileIds" type="checkbox" :value="file.id">
-          <span>{{ file.originalName || file.fileName }}</span>
-          <small>{{ file.id }}</small>
-        </label>
-        <p v-if="!files.length" class="hint">暂无文件，请先批量上传或刷新。</p>
-      </section>
+      <t-card class="panel" :title="`选择文件（${selectedFileIds.length}）`">
+        <t-checkbox-group v-model="selectedFileIds" class="selection-group">
+          <t-checkbox v-for="file in files" :key="file.id" :value="file.id" class="selection-row">
+            <span>{{ file.originalName || file.fileName }}</span>
+            <small>{{ file.id }}</small>
+          </t-checkbox>
+        </t-checkbox-group>
+        <t-empty v-if="!files.length" description="暂无文件，请先批量上传或刷新。" />
+      </t-card>
 
-      <section class="panel">
-        <h2>选择打印机（{{ selectedPrinterIds.length }}）</h2>
-        <label v-for="printer in printers" :key="printer.id" class="selection-row">
-          <input v-model="selectedPrinterIds" type="checkbox" :value="printer.id">
-          <span>{{ printer.name }}</span>
-          <small>{{ printer.ipAddress }} · {{ printer.status }}</small>
-        </label>
-        <p v-if="!printers.length" class="hint">暂无打印机，请先添加设备。</p>
-      </section>
+      <t-card class="panel" :title="`选择打印机（${selectedPrinterIds.length}）`">
+        <t-checkbox-group v-model="selectedPrinterIds" class="selection-group">
+          <t-checkbox v-for="printer in printers" :key="printer.id" :value="printer.id" class="selection-row">
+            <span>{{ printer.name }}</span>
+            <small>{{ printer.ipAddress }} · {{ printer.status }}</small>
+          </t-checkbox>
+        </t-checkbox-group>
+        <t-empty v-if="!printers.length" description="暂无打印机，请先添加设备。" />
+      </t-card>
     </div>
 
-    <section class="panel options-panel">
-      <label>分配策略
-        <select v-model="strategy">
-          <option value="ONE_TO_ONE">一文件一打印机</option>
-          <option value="ROUND_ROBIN">轮询分配</option>
-          <option value="AUTO_MATCH">按资源自动匹配（仅本次确认）</option>
-        </select>
-      </label>
-      <label>确认后的动作
-        <select v-model="action">
-          <option value="UPLOAD_ONLY">仅上传到打印机</option>
-          <option value="QUEUE">创建排队任务</option>
-          <option value="START_AFTER_CONFIRM">安全确认后启动</option>
-        </select>
-      </label>
-      <button class="primary-button" type="button" :disabled="previewing" @click="preview">
+    <t-card class="panel options-panel">
+      <t-form layout="inline">
+        <t-form-item label="分配策略">
+          <t-select v-model="strategy" class="option-select">
+            <t-option value="ONE_TO_ONE" label="一文件一打印机" />
+            <t-option value="ROUND_ROBIN" label="轮询分配" />
+            <t-option value="AUTO_MATCH" label="本次智能匹配" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="确认后的动作">
+          <t-select v-model="action" class="option-select">
+            <t-option value="UPLOAD_ONLY" label="仅上传到打印机" />
+            <t-option value="QUEUE" label="创建排队任务" />
+            <t-option value="START_AFTER_CONFIRM" label="安全确认后启动" />
+          </t-select>
+        </t-form-item>
+      </t-form>
+      <t-button class="mt-4" theme="primary" :loading="previewing" @click="preview">
         {{ previewing ? '生成中…' : '生成派发预览' }}
-      </button>
-    </section>
+      </t-button>
+    </t-card>
 
-    <section v-if="previewData" class="panel">
-      <h2>预览结果</h2>
-      <p class="hint">计划 {{ previewData.planId }} · 版本 {{ previewData.version }} · 请确认资源和动作后执行。</p>
+    <t-card v-if="previewData" class="panel" title="预览结果">
+      <p class="hint">请求 {{ previewData.requestId }} · 计划 {{ previewData.planId }} · 版本 {{ previewData.version }} · 动作 {{ previewData.action || action }}。</p>
+      <t-alert v-if="previewSuggestions.length" class="mb-3" theme="info" title="分配建议" :closable="false">
+        <div v-for="suggestion in previewSuggestions" :key="suggestion.itemId || suggestion.message">
+          {{ suggestion.message || suggestion.reasonCode || suggestion }}
+        </div>
+      </t-alert>
+      <t-alert v-if="previewExpired" class="mb-3" theme="warning" title="预览已过期，请重新生成" :closable="false" />
+      <t-alert v-if="previewData.conflicts?.length" class="mb-3" theme="warning" title="存在不可分配冲突" :closable="false">
+        <div v-for="conflict in previewData.conflicts" :key="conflict.itemId || conflict.code || conflict.message">
+          {{ conflict.message || conflict.reasonCode || conflict.code || '资源冲突' }}
+        </div>
+      </t-alert>
       <div v-for="item in previewData.items || []" :key="item.itemId || `${item.fileId}-${item.printerId}`" class="preview-row">
         <span>文件 {{ item.fileId }} → 打印机 {{ item.printerId || '未分配' }}</span>
-        <span :class="item.canExecute ? 'ok' : 'error'">{{ item.message || item.reasonCode || (item.canExecute ? '可执行' : '存在冲突') }}</span>
+        <t-tag :theme="item.canExecute ? 'success' : 'danger'" variant="light">
+          {{ item.message || item.reasonCode || (item.canExecute ? '可执行' : '存在冲突') }}
+        </t-tag>
       </div>
-      <button class="primary-button" type="button" :disabled="confirming || !executableItemIds.length" @click="confirm">
+      <t-button theme="primary" :disabled="previewExpired || confirming || !executableItemIds.length" :loading="confirming" @click="confirm">
         {{ confirming ? '执行中…' : `确认执行（${executableItemIds.length}项）` }}
-      </button>
-      <div v-if="confirmData" class="result-box">
-        执行完成：计划状态 {{ confirmData.planStatus || confirmData.status || '已处理' }}
+      </t-button>
+      <t-alert v-if="confirmData" class="mt-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '已处理'}`" :closable="false">
         <div v-for="item in confirmData.items || []" :key="item.itemId || `${item.fileId}-${item.printerId}`">
           文件 {{ item.fileId }}：{{ item.message || item.status }}
         </div>
-      </div>
-    </section>
+      </t-alert>
+    </t-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { message, confirmMessage } from '@/utils/message'
 import { batchUploadFiles } from '@/api/printFile'
 import { getFileList } from '@/api/printFile'
 import { getPrinterList } from '@/api/printer'
 import { previewBatchDispatch, confirmBatchDispatch } from '@/api/job'
+import { createBatchPreviewRequest } from '@/utils/batchDispatch'
 
 const route = useRoute()
 const files = ref([])
@@ -101,17 +121,20 @@ const printers = ref([])
 const selectedFileIds = ref([])
 const selectedPrinterIds = ref([])
 const uploadFiles = ref([])
-const uploadInput = ref(null)
 const uploadResult = ref(null)
 const lastBatchUploadFiles = ref([])
 const uploadController = ref(null)
 const previewData = ref(null)
 const confirmData = ref(null)
 const uploading = ref(false)
+const loadingResources = ref(false)
 const previewing = ref(false)
 const confirming = ref(false)
+const previewExpired = ref(false)
+const previewExpiresAt = ref(null)
 const strategy = ref('ONE_TO_ONE')
 const action = ref('QUEUE')
+let previewExpiryTimer = null
 
 const executableItemIds = computed(() => (previewData.value?.items || [])
   .filter(item => item.canExecute)
@@ -122,12 +145,44 @@ const retryableUploadFiles = computed(() => (uploadResult.value?.items || [])
   .filter(item => item.retryable && lastBatchUploadFiles.value[item.index])
   .map(item => lastBatchUploadFiles.value[item.index]))
 
+const previewSuggestions = computed(() => previewData.value?.suggestions || [])
+
+function stopPreviewExpiryTimer() {
+  if (previewExpiryTimer) {
+    clearTimeout(previewExpiryTimer)
+    previewExpiryTimer = null
+  }
+}
+
+function startPreviewExpiryTimer(expiresAt) {
+  stopPreviewExpiryTimer()
+  const expires = Date.parse(expiresAt || '')
+  if (!Number.isFinite(expires)) {
+    previewExpired.value = false
+    return
+  }
+  const update = () => {
+    previewExpired.value = Date.now() >= expires
+    if (!previewExpired.value) previewExpiryTimer = setTimeout(update, 1000)
+  }
+  update()
+}
+
+function invalidatePreview() {
+  previewData.value = null
+  confirmData.value = null
+  previewExpiresAt.value = null
+  previewExpired.value = false
+  stopPreviewExpiryTimer()
+}
+
 function queryIds(value) {
   if (!value) return []
   return String(value).split(',').map(item => item.trim()).filter(Boolean)
 }
 
 async function loadResources() {
+  loadingResources.value = true
   try {
     const [fileResponse, printerResponse] = await Promise.all([
       getFileList({ pageNum: 1, pageSize: 100 }),
@@ -138,11 +193,16 @@ async function loadResources() {
   } catch (error) {
     console.error('加载批量派发资源失败:', error)
     message.error('加载文件或打印机失败')
+  } finally {
+    loadingResources.value = false
   }
 }
 
-function handleFileChange(event) {
-  uploadFiles.value = Array.from(event.target.files || [])
+function handleFileChange(files) {
+  uploadFiles.value = (Array.isArray(files) ? files : [])
+    .map(file => file?.raw || file)
+    .filter(Boolean)
+  uploadResult.value = null
 }
 
 async function uploadSelected() {
@@ -159,7 +219,6 @@ async function uploadSelected() {
     uploadResult.value = response?.data || {}
     message.success('批量上传处理完成')
     uploadFiles.value = []
-    if (uploadInput.value) uploadInput.value.value = ''
     await loadResources()
   } catch (error) {
     console.error('批量上传失败:', error)
@@ -190,15 +249,18 @@ async function preview() {
     return
   }
   previewing.value = true
-  confirmData.value = null
+  invalidatePreview()
+  const previewRequest = createBatchPreviewRequest({
+    fileIds: selectedFileIds.value,
+    printerIds: selectedPrinterIds.value,
+    strategy: strategy.value,
+    action: action.value
+  })
   try {
-    const response = await previewBatchDispatch({
-      fileIds: selectedFileIds.value,
-      printerIds: selectedPrinterIds.value,
-      strategy: strategy.value,
-      action: action.value
-    })
-    previewData.value = response?.data || null
+    const response = await previewBatchDispatch(previewRequest)
+    previewData.value = response?.data ? { ...response.data, requestId: previewRequest.requestId } : null
+    previewExpiresAt.value = previewData.value?.expiresAt || null
+    startPreviewExpiryTimer(previewExpiresAt.value)
   } catch (error) {
     console.error('生成批量派发预览失败:', error)
     message.error(error?.message || '生成预览失败')
@@ -208,6 +270,10 @@ async function preview() {
 }
 
 async function confirm() {
+  if (!previewData.value || previewExpired.value || !executableItemIds.value.length) {
+    message.warning(previewExpired.value ? '预览已过期，请重新生成' : '当前没有可执行的预览项')
+    return
+  }
   try {
     await confirmMessage(
       '确认后将按预览结果创建任务或上传/启动，请确认打印机和文件均正确。',
@@ -241,6 +307,9 @@ onMounted(async () => {
   await loadResources()
   selectedFileIds.value = queryIds(route.query.fileIds)
 })
+
+watch([selectedFileIds, selectedPrinterIds, strategy, action], invalidatePreview, { deep: true })
+onUnmounted(stopPreviewExpiryTimer)
 </script>
 
 <style scoped>
