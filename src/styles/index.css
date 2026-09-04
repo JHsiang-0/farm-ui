@@ -43,6 +43,7 @@ body {
 
 .app-route-title {
   font-size: var(--app-page-title-size);
+  font-weight: 700;
   line-height: var(--app-page-title-line-height);
 }
 

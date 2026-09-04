@@ -3,7 +3,6 @@
     <header class="dashboard-heading">
       <div>
         <h1 class="app-route-title">概览仪表盘</h1>
-        <p class="dashboard-heading__description">设备、任务与打印机状态一览</p>
       </div>
       <div class="dashboard-heading__actions">
         <t-button :icon="renderIcon(RefreshIcon)" :loading="loading" @click="fetchOverview" size="medium">
@@ -421,7 +420,6 @@ onMounted(fetchOverview)
   color: var(--app-text-primary);
 }
 
-.dashboard-heading__description,
 .card-heading p {
   margin-top: 0.25rem !important;
   color: var(--app-text-secondary);

@@ -26,11 +26,27 @@ const breadcrumbs = computed(() => route.matched
 
 <style scoped>
 .app-breadcrumb {
-  min-height: 24px;
+  min-height: 2.025rem;
   margin-bottom: 1rem;
 }
 
 :deep(.t-breadcrumb) {
-  font-size: 0.8125rem;
+  color: var(--app-text-primary);
+  font-size: var(--app-page-title-size);
+  font-weight: 700;
+  line-height: var(--app-page-title-line-height);
+}
+
+:deep(.t-breadcrumb__item),
+:deep(.t-breadcrumb__inner),
+:deep(.t-breadcrumb__inner-text) {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+:deep(.t-breadcrumb__separator) {
+  color: var(--app-text-secondary);
+  font-size: 1rem;
 }
 </style>
