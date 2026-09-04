@@ -1,31 +1,60 @@
 <template>
   <div class="h-full app-page-background flex flex-col overflow-hidden">
-    <!-- 顶部操作栏 -->
-    <div class="file-library-toolbar m-6 mb-4 p-5 bg-white rounded-xl shadow-sm">
-      <div class="file-library-toolbar__heading">
-        <div class="file-library-toolbar__title-row">
-          <h1 class="file-library-toolbar__title app-route-title">
-            <FolderOpened :size="22" />
-            <span>文件库</span>
-          </h1>
+    <!-- 页面标题与操作栏 -->
+    <div class="app-page-toolbar file-library-page-toolbar m-6 mb-4">
+      <div class="file-library-toolbar__title-row">
+        <h1 class="file-library-toolbar__title app-page-toolbar__title app-route-title">
+          <FolderOpened :size="22" />
+          <span>文件库</span>
+        </h1>
 
-          <!-- 面包屑导航 -->
-          <t-breadcrumb separator="/" class="hidden sm:block">
-            <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
-              <span><folder-opened /></span>
-              <span>根目录</span>
-            </t-breadcrumb-item>
-            <t-breadcrumb-item
-              v-for="(breadcrumb, index) in breadcrumbs"
-              :key="breadcrumb.id"
-              @click.prevent="navigateTo(index)"
-            >
-              {{ breadcrumb.name }}
-            </t-breadcrumb-item>
-          </t-breadcrumb>
-        </div>
+        <!-- 面包屑导航 -->
+        <t-breadcrumb separator="/" class="hidden sm:block">
+          <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
+            <span><folder-opened /></span>
+            <span>根目录</span>
+          </t-breadcrumb-item>
+          <t-breadcrumb-item
+            v-for="(breadcrumb, index) in breadcrumbs"
+            :key="breadcrumb.id"
+            @click.prevent="navigateTo(index)"
+          >
+            {{ breadcrumb.name }}
+          </t-breadcrumb-item>
+        </t-breadcrumb>
       </div>
-      <div class="file-library-toolbar__body">
+      <Teleport to=".app-breadcrumb__actions">
+        <div class="file-library-toolbar__actions app-page-toolbar__actions">
+        <t-space class="file-view-toggle">
+          <t-button variant="text" size="small" @click="viewMode = 'grid'"
+            :class="{ 'file-view-toggle__active': viewMode === 'grid' }" aria-label="网格视图">
+            <Grid />
+          </t-button>
+          <t-button variant="text" size="small" @click="viewMode = 'list'"
+            :class="{ 'file-view-toggle__active': viewMode === 'list' }" aria-label="列表视图">
+            <List />
+          </t-button>
+        </t-space>
+        <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
+        <t-button variant="outline" theme="default" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
+          新建文件夹
+        </t-button>
+        <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
+          上传 G-Code 文件
+        </t-button>
+        <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
+          批量删除 ({{ selectedIds.length }})
+        </t-button>
+        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
+          刷新
+        </t-button>
+        </div>
+      </Teleport>
+    </div>
+
+    <div class="file-library-content-card mx-6 mb-6 p-4 bg-white rounded-xl shadow-sm flex-1 min-h-0 flex flex-col">
+      <!-- 搜索与筛选 -->
+      <div class="file-library-filter-row mb-4">
         <div class="file-library-toolbar__filters">
           <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-full sm:w-52" size="medium"
             @keyup.enter="handleSearch">
@@ -42,36 +71,10 @@
             <t-option label="尼龙" value="尼龙" />
           </t-select>
         </div>
-        <div class="file-library-toolbar__actions">
-          <t-space class="file-view-toggle">
-            <t-button variant="text" size="small" @click="viewMode = 'grid'"
-              :class="{ 'file-view-toggle__active': viewMode === 'grid' }" aria-label="网格视图">
-              <Grid />
-            </t-button>
-            <t-button variant="text" size="small" @click="viewMode = 'list'"
-              :class="{ 'file-view-toggle__active': viewMode === 'list' }" aria-label="列表视图">
-              <List />
-            </t-button>
-          </t-space>
-          <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
-          <t-button variant="outline" theme="default" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
-            新建文件夹
-          </t-button>
-          <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
-            上传 G-Code 文件
-          </t-button>
-          <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
-            批量删除 ({{ selectedIds.length }})
-          </t-button>
-          <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
-            刷新
-          </t-button>
-        </div>
       </div>
-    </div>
 
-    <!-- 文件列表区 -->
-    <div v-if="fileList.length > 0" class="flex-1 overflow-hidden flex flex-col mx-6">
+      <!-- 文件列表区 -->
+      <div v-if="fileList.length > 0" class="flex-1 min-h-0 overflow-hidden flex flex-col">
       <!-- 网格视图 -->
       <div v-if="viewMode === 'grid'" class="file-grid-view flex-1 overflow-y-auto pb-4">
         <!-- 文件夹 -->
@@ -213,7 +216,7 @@
       </div>
 
       <!-- 列表视图 -->
-      <div v-else class="bg-white rounded-lg shadow-sm overflow-hidden flex-1">
+      <div v-else class="overflow-hidden flex-1">
         <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
           @row-click="handleTableRowClick" border stripe style="width: 100%" height="calc(100vh - 300px)">
           <TdTableColumn type="selection" width="50" align="center" />
@@ -296,8 +299,8 @@
       </div>
     </div>
 
-    <!-- 空状态 -->
-    <div v-else-if="!loading" class="flex justify-center py-16 px-4 mx-6">
+      <!-- 空状态 -->
+      <div v-else-if="!loading" class="flex justify-center flex-1 py-16 px-4">
       <t-empty description="暂无文件，请上传 G-Code 文件">
         <template #image>
           <FolderOpened :size="80" class="text-gray-400" />
@@ -310,17 +313,18 @@
       </t-empty>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="flex flex-col items-center py-16 px-4 mx-6 text-gray-600">
+      <!-- 加载状态 -->
+      <div v-if="loading" class="flex flex-col items-center justify-center flex-1 py-16 px-4 text-gray-600">
       <Refresh :size="48" class="is-loading mb-3" />
       <p>加载中...</p>
     </div>
 
-    <!-- 分页 -->
-    <div v-if="fileList.length > 0" class="flex justify-center pt-2 pb-6 shrink-0 mx-6">
+      <!-- 分页 -->
+      <div v-if="fileList.length > 0" class="flex justify-center pt-2 shrink-0">
       <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize"
         :total="pagination.total" :show-page-size="false"
-        @change="handlePageChange" class="bg-white p-4 rounded-lg shadow-sm" />
+        @change="handlePageChange" class="p-4" />
+      </div>
     </div>
 
     <!-- 文件上传对话框 -->
@@ -1047,13 +1051,7 @@ onMounted(() => {
   border: 1px solid var(--app-border);
 }
 
-.file-library-toolbar__heading {
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--app-border);
-}
-
 .file-library-toolbar__title-row,
-.file-library-toolbar__body,
 .file-library-toolbar__filters,
 .file-library-toolbar__actions {
   display: flex;
@@ -1072,13 +1070,6 @@ onMounted(() => {
   flex-shrink: 0;
   margin: 0;
   color: var(--app-text-primary);
-  font-size: var(--app-page-title-size);
-  font-weight: 700;
-}
-
-.file-library-toolbar__body {
-  justify-content: space-between;
-  gap: 1rem;
 }
 
 .file-library-toolbar__filters,
@@ -1177,8 +1168,7 @@ onMounted(() => {
     padding: 1rem;
   }
 
-  .file-library-toolbar__title-row,
-  .file-library-toolbar__body {
+  .file-library-toolbar__title-row {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1202,17 +1192,6 @@ onMounted(() => {
 
   .file-card__media {
     height: 88px;
-  }
-}
-
-@media (max-width: 1100px) {
-  .file-library-toolbar__body {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .file-library-toolbar__actions {
-    justify-content: flex-start;
   }
 }
 

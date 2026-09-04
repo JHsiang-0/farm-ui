@@ -50,7 +50,7 @@ const router = createRouter({
           path: 'users',
           name: 'users',
           component: () => import('../views/UserManagement.vue'),
-          meta: { title: '用户管理', roles: ['ADMIN'] }
+          meta: { title: '用户管理', roles: ['ADMIN'], hideBreadcrumb: true }
         },
         {
           path: 'files',
@@ -68,13 +68,13 @@ const router = createRouter({
               path: 'queue',
               name: 'tasks-queue',
               component: () => import('../views/JobQueue.vue'),
-              meta: { title: '任务队列' }
+              meta: { title: '任务队列', hideBreadcrumb: true }
             },
             {
               path: 'history',
               name: 'tasks-history',
               component: () => import('../views/JobHistory.vue'),
-              meta: { title: '打印历史' }
+              meta: { title: '打印历史', hideBreadcrumb: true }
             }
           ]
         }

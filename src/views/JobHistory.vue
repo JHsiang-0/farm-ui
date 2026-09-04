@@ -1,18 +1,15 @@
 <template>
   <div class="h-full app-page-background flex flex-col overflow-hidden">
-    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
-      <template #header>
-        <div class="flex flex-wrap justify-between items-center gap-x-8 gap-y-3">
-          <div class="flex min-w-0 items-center gap-3 font-semibold text-gray-900">
-            <document :size="20" class="text-gray-600" />
-            <span class="app-route-title truncate">打印历史记录</span>
-          </div>
-          <t-button class="shrink-0" :icon="renderIcon(Refresh)" :loading="loading" @click="handleQuery" size="medium">
-            刷新
-          </t-button>
-        </div>
-      </template>
+    <div class="app-page-toolbar m-6 mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">打印历史记录</h1>
+      <div class="app-page-toolbar__actions">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="handleQuery" size="medium">
+          刷新
+        </t-button>
+      </div>
+    </div>
 
+    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
       <!-- 顶部检索区 -->
       <div class="bg-gray-50 p-4 rounded-lg mb-4">
         <div class="flex flex-wrap items-center gap-4">

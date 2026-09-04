@@ -9,15 +9,15 @@
     />
 
     <!-- 页面标题与操作栏 -->
-    <div class="printer-manage-toolbar m-6 mb-4">
-      <h1 class="printer-manage-toolbar__title app-route-title">打印机管理</h1>
-      <div v-if="activeStatusFilter" class="printer-manage-toolbar__filter">
+    <div class="app-page-toolbar m-6 mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">打印机管理</h1>
+      <div v-if="activeStatusFilter" class="app-page-toolbar__filter">
         <t-tag :theme="activeStatusFilter.theme" variant="light">
           当前筛选：{{ activeStatusFilter.label }}
         </t-tag>
         <t-button variant="text" size="small" @click="clearStatusFilter">显示全部</t-button>
       </div>
-      <div class="printer-manage-toolbar__actions">
+      <div class="app-page-toolbar__actions">
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
           刷新
         </t-button>
@@ -816,47 +816,3 @@ onMounted(() => {
   fetchData()
 })
 </script>
-
-<style scoped>
-.printer-manage-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  min-height: 2.025rem;
-}
-
-.printer-manage-toolbar__title {
-  flex-shrink: 0;
-  margin: 0;
-  color: var(--app-text-primary);
-}
-
-.printer-manage-toolbar__actions,
-.printer-manage-toolbar__filter {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.printer-manage-toolbar__actions {
-  margin-left: auto;
-}
-
-@media (max-width: 768px) {
-  .printer-manage-toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .printer-manage-toolbar__actions,
-  .printer-manage-toolbar__filter {
-    width: 100%;
-  }
-
-  .printer-manage-toolbar__actions {
-    margin-left: 0;
-  }
-}
-</style>

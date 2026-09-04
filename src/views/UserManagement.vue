@@ -1,7 +1,13 @@
 <template>
   <div class="h-full app-page-background p-6">
-    <t-card title="用户管理" class="shadow-sm user-management-card">
-      <template #actions><t-button theme="primary" @click="openCreate">新增用户</t-button></template>
+    <div class="app-page-toolbar mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">用户管理</h1>
+      <div class="app-page-toolbar__actions">
+        <t-button theme="primary" @click="openCreate">新增用户</t-button>
+      </div>
+    </div>
+
+    <t-card class="shadow-sm">
       <div class="flex gap-3 mb-4">
         <t-input v-model="query.username" placeholder="按用户名搜索" clearable @enter="fetchUsers" />
         <t-select v-model="query.role" placeholder="角色" clearable style="width: 150px" @change="fetchUsers">
@@ -76,10 +82,3 @@ const toggleUser = async user => {
 }
 onMounted(fetchUsers)
 </script>
-
-<style scoped>
-.user-management-card :deep(.t-card__title) {
-  font-size: var(--app-page-title-size);
-  line-height: var(--app-page-title-line-height);
-}
-</style>
