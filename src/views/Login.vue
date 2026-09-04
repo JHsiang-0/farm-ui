@@ -139,7 +139,7 @@
 
 <script setup>
 defineOptions({ name: 'LoginView' })
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from '@/utils/message'
 import { useUserStore } from '@/stores/user'
@@ -177,17 +177,30 @@ const validateForm = () => {
     valid = false
   }
 
-  if (!loginForm.password) {
-    errors.password = '请输入密码'
-    valid = false
-  } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(loginForm.password)) {
-    errors.password = '密码必须为 6-20 位，且包含大小写字母和数字'
+  if (setupMode.value && loginForm.username.trim() && !/^[a-zA-Z0-9_]+$/.test(loginForm.username.trim())) {
+    errors.username = '用户名只能包含字母、数字和下划线'
     valid = false
   }
 
-  if (setupMode.value && loginForm.confirmPassword !== loginForm.password) {
-    errors.confirmPassword = '两次输入的密码不一致'
+  if (!loginForm.password) {
+    errors.password = '请输入密码'
     valid = false
+  } else if (loginForm.password.length < 6 || loginForm.password.length > 20) {
+    errors.password = '密码长度应为 6-20 个字符'
+    valid = false
+  } else if (setupMode.value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(loginForm.password)) {
+    errors.password = '初始化密码必须为 6-20 位，且包含大小写字母和数字'
+    valid = false
+  }
+
+  if (setupMode.value) {
+    if (!loginForm.confirmPassword) {
+      errors.confirmPassword = '请再次输入密码'
+      valid = false
+    } else if (loginForm.confirmPassword !== loginForm.password) {
+      errors.confirmPassword = '两次输入的密码不一致'
+      valid = false
+    }
   }
 
   return valid
@@ -218,11 +231,18 @@ const handleLogin = async () => {
   try {
     loginForm.username = loginForm.username.trim()
     if (setupMode.value) {
-      const response = await setupFirstAdmin(loginForm)
+      const response = await setupFirstAdmin({
+        username: loginForm.username,
+        password: loginForm.password,
+        confirmPassword: loginForm.confirmPassword
+      })
       userStore.userLoginWithResult(response.data, { remember: true })
       message.success('管理员初始化成功')
     } else {
-      await userStore.userLogin(loginForm, { remember: rememberMe.value })
+      await userStore.userLogin({
+        username: loginForm.username,
+        password: loginForm.password
+      }, { remember: rememberMe.value })
       message.success('登录成功')
     }
     loginSuccess.value = true
@@ -231,6 +251,7 @@ const handleLogin = async () => {
       : '/'
     await router.push(redirect)
   } catch (error) {
+    if (Number(error?.status || error?.code) === 409) setupMode.value = false
     errorMessage.value = error.message || '登录失败，请检查用户名和密码'
     loginFailed.value = true
     clearTimeout(feedbackTimer)
@@ -242,6 +263,7 @@ const handleLogin = async () => {
   }
 }
 onMounted(loadSetupStatus)
+onUnmounted(() => clearTimeout(feedbackTimer))
 </script>
 
 <style scoped>

@@ -1,16 +1,24 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { login } from '@/api/user'
+import { getCurrentUser, login } from '@/api/user'
+import {
+  createAuthSession,
+  isSessionExpired,
+  refreshAuthSession
+} from '@/utils/authSession'
 
 const SESSION_STORAGE_KEY = 'farm-ui-session'
 
 const readStoredSession = () => {
   if (typeof window === 'undefined') return null
 
-  for (const storage of [window.sessionStorage, window.localStorage]) {
+  for (const [storage, remember] of [
+    [window.sessionStorage, false],
+    [window.localStorage, true]
+  ]) {
     try {
       const value = storage.getItem(SESSION_STORAGE_KEY)
-      if (value) return JSON.parse(value)
+      if (value) return { ...JSON.parse(value), remember }
     } catch {
       // 存储不可用或内容损坏时继续尝试另一个存储区。
     }
@@ -30,41 +38,59 @@ const clearStoredSession = () => {
   }
 }
 
-const storedSession = readStoredSession()
-
 export const useUserStore = defineStore('user', () => {
+  const storedSession = readStoredSession()
   const token = ref(storedSession?.token || '')
   const userInfo = ref(storedSession?.userInfo || {})
+  const expiresIn = ref(storedSession?.expiresIn || null)
+  const expiresAt = ref(storedSession?.expiresAt || null)
+  const rememberSession = ref(storedSession?.remember === true)
+  const restoreState = ref(token.value ? 'restoring' : 'anonymous')
   const isAdmin = computed(() => userInfo.value.role === 'ADMIN')
   const isOperator = computed(() => userInfo.value.role === 'OPERATOR')
+  const isAuthenticated = computed(() => Boolean(token.value && restoreState.value === 'authenticated'))
+  const isRestoring = computed(() => restoreState.value === 'restoring')
+  let restorePromise = null
 
   const persistSession = remember => {
     if (typeof window === 'undefined') return
 
+    rememberSession.value = remember === true
     clearStoredSession()
     try {
       const storage = remember ? window.localStorage : window.sessionStorage
       storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
         token: token.value,
-        userInfo: userInfo.value
+        userInfo: userInfo.value,
+        expiresIn: expiresIn.value,
+        expiresAt: expiresAt.value
       }))
     } catch {
       // 存储不可用时保留当前页面内存登录态，不阻断登录。
     }
   }
 
-  const applyLoginResult = (data, options = {}) => {
-    const role = String(data?.role || '').toUpperCase()
+  const clearSession = () => {
+    token.value = ''
+    userInfo.value = {}
+    expiresIn.value = null
+    expiresAt.value = null
+    restoreState.value = 'anonymous'
+    clearStoredSession()
+  }
 
-    if (!data?.token || !['ADMIN', 'OPERATOR'].includes(role)) {
-      token.value = ''
-      userInfo.value = {}
-      clearStoredSession()
+  const applyLoginResult = (data, options = {}) => {
+    const session = createAuthSession(data)
+    if (!session) {
+      clearSession()
       throw new Error('登录响应缺少有效的身份信息')
     }
 
-    token.value = String(data.token)
-    userInfo.value = { ...data, role }
+    token.value = session.token
+    userInfo.value = session.userInfo
+    expiresIn.value = session.expiresIn
+    expiresAt.value = session.expiresAt
+    restoreState.value = 'authenticated'
     persistSession(options.remember === true)
   }
 
@@ -79,25 +105,85 @@ export const useUserStore = defineStore('user', () => {
     applyLoginResult(data, options)
   }
 
+  /**
+   * Validate a stored token against the server and replace the locally stored
+   * role/profile with the trusted /auth/me response.
+   */
+  const restoreSession = () => {
+    if (restorePromise) return restorePromise
+
+    restorePromise = (async () => {
+      if (!token.value) {
+        restoreState.value = 'anonymous'
+        return false
+      }
+
+      if (isSessionExpired(expiresAt.value)) {
+        clearSession()
+        return false
+      }
+
+      restoreState.value = 'restoring'
+      try {
+        const response = await getCurrentUser()
+        const session = refreshAuthSession({
+          token: token.value,
+          userInfo: userInfo.value,
+          expiresIn: expiresIn.value,
+          expiresAt: expiresAt.value
+        }, response?.data)
+
+        if (!session) throw new Error('当前用户身份无效')
+
+        token.value = session.token
+        userInfo.value = session.userInfo
+        expiresIn.value = session.expiresIn
+        expiresAt.value = session.expiresAt
+        restoreState.value = 'authenticated'
+        persistSession(rememberSession.value)
+        return true
+      } catch {
+        clearSession()
+        return false
+      } finally {
+        restorePromise = null
+      }
+    })()
+
+    return restorePromise
+  }
+
   const hasRole = roles => {
     const requiredRoles = Array.isArray(roles) ? roles : [roles]
-    return requiredRoles.filter(Boolean).some(role => role === userInfo.value.role)
+    return requiredRoles
+      .filter(Boolean)
+      .some(role => String(role).toUpperCase() === userInfo.value.role)
   }
 
   // 登出动作
   const logout = () => {
-    token.value = ''
-    userInfo.value = {}
-    clearStoredSession()
+    clearSession()
+
+    // Avoid a hard dependency during app bootstrap while ensuring logout also
+    // clears an active realtime connection when that store has been used.
+    void import('@/stores/printer/realtimeStore')
+      .then(({ useRealtimeStore }) => useRealtimeStore().disconnectWs())
+      .catch(() => {})
   }
 
   return {
     token,
     userInfo,
+    expiresIn,
+    expiresAt,
+    restoreState,
+    isAuthenticated,
+    isRestoring,
     isAdmin,
     isOperator,
     userLogin,
     userLoginWithResult,
+    restoreSession,
     hasRole,
     logout
   }

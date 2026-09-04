@@ -19,10 +19,11 @@ import {
  * @returns {Promise<{code: number, message: string, data: LoginResult}>} 登录结果
  */
 export function login(data) {
+  const { username, password } = data || {}
   return request({
     url: '/api/v1/auth/login',
     method: 'post',
-    data
+    data: { username, password }
   }).then(response => mapResponseData(response, normalizeUser))
 }
 
@@ -44,7 +45,17 @@ export function setupFirstAdmin(data) {
     url: '/api/v1/auth/setup/admin',
     method: 'post',
     data
-  })
+  }).then(response => mapResponseData(response, normalizeUser))
+}
+
+/**
+ * Restore the current identity from the Bearer Token.
+ */
+export function getCurrentUser() {
+  return request({
+    url: '/api/v1/auth/me',
+    method: 'get'
+  }).then(response => mapResponseData(response, normalizeUser))
 }
 
 /**
