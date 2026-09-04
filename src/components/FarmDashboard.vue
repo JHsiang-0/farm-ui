@@ -450,6 +450,7 @@ async function handleRemoveFromBoard(device) {
  * 处理抽屉关闭事件
  */
 function handleDrawerClosed() {
+  drawerVisible.value = false
   activeDevice.value = null
 }
 

@@ -1,6 +1,7 @@
 import { cloneMockData, mockState, nextMockId, resetMockState } from './data'
 
 const MOCK_DELAY = 120
+const ATTENTION_PRINTER_STATUSES = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
 
 const wait = duration => new Promise(resolve => setTimeout(resolve, duration))
 
@@ -334,7 +335,9 @@ const handlePrinterPage = config => {
     records = records.filter(item => item.name.toLowerCase().includes(String(params.name).toLowerCase()))
   }
   if (params.status) {
-    records = records.filter(item => item.status === params.status)
+    records = params.status === 'ATTENTION'
+      ? records.filter(item => ATTENTION_PRINTER_STATUSES.includes(String(item.status || '').toUpperCase()))
+      : records.filter(item => item.status === params.status)
   }
   return getPageData(records.map(cloneMockData), params)
 }
@@ -759,7 +762,7 @@ const route = async config => {
   fail(404, 404, `Mock 未实现接口：${method} ${path}`)
 }
 
-export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true'
+export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.MODE === 'desktop-mock'
 
 if (import.meta.env.DEV) {
   window.__FARM_RESET_MOCK__ = resetMockState

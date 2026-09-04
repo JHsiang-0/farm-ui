@@ -1,7 +1,13 @@
 <template>
-  <div class="h-full bg-gray-50 p-6">
-    <t-card title="用户管理" class="shadow-sm">
-      <template #actions><t-button theme="primary" @click="openCreate">新增用户</t-button></template>
+  <div class="app-page-shell app-page-background">
+    <div class="app-page-toolbar mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">用户管理</h1>
+      <div class="app-page-toolbar__actions">
+        <t-button theme="primary" @click="openCreate">新增用户</t-button>
+      </div>
+    </div>
+
+    <t-card class="app-page-card shadow-sm">
       <div class="flex gap-3 mb-4">
         <t-input v-model="query.username" placeholder="按用户名搜索" clearable @enter="fetchUsers" />
         <t-select v-model="query.role" placeholder="角色" clearable style="width: 150px" @change="fetchUsers">
@@ -9,7 +15,7 @@
         </t-select>
         <t-button @click="fetchUsers" :loading="loading">查询</t-button>
       </div>
-      <TdTable :data="users" :loading="loading">
+      <TdTable :data="users" :loading="loading" class="flex-1 min-h-0">
         <TdTableColumn prop="id" label="ID" width="80" />
         <TdTableColumn prop="username" label="用户名" />
         <TdTableColumn prop="role" label="角色" />

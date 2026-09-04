@@ -1,26 +1,22 @@
 <template>
-  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
-    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
-      <template #header>
-        <div class="flex justify-between items-center">
-          <div class="flex items-center gap-3 text-lg font-semibold text-gray-900">
-            <list :size="20" class="text-gray-600" />
-            <span>生产调度队列</span>
-          </div>
-          <t-button theme="default" @click="fetchQueue" :loading="loading">
-            <span><refresh /></span>
-            刷新队列
-          </t-button>
-        </div>
-      </template>
+  <div class="app-page-shell app-page-background">
+    <div class="app-page-toolbar mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">生产调度队列</h1>
+      <div class="app-page-toolbar__actions">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchQueue" size="medium">
+          刷新
+        </t-button>
+      </div>
+    </div>
 
+    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <TdTable
         :data="queueData"
         :loading="loading"
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
-        height="calc(100vh - 280px)"
+        height="100%"
       >
         <TdTableColumn prop="id" label="任务单号" width="100" align="center">
           <template #default="scope">
@@ -212,7 +208,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import {
-  ListNumberedIcon as List,
   RefreshIcon as Refresh,
   LocationIcon as Pointer,
   PrintIcon as Printer,
@@ -226,6 +221,7 @@ import { getJobQueue, cancelJob, assignJobToPrinter, requeueJob, updateJobPriori
 import { confirmSafe, getPrinterList } from '@/api/printer'
 import { message, confirmMessage } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
+import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
@@ -254,6 +250,7 @@ const openTaskDetail = job => {
 
 const handleTaskDetailVisibility = visible => {
   if (!visible) {
+    detailDrawerVisible.value = false
     selectedJob.value = null
     sessionStorage.removeItem(JOB_QUEUE_DETAIL_CONTEXT_KEY)
   }

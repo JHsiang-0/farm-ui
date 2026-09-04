@@ -1,10 +1,10 @@
 <template>
-  <t-drawer v-model:visible="visible" header="文件详情"
+  <t-drawer :visible="modelValue" header="文件详情"
     size="520px"
     :destroy-on-close="true"
     :footer="false"
     class="file-detail-drawer"
-    @closed="handleClosed"
+    @update:visible="handleVisibleChange"
   >
     <div v-if="file" class="p-4">
       <!-- 顶部区域 -->
@@ -150,7 +150,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { DownloadIcon as Download, FileIcon as Document, PrintIcon as Printer } from 'tdesign-icons-vue-next'
 import IconCube from '../icons/IconCube.vue'
 import IconClock from '../icons/IconClock.vue'
@@ -177,10 +176,10 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'download', 'closed', 'print'])
 
 // Computed
-const visible = computed({
-  get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val)
-})
+const handleVisibleChange = (value) => {
+  emit('update:modelValue', value)
+  if (!value) emit('closed')
+}
 
 // Methods
 const handlePrint = () => {
@@ -189,10 +188,6 @@ const handlePrint = () => {
 
 const handleDownload = () => {
   emit('download', props.file)
-}
-
-const handleClosed = () => {
-  emit('closed')
 }
 
 const formatEstTime = (seconds) => {
@@ -236,20 +231,3 @@ const getMaterialTagType = (materialType) => {
   return types[materialType] || 'default'
 }
 </script>
-
-<style scoped>
-:deep(.t-drawer__body) {
-  padding: 0;
-  overflow-y: auto;
-}
-
-:deep(.t-drawer__header) {
-  margin-bottom: 0;
-  padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.file-detail-drawer {
-  padding: 0;
-}
-</style>

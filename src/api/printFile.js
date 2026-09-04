@@ -5,6 +5,7 @@ import {
   normalizePageResponse,
   normalizePrintFile
 } from '@/utils/dataAdapters'
+import { REQUEST_TIMEOUT } from '@/utils/constants'
 
 /**
  * 打印文件管理 API 模块
@@ -89,6 +90,7 @@ export function uploadFile(formData, onUploadProgress, options = {}) {
       'Content-Type': 'multipart/form-data'
     },
     onUploadProgress,
+    timeout: REQUEST_TIMEOUT.UPLOAD,
     ...options
   }).then(response => mapResponseData(response, normalizePrintFile))
 }

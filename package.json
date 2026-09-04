@@ -1,6 +1,6 @@
 {
   "name": "farm-ui",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,15 @@
     "dev:mock": "vite --mode mock",
     "build:mock": "vite build --mode mock",
     "build": "vite build",
+    "build:desktop": "vite build --mode desktop",
+    "build:desktop:mock": "vite build --mode desktop-mock",
+    "desktop:dev": "concurrently -k \"vite --mode desktop\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "desktop:dev:mock": "concurrently -k \"vite --mode desktop-mock\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "desktop:run": "npm run build:desktop && electron .",
+    "desktop:run:mock": "npm run build:desktop:mock && electron .",
+    "desktop:build": "npm run build:desktop && electron-builder --win nsis",
+    "desktop:build:mock": "npm run build:desktop:mock && electron-builder --win nsis",
+    "desktop:build:dir": "npm run build:desktop && electron-builder --win dir",
     "test": "node --test tests/*.test.js",
     "preview": "vite preview",
     "lint": "run-s lint:*",
@@ -28,6 +37,9 @@
     "@eslint/js": "^10.0.1",
     "@vitejs/plugin-vue": "^6.0.4",
     "autoprefixer": "^10.4.27",
+    "concurrently": "^10.0.5",
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.50.0",
@@ -39,7 +51,38 @@
     "prettier": "3.8.1",
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1",
-    "vite-plugin-vue-devtools": "^8.0.6"
+    "vite-plugin-vue-devtools": "^8.0.6",
+    "wait-on": "^9.1.0"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.example.farmui",
+    "productName": "Farm UI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

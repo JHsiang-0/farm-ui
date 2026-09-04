@@ -16,6 +16,7 @@ import {
  * @param {Object} params - 查询参数
  * @param {number} [params.pageNum=1] - 页码
  * @param {number} [params.pageSize=10] - 每页条数
+ * @param {string} [params.status] - 设备状态（PRINTING/IDLE/ATTENTION）
  * @returns {Promise<{code: number, message: string, data: {records: Array<Printer>, total: number, pageNum: number, pageSize: number}}>} 分页结果
  */
 export function getPrinterList(params = {}) {

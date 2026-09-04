@@ -1,19 +1,15 @@
 <template>
-  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
-    <t-card class="shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden hover:shadow-md transition-shadow duration-200 m-6">
-      <template #header>
-        <div class="flex justify-between items-center">
-          <div class="flex items-center gap-3 text-lg font-semibold text-gray-900">
-            <document :size="20" class="text-gray-600" />
-            <span>打印历史记录</span>
-          </div>
-          <t-button theme="default" @click="handleQuery" :loading="loading">
-            <span><refresh /></span>
-            刷新数据
-          </t-button>
-        </div>
-      </template>
+  <div class="app-page-shell app-page-background">
+    <div class="app-page-toolbar mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">打印历史记录</h1>
+      <div class="app-page-toolbar__actions">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="handleQuery" size="medium">
+          刷新
+        </t-button>
+      </div>
+    </div>
 
+    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <!-- 顶部检索区 -->
       <div class="bg-gray-50 p-4 rounded-lg mb-4">
         <div class="flex flex-wrap items-center gap-4">
@@ -66,7 +62,7 @@
         style="width: 100%"
         class="rounded-lg overflow-hidden flex-1"
         :header-cell-style="{ background: '#f9fafb' }"
-        height="calc(100vh - 480px)"
+        height="100%"
       >
         <TdTableColumn prop="id" label="任务ID" width="100" align="center">
           <template #default="scope">
@@ -204,6 +200,7 @@ import {
 import { getJobPage, cancelJob, retryJob, requeueJob, updateJobPriority } from '@/api/job'
 import { message } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
+import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
@@ -224,6 +221,7 @@ const openTaskDetail = job => {
 
 const handleTaskDetailVisibility = visible => {
   if (!visible) {
+    detailDrawerVisible.value = false
     selectedJob.value = null
     sessionStorage.removeItem(JOB_HISTORY_DETAIL_CONTEXT_KEY)
   }

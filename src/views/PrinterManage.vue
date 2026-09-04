@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-gray-50 flex flex-col overflow-hidden">
+  <div class="app-page-shell app-page-background">
     <!-- 设备详情抽屉 -->
     <DeviceDetailDrawer
       v-model="detailDrawerVisible"
@@ -8,40 +8,43 @@
       @closed="clearPrinterDetailContext"
     />
 
-    <!-- 操作栏 -->
-    <t-card class="shadow-none rounded-lg bg-white m-6">
-      <div class="flex flex-wrap justify-between items-center gap-3">
-        <div class="flex items-center gap-3">
-          <t-button theme="default" @click="fetchData">
-            <span><refresh /></span>
-            刷新列表
-          </t-button>
-        </div>
-        <div class="flex items-center gap-3">
-          <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
-            <span><aim /></span>
-            扫描局域网设备
-          </t-button>
-          <t-button v-if="isAdmin" theme="success" @click="handleAdd">
-            <span><plus /></span>
-            新增打印机
-          </t-button>
-        </div>
+    <!-- 页面标题与操作栏 -->
+    <div class="app-page-toolbar mb-4">
+      <h1 class="app-page-toolbar__title app-route-title">打印机管理</h1>
+      <div v-if="activeStatusFilter" class="app-page-toolbar__filter">
+        <t-tag :theme="activeStatusFilter.theme" variant="light">
+          当前筛选：{{ activeStatusFilter.label }}
+        </t-tag>
+        <t-button variant="text" size="small" @click="clearStatusFilter">显示全部</t-button>
       </div>
-    </t-card>
+      <div class="app-page-toolbar__actions">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
+          刷新
+        </t-button>
+        <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
+          <span><aim /></span>
+          扫描局域网设备
+        </t-button>
+        <t-button v-if="isAdmin" theme="success" @click="handleAdd">
+          <span><plus /></span>
+          新增打印机
+        </t-button>
+      </div>
+    </div>
 
     <!-- 数据表格 -->
-    <t-card class="shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200 flex-1 flex flex-col overflow-hidden mx-6 mb-6">
-      <TdTable
-        :data="tableData"
-        :loading="loading"
-        style="width: 100%"
-        class="rounded-lg overflow-hidden flex-1"
-        :header-cell-style="{ background: '#f9fafb' }"
-        @row-click="handleRowClick"
-        row-class-name="cursor-pointer hover:bg-gray-50"
-        height="calc(100vh - 320px)"
-      >
+    <t-card class="printer-manage-card app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+      <div class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+        <TdTable
+          :data="tableData"
+          :loading="loading"
+          style="width: 100%"
+          class="min-h-0 flex-1 overflow-hidden rounded-lg"
+          :header-cell-style="{ background: '#f9fafb' }"
+          @row-click="handleRowClick"
+          row-class-name="cursor-pointer hover:bg-gray-50"
+          height="100%"
+        >
         <TdTableColumn prop="id" label="ID" width="80" align="center">
           <template #default="scope">
             <span class="font-mono font-semibold text-gray-600">{{ scope.row.id }}</span>
@@ -112,9 +115,12 @@
           <template #default="scope">
             <div class="text-center">
               <span v-if="scope.row.currentJobId" class="text-sm">
-                #{{ scope.row.currentJobId }}
-                <t-tag v-if="scope.row.currentJobStatus" size="small" :theme="getJobStatusType(scope.row.currentJobStatus)" class="ml-1">
-                  {{ scope.row.currentJobStatus }}
+                <span class="block truncate" :title="scope.row.currentJobFileName || `任务 #${scope.row.currentJobId}`">
+                  {{ scope.row.currentJobFileName || `任务 #${scope.row.currentJobId}` }}
+                </span>
+                <span class="text-xs text-gray-500">任务 #{{ scope.row.currentJobId }}</span>
+                <t-tag size="small" :theme="getJobStatusType(scope.row.currentJobStatus || scope.row.status)" class="ml-1">
+                  {{ getJobStatusLabel(scope.row.currentJobStatus || scope.row.status) }}
                 </t-tag>
               </span>
               <span v-else class="text-gray-400 text-sm">无</span>
@@ -164,10 +170,10 @@
             </div>
           </template>
         </TdTableColumn>
-      </TdTable>
+        </TdTable>
+      </div>
 
-      <!-- 分页 -->
-      <div class="flex justify-end mt-5">
+      <template #footer>
         <t-pagination
           v-model:current="queryParams.pageNum"
           v-model:pageSize="queryParams.pageSize"
@@ -175,7 +181,7 @@
           :show-page-size="false"
           @change="fetchData"
         />
-      </div>
+      </template>
     </t-card>
 
     <!-- 新增/编辑弹窗 -->
@@ -377,7 +383,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   RefreshIcon as Refresh,
   MapAimingIcon as Aim,
@@ -402,6 +409,7 @@ import {
 } from '@/api/printer'
 import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
+import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -411,6 +419,8 @@ defineOptions({ name: 'PrinterManage' })
 
 // ===== 列表与分页状态 =====
 const loading = ref(false)
+const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.isAdmin)
 const tableData = ref([])
@@ -419,6 +429,18 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 20
 })
+
+const statusFilterConfig = {
+  PRINTING: { label: '打印中', theme: 'primary' },
+  IDLE: { label: '空闲打印机', theme: 'success' },
+  ATTENTION: { label: '异常设备', theme: 'danger' }
+}
+
+const activeStatusFilterKey = computed(() => {
+  const value = Array.isArray(route.query.status) ? route.query.status[0] : route.query.status
+  return statusFilterConfig[value] ? value : ''
+})
+const activeStatusFilter = computed(() => statusFilterConfig[activeStatusFilterKey.value] || null)
 
 // ===== 设备详情抽屉状态 =====
 const detailDrawerVisible = ref(false)
@@ -511,10 +533,24 @@ const getJobStatusType = (status) => {
     'QUEUED': 'primary',
     'ASSIGNED': 'warning',
     'PRINTING': 'success',
+    'PAUSED': 'warning',
     'COMPLETED': 'default',
     'FAILED': 'danger'
   }
   return map[status] || 'default'
+}
+
+const getJobStatusLabel = (status) => {
+  const map = {
+    QUEUED: '排队中',
+    ASSIGNED: '已分配',
+    PRINTING: '打印中',
+    PAUSED: '已暂停',
+    COMPLETED: '已完成',
+    FAILED: '失败',
+    CANCELLED: '已取消'
+  }
+  return map[String(status || '').toUpperCase()] || '未知'
 }
 
 // 判断是否应该显示"确认清理"按钮
@@ -610,6 +646,7 @@ const handleRowClick = (row) => {
 }
 
 const clearPrinterDetailContext = () => {
+  detailDrawerVisible.value = false
   sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
   selectedDevice.value = null
   selectedDeviceRealTimeData.value = null
@@ -627,7 +664,10 @@ const restorePrinterDetailContext = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getPrinterList(queryParams)
+    const res = await getPrinterList({
+      ...queryParams,
+      ...(activeStatusFilterKey.value ? { status: activeStatusFilterKey.value } : {})
+    })
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
     restorePrinterDetailContext()
@@ -637,6 +677,18 @@ const fetchData = async () => {
     loading.value = false
   }
 }
+
+const clearStatusFilter = () => {
+  const query = { ...route.query }
+  delete query.status
+  queryParams.pageNum = 1
+  router.replace({ path: route.path, query })
+}
+
+watch(() => route.query.status, () => {
+  queryParams.pageNum = 1
+  fetchData()
+})
 
 // 点击新增按钮
 const handleAdd = () => {
@@ -777,22 +829,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 扫描结果表格输入框优化 */
-:deep(.t-table .t-input__wrapper) {
-  padding: 0 8px;
+.printer-manage-card {
+  height: 100%;
 }
 
-:deep(.t-table .t-input__inner) {
-  height: 28px;
-  font-size: 14px;
+.printer-manage-card :deep(.t-card__body) {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
 }
 
-/* 表格行可点击样式 */
-:deep(.t-table .cursor-pointer) {
-  cursor: pointer;
+.printer-manage-card :deep(.t-card__footer) {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--app-border);
 }
 
-:deep(.t-table .t-table__row:hover) {
-  background-color: #f3f4f6;
+.printer-manage-card__table {
+  flex: 1 1 0%;
+  min-height: 0;
 }
 </style>
