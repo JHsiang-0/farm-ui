@@ -63,10 +63,10 @@ export function normalizeBatchConfirmResult(data = {}) {
     planStatus: data.planStatus || data.status || null,
     idempotent: data.idempotent === true || data.repeated === true,
     repeated: data.repeated === true || data.idempotent === true,
-    items: (Array.isArray(data.items) ? data.items : []).map((item, index) => {
+    items: (Array.isArray(data.items) ? data.items : []).map(item => {
       const status = String(item?.status || (item?.success ? 'SUCCESS' : 'FAILED')).toUpperCase()
       return {
-        itemId: item?.itemId ?? `item-${index}`,
+        itemId: item?.itemId ?? null,
         fileId: item?.fileId ?? null,
         printerId: item?.printerId ?? null,
         jobId: item?.jobId == null ? null : String(item.jobId),

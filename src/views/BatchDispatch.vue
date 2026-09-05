@@ -8,23 +8,32 @@
       <t-tag theme="default" variant="outline" title="v3 自动派单尚未开放，不会发送自动派单请求">
         v3 自动派单：规划中
       </t-tag>
-      <t-button variant="outline" @click="loadResources" :loading="loadingResources">刷新资源</t-button>
+      <t-button variant="outline" :loading="loadingResources" @click="loadResources">刷新资源</t-button>
     </div>
+
+    <t-steps :current="currentStep" readonly class="mb-4">
+      <t-step-item title="选择资源" content="选择可见文件和打印机" />
+      <t-step-item title="配置策略" content="选择分配策略与动作" />
+      <t-step-item title="无副作用预览" content="确认冲突和执行范围" />
+      <t-step-item title="确认执行" content="按计划幂等执行" />
+      <t-step-item title="逐项结果" content="查看成功与恢复项" />
+    </t-steps>
 
     <t-card class="panel" title="批量上传">
       <h2>批量上传</h2>
       <p class="hint">支持多个 .gcode、.g、.3mf、.stl 文件；上传结果按文件分别返回。</p>
       <t-upload theme="file" multiple :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
         :files="uploadFiles" @select-change="handleFileChange" />
+      <t-progress v-if="uploading" class="mt-3" :percentage="uploadProgress" />
       <t-space class="mt-3">
         <t-button theme="primary" :loading="uploading" :disabled="!uploadFiles.length" @click="uploadSelected">
           {{ uploading ? '上传中…' : '批量上传' }}
         </t-button>
         <t-button v-if="uploading" variant="outline" @click="cancelUpload">取消上传</t-button>
       </t-space>
-      <t-alert v-if="uploadResult" class="mt-3" :theme="uploadResult.failureCount ? 'warning' : 'success'"
-        :title="`上传完成：成功 ${uploadResult.successCount ?? 0} 个，失败 ${uploadResult.failureCount ?? 0} 个`"
-        :closable="false">
+      <t-alert v-if="uploadResult" class="mt-3" :theme="uploadFailureCount ? 'warning' : 'success'"
+        :title="`上传完成：成功 ${uploadSuccessCount} 个，失败 ${uploadFailureCount} 个`"
+        :close-btn="false">
         <template #operation>
           <t-button v-if="retryableUploadFiles.length" variant="text" size="small" @click="retryFailedUploads">
             重试失败项（{{ retryableUploadFiles.length }}）
@@ -37,7 +46,7 @@
       <t-card class="panel" :title="`选择文件（${selectedFileIds.length}）`">
         <t-checkbox-group v-model="selectedFileIds" class="selection-group">
           <t-checkbox v-for="file in files" :key="file.id" :value="file.id" class="selection-row">
-            <span>{{ file.originalName || file.fileName }}</span>
+            <span>{{ file.originalName || `文件 #${file.id}` }}</span>
             <small>{{ file.id }}</small>
           </t-checkbox>
         </t-checkbox-group>
@@ -78,52 +87,64 @@
     </t-card>
 
     <t-card v-if="previewData" class="panel" title="预览结果">
-      <p class="hint">请求 {{ previewData.requestId }} · 计划 {{ previewData.planId }} · 版本 {{ previewData.version }} · 动作 {{ previewData.action || action }}。</p>
-      <t-alert v-if="previewSuggestions.length" class="mb-3" theme="info" title="分配建议" :closable="false">
-        <div v-for="suggestion in previewSuggestions" :key="suggestion.itemId || suggestion.message">
-          {{ suggestion.message || suggestion.reasonCode || suggestion }}
-        </div>
-      </t-alert>
-      <t-alert v-if="previewExpired" class="mb-3" theme="warning" title="预览已过期，请重新生成" :closable="false" />
-      <t-alert v-if="previewData.conflicts?.length" class="mb-3" theme="warning" title="存在不可分配冲突" :closable="false">
+      <p class="hint">计划 {{ previewData.planId }} · 版本 {{ previewData.version }} · 动作 {{ previewData.action || action }}。</p>
+      <t-alert v-if="previewExpired" class="mb-3" theme="warning" title="预览已过期，请重新生成" :close-btn="false" />
+      <t-alert v-if="previewData.conflicts?.length" class="mb-3" theme="warning" title="存在不可分配冲突" :close-btn="false">
         <div v-for="conflict in previewData.conflicts" :key="conflict.itemId || conflict.code || conflict.message">
           {{ conflict.message || conflict.reasonCode || conflict.code || '资源冲突' }}
         </div>
       </t-alert>
-      <div v-for="item in previewData.items || []" :key="item.itemId || `${item.fileId}-${item.printerId}`" class="preview-row">
-        <span>文件 {{ item.fileId }} → 打印机 {{ item.printerId || '未分配' }}</span>
+      <div v-for="item in previewData.items || []" :key="item.itemId" class="preview-row">
+        <span>{{ item.fileName || `文件 #${item.fileId}` }} → {{ item.printerName || (item.printerId ? `打印机 #${item.printerId}` : '未分配') }}</span>
         <t-tag :theme="item.canExecute ? 'success' : 'danger'" variant="light">
           {{ item.message || item.reasonCode || (item.canExecute ? '可执行' : '存在冲突') }}
         </t-tag>
       </div>
+      <t-alert v-if="executableItemIds.length" class="mb-3" theme="warning" title="确认前请检查影响范围" :close-btn="false">
+        本次将按“{{ previewData.action || action }}”处理 {{ executableItemIds.length }} 项可执行明细；确认后由后端按计划版本和令牌幂等执行。
+      </t-alert>
       <t-button theme="primary" :disabled="previewExpired || confirming || confirmData || !executableItemIds.length" :loading="confirming" @click="confirm">
         {{ confirming ? '执行中…' : `确认执行（${executableItemIds.length}项）` }}
       </t-button>
-      <t-alert v-if="confirmData" class="mt-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '已处理'}`" :closable="false">
+      <t-button v-if="confirmData && !previewExpired" class="ml-2" variant="outline" :loading="confirming" @click="replayConfirm">
+        再次获取执行结果
+      </t-button>
+      <t-alert v-if="confirmData" class="mt-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '—'}`" :close-btn="false">
         成功 {{ confirmSuccessCount }} 项，失败 {{ confirmFailureCount }} 项
         <span v-if="confirmData.repeated">（重复确认已返回原结果）</span>
         <t-space class="mt-2">
           <t-button v-if="retryableConfirmItems.length" variant="outline" size="small" @click="retryFailedConfirmItems">
             重新预览可恢复项（{{ retryableConfirmItems.length }}）
           </t-button>
-          <t-button v-if="existingJobItems.length" variant="outline" size="small" @click="openExistingJob(existingJobItems[0])">
-            打开已有任务（{{ existingJobItems[0].jobId }}）
-          </t-button>
+          <span v-if="existingJobItems.length">需打开已有任务 {{ existingJobItems.length }} 项，请在结果明细中逐项处理。</span>
         </t-space>
       </t-alert>
-      <t-table v-if="confirmData?.items?.length" class="mt-3" :data="confirmData.items" :columns="confirmColumns"
+      <t-tabs v-if="confirmData?.items?.length" v-model="resultTab" class="mt-3">
+        <t-tab-panel value="all" :label="`全部结果（${confirmData.items.length}）`" />
+        <t-tab-panel value="success" :label="`成功项（${confirmSuccessCount}）`" />
+        <t-tab-panel value="retryable" :label="`可恢复失败（${retryableConfirmItems.length}）`" />
+        <t-tab-panel value="existing" :label="`已有任务（${existingJobItems.length}）`" />
+      </t-tabs>
+      <t-empty v-if="confirmData?.items?.length && !visibleConfirmItems.length" class="mt-3" description="当前分类暂无结果" />
+      <t-table v-if="visibleConfirmItems.length" class="mt-3" :data="visibleConfirmItems" :columns="confirmColumns"
         row-key="itemId" bordered size="small">
         <template #status="{ row }">
           <t-tag :theme="resultTheme(row)" variant="light">{{ row.status }}</t-tag>
         </template>
         <template #message="{ row }">
-          {{ row.message || row.errorCode || '—' }}
+          {{ row.message || '—' }}
         </template>
         <template #retryable="{ row }">
           {{ row.retryable ? '是' : '否' }}
         </template>
         <template #source="{ row }">
           {{ row.sourcePlanId ? `${row.sourcePlanId} / ${row.sourceItemId}` : '—' }}
+        </template>
+        <template #recovery="{ row }">
+          <t-button v-if="row.jobId && row.recoveryAction === 'OPEN_EXISTING_JOB'" variant="text" size="small" @click="openExistingJob(row)">
+            打开任务
+          </t-button>
+          <span v-else>—</span>
         </template>
       </t-table>
     </t-card>
@@ -134,11 +155,11 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, confirmMessage } from '@/utils/message'
-import { batchUploadFiles } from '@/api/printFile'
-import { getFileList } from '@/api/printFile'
+import { batchUploadFiles, getFileTree } from '@/api/printFile'
 import { getPrinterList } from '@/api/printer'
 import { previewBatchDispatch, confirmBatchDispatch, retryPreviewBatchDispatch } from '@/api/job'
 import { createBatchPreviewRequest, normalizeBatchConfirmResult } from '@/utils/batchDispatch'
+import { isBatchUploadSuccess, normalizeBatchUploadResult, validateBatchUploadSelection } from '@/utils/batchUpload'
 import { useJobStore } from '@/stores/jobStore'
 
 const route = useRoute()
@@ -155,15 +176,24 @@ const uploadController = ref(null)
 const previewData = ref(null)
 const confirmData = ref(null)
 const uploading = ref(false)
+const uploadProgress = ref(0)
 const loadingResources = ref(false)
 const previewing = ref(false)
 const confirming = ref(false)
 const previewExpired = ref(false)
 const previewExpiresAt = ref(null)
 const recoveryHistory = ref([])
+const resultTab = ref('all')
 const strategy = ref('ONE_TO_ONE')
 const action = ref('QUEUE')
 let previewExpiryTimer = null
+
+const currentStep = computed(() => {
+  if (confirmData.value) return 4
+  if (previewData.value) return 2
+  if (selectedFileIds.value.length || selectedPrinterIds.value.length) return 1
+  return 0
+})
 
 const executableItemIds = computed(() => (previewData.value?.items || [])
   .filter(item => item.canExecute)
@@ -174,11 +204,19 @@ const retryableUploadFiles = computed(() => (uploadResult.value?.items || [])
   .filter(item => item.retryable && lastBatchUploadFiles.value[item.index])
   .map(item => lastBatchUploadFiles.value[item.index]))
 
-const previewSuggestions = computed(() => previewData.value?.suggestions || [])
+const uploadSuccessCount = computed(() => (uploadResult.value?.items || []).filter(isBatchUploadSuccess).length)
+const uploadFailureCount = computed(() => (uploadResult.value?.items || []).filter(item => !isBatchUploadSuccess(item)).length)
 const confirmSuccessCount = computed(() => (confirmData.value?.items || []).filter(item => item.success).length)
 const confirmFailureCount = computed(() => (confirmData.value?.items || []).filter(item => !item.success).length)
+const visibleConfirmItems = computed(() => {
+  const items = confirmData.value?.items || []
+  if (resultTab.value === 'success') return items.filter(item => item.success)
+  if (resultTab.value === 'retryable') return retryableConfirmItems.value
+  if (resultTab.value === 'existing') return existingJobItems.value
+  return items
+})
 const retryableConfirmItems = computed(() => (confirmData.value?.items || [])
-  .filter(item => item.retryable && !item.jobId && !item.recoveryAction))
+  .filter(item => item.itemId && item.retryable && !item.jobId && !item.recoveryAction))
 const existingJobItems = computed(() => (confirmData.value?.items || [])
   .filter(item => item.jobId && item.recoveryAction === 'OPEN_EXISTING_JOB'))
 const confirmColumns = [
@@ -186,10 +224,27 @@ const confirmColumns = [
   { colKey: 'printerId', title: '打印机 ID', width: 120 },
   { colKey: 'jobId', title: '任务 ID', width: 120 },
   { colKey: 'status', title: '状态', width: 120 },
+  { colKey: 'errorCode', title: '错误码', width: 120 },
   { colKey: 'message', title: '说明' },
   { colKey: 'retryable', title: '可重试', width: 100 },
-  { colKey: 'source', title: '恢复来源' }
+  { colKey: 'source', title: '恢复来源' },
+  { colKey: 'recovery', title: '恢复操作', width: 110 }
 ]
+
+function flattenFiles(nodes, result = []) {
+  nodes.forEach(node => {
+    if (node.folder !== true) {
+      result.push({
+        id: node.id,
+        originalName: node.name,
+        fileSize: node.fileSize,
+        materialType: node.materialType
+      })
+    }
+    if (Array.isArray(node.children)) flattenFiles(node.children, result)
+  })
+  return result
+}
 
 function resultTheme(item) {
   return item.success ? 'success' : 'danger'
@@ -233,10 +288,10 @@ async function loadResources() {
   loadingResources.value = true
   try {
     const [fileResponse, printerResponse] = await Promise.all([
-      getFileList({ pageNum: 1, pageSize: 100 }),
+      getFileTree(),
       getPrinterList({ pageNum: 1, pageSize: 100 })
     ])
-    files.value = (fileResponse?.data?.records || []).filter(file => !file.folder)
+    files.value = flattenFiles(Array.isArray(fileResponse?.data) ? fileResponse.data : [])
     printers.value = printerResponse?.data?.records || []
   } catch (error) {
     console.error('加载批量派发资源失败:', error)
@@ -246,25 +301,33 @@ async function loadResources() {
   }
 }
 
-function handleFileChange(files) {
-  uploadFiles.value = (Array.isArray(files) ? files : [])
+function handleFileChange(selectedUploadFiles) {
+  const selectedFiles = (Array.isArray(selectedUploadFiles) ? selectedUploadFiles : [])
     .map(file => file?.raw || file)
     .filter(Boolean)
+  const validation = validateBatchUploadSelection(selectedFiles, files.value.map(file => file.originalName))
+  uploadFiles.value = validation.files
+  if (validation.rejected.length) {
+    message.warning(validation.rejected.map(item => item.reason).join('；'))
+  }
   uploadResult.value = null
 }
 
 async function uploadSelected() {
   uploading.value = true
+  uploadProgress.value = 0
   lastBatchUploadFiles.value = [...uploadFiles.value]
   uploadController.value = new AbortController()
   try {
     const response = await batchUploadFiles(
       uploadFiles.value,
       null,
-      undefined,
+      event => {
+        if (event?.total) uploadProgress.value = Math.min(Math.round((event.loaded / event.total) * 100), 99)
+      },
       { signal: uploadController.value.signal }
     )
-    uploadResult.value = response?.data || {}
+    uploadResult.value = normalizeBatchUploadResult(response?.data)
     message.success('批量上传处理完成')
     uploadFiles.value = []
     await loadResources()
@@ -278,6 +341,7 @@ async function uploadSelected() {
   } finally {
     uploadController.value = null
     uploading.value = false
+    uploadProgress.value = 0
   }
 }
 
@@ -296,6 +360,10 @@ async function preview() {
     message.warning('请至少选择一个文件和一台打印机')
     return
   }
+  if (selectedFileIds.value.length > 100 || selectedPrinterIds.value.length > 100) {
+    message.warning('单次预览最多选择 100 个文件和 100 台打印机')
+    return
+  }
   previewing.value = true
   invalidatePreview()
   const previewRequest = createBatchPreviewRequest({
@@ -306,7 +374,7 @@ async function preview() {
   })
   try {
     const response = await previewBatchDispatch(previewRequest)
-    previewData.value = response?.data ? { ...response.data, requestId: previewRequest.requestId } : null
+    previewData.value = response?.data || null
     previewExpiresAt.value = previewData.value?.expiresAt || null
     startPreviewExpiryTimer(previewExpiresAt.value)
   } catch (error) {
@@ -317,19 +385,21 @@ async function preview() {
   }
 }
 
-async function confirm() {
-  if (confirming.value || confirmData.value || !previewData.value || previewExpired.value || !executableItemIds.value.length) {
+async function confirm(replay = false) {
+  if (confirming.value || (!replay && confirmData.value) || !previewData.value || previewExpired.value || !executableItemIds.value.length) {
     message.warning(previewExpired.value ? '预览已过期，请重新生成' : '当前没有可执行的预览项')
     return
   }
-  try {
-    await confirmMessage(
-      '确认后将按预览结果创建任务或上传/启动，请确认打印机和文件均正确。',
-      '确认批量派发',
-      { confirmButtonText: '确认执行', cancelButtonText: '返回检查', type: 'warning' }
-    )
-  } catch {
-    return
+  if (!replay) {
+    try {
+      await confirmMessage(
+        '确认后将按预览结果创建任务或上传/启动，请确认打印机和文件均正确。',
+        '确认批量派发',
+        { confirmButtonText: '确认执行', cancelButtonText: '返回检查', type: 'warning' }
+      )
+    } catch {
+      return
+    }
   }
 
   confirming.value = true
@@ -350,6 +420,10 @@ async function confirm() {
   } finally {
     confirming.value = false
   }
+}
+
+function replayConfirm() {
+  return confirm(true)
 }
 
 async function retryFailedConfirmItems() {
@@ -391,17 +465,17 @@ onUnmounted(stopPreviewExpiryTimer)
 </script>
 
 <style scoped>
-.batch-dispatch-page { padding: 24px; height: 100%; overflow: auto; background: #f7f8fa; color: #1f2937; }
+.batch-dispatch-page { padding: 24px; height: 100%; overflow: auto; background: var(--app-page-background); color: var(--app-text-primary); }
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 h1, h2 { margin: 0 0 8px; }
 h1 { font-size: 24px; }
 h2 { font-size: 17px; }
-.page-header p, .hint { color: #6b7280; margin: 0 0 12px; }
-.panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.page-header p, .hint { color: var(--app-text-secondary); margin: 0 0 12px; }
+.panel { background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
 .selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+.selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--app-border-subtle); }
 .selection-row span { flex: 1; }
-small { color: #9ca3af; }
+small { color: var(--app-text-placeholder); }
 .options-panel { display: flex; gap: 18px; align-items: end; flex-wrap: wrap; }
 label { display: flex; flex-direction: column; gap: 6px; }
 select { min-width: 180px; padding: 7px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; }
