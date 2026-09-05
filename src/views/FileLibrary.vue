@@ -527,6 +527,7 @@ import {
   normalizeBatchUploadResult,
   validateBatchUploadSelection
 } from '@/utils/batchUpload'
+import { chunkItems, runUploadQueue } from '@/utils/uploadQueue'
 
 defineOptions({ name: 'FileLibrary' })
 
@@ -547,6 +548,7 @@ const batchUploadResults = ref([])
 const batchUploading = ref(false)
 const uploadProgress = ref(0)
 const uploadError = ref('')
+const UPLOAD_BATCH_SIZE = 5
 let uploadController = null
 // 打印任务对话框状态
 const createJobDialogVisible = ref(false)
@@ -797,9 +799,44 @@ const submitBatchUpload = async () => {
         }]
       }
     } else {
-      result = await batchUploadFiles(files, currentParentId.value, onUploadProgress, {
+      const chunks = chunkItems(files, UPLOAD_BATCH_SIZE)
+      const chunkLoaded = new Map()
+      const totalBytes = files.reduce((total, file) => total + (Number(file.size) || 0), 0)
+      const queueResults = await runUploadQueue(chunks, async (chunk, chunkIndex) => {
+        const chunkProgress = event => {
+          chunkLoaded.set(chunkIndex, event?.loaded || 0)
+          const loaded = [...chunkLoaded.values()].reduce((total, value) => total + value, 0)
+          onUploadProgress({ loaded, total: totalBytes })
+        }
+        return batchUploadFiles(chunk, currentParentId.value, chunkProgress, {
+          signal: uploadController.signal
+        })
+      }, {
+        concurrency: 3,
         signal: uploadController.signal
       })
+      const items = []
+      queueResults.forEach((queueResult, chunkIndex) => {
+        const offset = chunkIndex * UPLOAD_BATCH_SIZE
+        const chunk = chunks[chunkIndex]
+        if (queueResult.status === 'fulfilled') {
+          normalizeBatchUploadResult(queueResult.value).items.forEach(item => {
+            const file = chunk[item.index]
+            items.push({ ...item, index: offset + item.index, fileName: item.fileName || file?.name || '' })
+          })
+        } else {
+          chunk.forEach((file, itemIndex) => items.push({
+            index: offset + itemIndex,
+            fileId: null,
+            fileName: file.name,
+            status: 'FAILED',
+            errorCode: queueResult.reason?.response?.status || null,
+            message: queueResult.reason?.message || '上传失败，可重试',
+            retryable: true
+          }))
+        }
+      })
+      result = { items: items.sort((left, right) => left.index - right.index) }
     }
 
     const items = normalizeBatchUploadResult(result).items
