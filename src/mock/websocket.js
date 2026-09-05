@@ -1,4 +1,5 @@
 import { mockState } from './data.js'
+import { toPublicPrinter } from './server.js'
 
 let mockEventSequence = 0
 
@@ -33,7 +34,9 @@ export function createMockWebSocketStream({ onOpen, onMessage, onClose } = {}) {
   onOpen?.()
   emit({
     type: 'SNAPSHOT',
-    data: mockState.printers.map(printer => ({ printerId: printer.id, data: buildPrinterData(printer) }))
+    data: {
+      printers: mockState.printers.map(toPublicPrinter)
+    }
   })
 
   const timer = window.setInterval(() => {

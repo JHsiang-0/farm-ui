@@ -10,9 +10,9 @@ export const MOCK_ERROR_SCENARIOS = Object.freeze({
   '409': Object.freeze({ status: 409, code: 409, message: '模拟资源冲突' }),
   '422': Object.freeze({ status: 422, code: 422, message: '模拟业务校验失败' }),
   '503': Object.freeze({ status: 503, code: 503, message: '模拟服务维护中' }),
-  '10001': Object.freeze({ status: 400, code: 10001, message: '模拟参数错误' }),
+  '10001': Object.freeze({ status: 503, code: 10001, message: '模拟打印机离线或设备不可用' }),
   '10002': Object.freeze({ status: 409, code: 10002, message: '模拟设备忙碌' }),
-  '5003': Object.freeze({ status: 500, code: 5003, message: '模拟存储服务失败' }),
+  '5003': Object.freeze({ status: 503, code: 5003, message: '模拟文件存储服务不可用' }),
   '5004': Object.freeze({ status: 503, code: 5004, message: '模拟设备网络异常' })
 })
 
