@@ -1,5 +1,5 @@
 <template>
-  <div class="app-page-shell app-page-background">
+  <div class="app-page-shell app-page-background relative">
     <!-- 设备详情抽屉 -->
     <DeviceDetailDrawer
       v-model="detailDrawerVisible"
@@ -29,6 +29,26 @@
           <span><plus /></span>
           新增打印机
         </t-button>
+      </div>
+    </div>
+
+    <!-- 设备状态概览 -->
+    <div class="printer-summary-grid mb-4">
+      <div class="printer-summary-card printer-summary-card--total">
+        <span class="printer-summary-card__label">全部设备</span>
+        <strong class="printer-summary-card__value">{{ printerSummary.total }}</strong>
+      </div>
+      <div class="printer-summary-card printer-summary-card--printing">
+        <span class="printer-summary-card__label">打印中</span>
+        <strong class="printer-summary-card__value">{{ printerSummary.printing }}</strong>
+      </div>
+      <div class="printer-summary-card printer-summary-card--idle">
+        <span class="printer-summary-card__label">待机</span>
+        <strong class="printer-summary-card__value">{{ printerSummary.idle }}</strong>
+      </div>
+      <div class="printer-summary-card printer-summary-card--offline">
+        <span class="printer-summary-card__label">离线</span>
+        <strong class="printer-summary-card__value">{{ printerSummary.offline }}</strong>
       </div>
     </div>
 
@@ -135,7 +155,7 @@
               <t-button
                 v-if="shouldShowSafeButton(scope.row)"
                 size="small" theme="warning"
-                @click="handleConfirmSafe(scope.row)"
+                @click.stop="handleConfirmSafe(scope.row)"
                 :loading="confirmingSafeIds.includes(scope.row.id)"
               >
                 <span><check /></span>
@@ -145,24 +165,25 @@
               <t-button
                 v-if="shouldShowStartButton(scope.row)"
                 size="small" theme="success"
-                @click="handleStartJob(scope.row)"
+                @click.stop="handleStartJob(scope.row)"
                 :loading="startingJobIds.includes(scope.row.id)"
               >
                 <span><printer /></span>
                 启动打印
               </t-button>
               <!-- 编辑按钮 -->
-              <t-button v-if="isAdmin" size="small" theme="primary" @click="handleEdit(scope.row)">
+              <t-button v-if="isAdmin" size="small" theme="primary" @click.stop="handleEdit(scope.row)">
                 <span><edit /></span>
                 编辑
               </t-button>
               <!-- 删除按钮 -->
               <t-popconfirm v-if="isAdmin" content="确定要删除这台机器吗？"
                 theme="danger"
+                @click.stop
                 @confirm="handleDelete(scope.row.id)"
               >
                 <template>
-                  <t-button size="small" theme="danger" variant="outline">
+                  <t-button size="small" theme="danger" variant="outline" @click.stop>
                     <span><delete /></span>
                   </t-button>
                 </template>
@@ -173,7 +194,7 @@
         </TdTable>
       </div>
 
-      <template #footer>
+      <div class="printer-manage-card__footer app-pagination-footer">
         <t-pagination
           v-model:current="queryParams.pageNum"
           v-model:pageSize="queryParams.pageSize"
@@ -181,7 +202,7 @@
           :show-page-size="false"
           @change="fetchData"
         />
-      </template>
+      </div>
     </t-card>
 
     <!-- 新增/编辑弹窗 -->
@@ -441,6 +462,20 @@ const activeStatusFilterKey = computed(() => {
   return statusFilterConfig[value] ? value : ''
 })
 const activeStatusFilter = computed(() => statusFilterConfig[activeStatusFilterKey.value] || null)
+
+const printerSummary = computed(() => {
+  const total = tableData.value.length
+  const printing = tableData.value.filter(item => String(item.status || '').toUpperCase() === 'PRINTING').length
+  const idle = tableData.value.filter(item => String(item.status || '').toUpperCase() === 'IDLE').length
+  const offline = tableData.value.filter(item => String(item.status || '').toUpperCase() === 'OFFLINE').length
+
+  return {
+    total,
+    printing,
+    idle,
+    offline
+  }
+})
 
 // ===== 设备详情抽屉状态 =====
 const detailDrawerVisible = ref(false)
@@ -829,6 +864,50 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.printer-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.printer-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid #edf2f7;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.printer-summary-card__label {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.printer-summary-card__value {
+  font-size: clamp(1.15rem, 2vw, 1.7rem);
+  line-height: 1.2;
+  color: #111827;
+}
+
+.printer-summary-card--total {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.printer-summary-card--printing {
+  background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+}
+
+.printer-summary-card--idle {
+  background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+}
+
+.printer-summary-card--offline {
+  background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
+}
+
 .printer-manage-card {
   height: 100%;
 }
@@ -838,15 +917,26 @@ onMounted(() => {
   flex: 1 1 0%;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
-.printer-manage-card :deep(.t-card__footer) {
+.printer-manage-card__footer {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.5rem;
+  margin-top: auto;
+}
+
+.printer-manage-card__footer :deep(.t-pagination) {
+  width: 100%;
 }
 
 .printer-manage-card__table {
-  flex: 1 1 0%;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .printer-action-group {
