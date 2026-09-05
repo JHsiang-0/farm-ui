@@ -34,6 +34,7 @@ const createSeedData = () => ({
     {
       id: 403,
       name: 'Printer_C0DA',
+      machineModel: '拓竹 A1',
       machineNumber: 'A-01',
       ipAddress: '192.168.1.80',
       macAddress: 'AA:BB:CC:DD:EE:01',
@@ -58,6 +59,7 @@ const createSeedData = () => ({
     {
       id: 404,
       name: 'Printer_A12F',
+      machineModel: '拓竹 A1',
       machineNumber: 'A-02',
       ipAddress: '192.168.1.81',
       macAddress: 'AA:BB:CC:DD:EE:02',
@@ -80,6 +82,7 @@ const createSeedData = () => ({
     {
       id: 405,
       name: 'Printer_B07E',
+      machineModel: '拓竹 X1-Carbon',
       machineNumber: 'A-03',
       ipAddress: '192.168.1.82',
       macAddress: 'AA:BB:CC:DD:EE:03',
@@ -104,6 +107,7 @@ const createSeedData = () => ({
     {
       id: 406,
       name: 'Printer_OFFLINE',
+      machineModel: '创想三维 K1 Max',
       machineNumber: 'B-01',
       ipAddress: '192.168.1.83',
       macAddress: 'AA:BB:CC:DD:EE:04',
@@ -126,6 +130,7 @@ const createSeedData = () => ({
     {
       id: 407,
       name: 'Printer_ERROR',
+      machineModel: '拓竹 P1S',
       machineNumber: 'B-02',
       ipAddress: '192.168.1.84',
       macAddress: 'AA:BB:CC:DD:EE:05',
@@ -149,6 +154,7 @@ const createSeedData = () => ({
     {
       id: 408,
       name: 'Printer_CLEAN',
+      machineModel: '拓竹 X1-Carbon',
       machineNumber: 'B-03',
       ipAddress: '192.168.1.85',
       macAddress: 'AA:BB:CC:DD:EE:06',

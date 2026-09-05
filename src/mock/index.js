@@ -134,7 +134,14 @@ const publicJob = job => {
   return {
     ...cloneMockData(job),
     fileName: file?.originalName || `文件 #${job.fileId}`,
+    fileSize: file?.fileSize || null,
+    estTime: file?.estTime || null,
+    filamentWeight: file?.filamentWeight || null,
+    filamentLength: file?.filamentLength || null,
+    bedTemp: file?.bedTemp || null,
     printerName: printer?.name || null,
+    machineModel: printer?.machineModel || printer?.name || null,
+    printerModel: printer?.machineModel || null,
     materialType: file?.materialType || null,
     nozzleSize: file?.nozzleSize || null,
     endedAt: job.completedAt
