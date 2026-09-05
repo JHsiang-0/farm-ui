@@ -34,7 +34,7 @@
         <div v-for="job in activeJobs" :key="String(job.id)" class="rounded-lg border border-gray-100 bg-gray-50 p-3">
           <div class="flex items-center justify-between gap-2">
             <span class="font-mono text-sm font-semibold text-gray-800">任务 #{{ job.id }}</span>
-            <t-tag :theme="jobStatus(job.status).type" variant="light" size="small">{{ jobStatus(job.status).label }}</t-tag>
+            <StatusTag domain="job" :status="job.status" />
           </div>
           <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
             <span>打印机：{{ job.printerId || '未分配' }}</span>
@@ -76,8 +76,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { JOB_STATUS_MAP } from '@/utils/constants'
 import AsyncState from './AsyncState.vue'
+import StatusTag from './StatusTag.vue'
 import { buildSevenDayJobTrend, buildStatusSummary } from '@/utils/dashboardMetrics'
 
 const props = defineProps({
@@ -94,7 +94,6 @@ const summary = computed(() => buildStatusSummary(props.statusCounts))
 const trend = computed(() => buildSevenDayJobTrend(props.historyJobs))
 const maxTrendCount = computed(() => Math.max(...trend.value.map(item => item.count), 1))
 
-const jobStatus = status => JOB_STATUS_MAP[status] || { label: status || '未知', type: 'default' }
 const progressStatus = status => status === 'FAILED' ? 'error' : status === 'COMPLETED' ? 'success' : 'active'
 const statusProgress = theme => theme === 'danger' ? 'error' : theme === 'success' ? 'success' : theme === 'warning' ? 'warning' : 'active'
 const barHeight = count => Math.max(6, Math.round((count / maxTrendCount.value) * 100))

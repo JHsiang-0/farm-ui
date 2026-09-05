@@ -18,7 +18,7 @@
         <t-descriptions-item label="发起用户 ID">{{ formatValue(task.userId) }}</t-descriptions-item>
         <t-descriptions-item label="现场操作员 ID">{{ formatValue(task.operatorId) }}</t-descriptions-item>
         <t-descriptions-item label="状态">
-          <t-tag :theme="statusTheme(task.status)">{{ statusLabel(task.status) }}</t-tag>
+          <StatusTag domain="job" :status="task.status" />
         </t-descriptions-item>
         <t-descriptions-item label="优先级">{{ formatValue(task.priority) }}</t-descriptions-item>
         <t-descriptions-item label="进度">
@@ -58,6 +58,7 @@
 
 <script setup>
 import { formatDateTime } from '@/utils/formatters'
+import StatusTag from './StatusTag.vue'
 
 defineProps({
   modelValue: { type: Boolean, default: false },
@@ -72,11 +73,4 @@ const handleVisibleChange = value => emit('update:modelValue', value)
 const hasValue = value => value !== undefined && value !== null && value !== ''
 const formatValue = value => hasValue(value) ? value : '-'
 
-const statusLabels = {
-  UPLOADING: '上传中', QUEUED: '排队中', ASSIGNED: '已分配', READY: '待启动', PRINTING: '打印中',
-  PAUSED: '已暂停', COMPLETED: '已完成', FAILED: '失败', RECONCILING: '状态核对中', CANCELLED: '已取消'
-}
-
-const statusLabel = status => statusLabels[status] || status || '未知'
-const statusTheme = status => ({ PRINTING: 'success', FAILED: 'danger', PAUSED: 'warning', RECONCILING: 'warning' }[status] || 'default')
 </script>

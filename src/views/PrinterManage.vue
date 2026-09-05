@@ -24,14 +24,16 @@
     />
 
     <!-- 页面标题与操作栏 -->
-    <div class="app-page-toolbar mb-4">
-      <h1 class="app-page-toolbar__title app-route-title">打印机管理</h1>
+    <PageHeader title="打印机管理">
+      <template #filter>
       <div v-if="activeStatusFilter" class="app-page-toolbar__filter">
         <t-tag :theme="activeStatusFilter.theme" variant="light">
           当前筛选：{{ activeStatusFilter.label }}
         </t-tag>
         <t-button variant="text" size="small" @click="clearStatusFilter">显示全部</t-button>
       </div>
+      </template>
+      <template #actions>
       <div class="app-page-toolbar__actions">
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
           刷新
@@ -48,7 +50,8 @@
           新增打印机
         </t-button>
       </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="printer-filter-bar">
       <t-input
@@ -116,9 +119,7 @@
 
         <TdTableColumn prop="status" label="当前状态" width="120" align="center">
           <template #default="scope">
-            <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-              {{ getStatusLabel(scope.row.status) }}
-            </t-tag>
+            <StatusTag domain="printer" :status="scope.row.status" />
           </template>
         </TdTableColumn>
 
@@ -304,9 +305,7 @@
         hover
       >
         <template #status="slotProps">
-          <t-tag :theme="getStatusType(slotProps.row.status)" variant="light" size="small">
-            {{ getStatusLabel(slotProps.row.status) }}
-          </t-tag>
+          <StatusTag domain="printer" :status="slotProps.row.status" />
         </template>
         <template #position>
           <t-button size="small" variant="text" @click="goToDashboard">前往看板管理位置</t-button>
@@ -387,9 +386,7 @@
 
           <TdTableColumn prop="status" label="设备状态" width="120" align="center">
             <template #default="scope">
-              <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-                {{ getStatusLabel(scope.row.status) }}
-              </t-tag>
+              <StatusTag domain="printer" :status="scope.row.status" />
             </template>
           </TdTableColumn>
 
@@ -505,6 +502,8 @@ import { PRINTER_STATUS, PRINTER_STATUS_MAP } from '@/utils/constants'
 import { normalizePrinterStatus } from '@/utils/dataAdapters'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 
@@ -640,10 +639,6 @@ const getStatusColor = (status) => {
 }
 
 // 获取状态标签类型
-const getStatusType = (status) => {
-  return PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.type || 'default'
-}
-
 const getStatusLabel = (status) => {
   return PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.label || '未知'
 }

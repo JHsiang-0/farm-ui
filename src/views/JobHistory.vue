@@ -1,13 +1,14 @@
 <template>
   <div class="app-page-shell app-page-background">
-    <div class="app-page-toolbar mb-4">
-      <h1 class="app-page-toolbar__title app-route-title">打印历史记录</h1>
+    <PageHeader title="打印历史记录">
+      <template #actions>
       <div class="app-page-toolbar__actions">
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="handleQuery" size="medium">
           刷新
         </t-button>
       </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <t-card class="app-page-card history-card">
       <!-- 顶部检索区 -->
@@ -97,9 +98,7 @@
 
         <TdTableColumn prop="status" label="状态" width="120" align="center">
           <template #default="scope">
-            <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-              {{ getStatusLabel(scope.row.status) }}
-            </t-tag>
+            <StatusTag domain="job" :status="scope.row.status" />
           </template>
         </TdTableColumn>
 
@@ -209,6 +208,8 @@ import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { useJobStore } from '@/stores/jobStore'
 
@@ -264,40 +265,6 @@ const pagination = reactive({
   pageSize: 10,
   total: 0
 })
-
-// 获取状态标签类型
-const getStatusType = (status) => {
-  const map = {
-    'UPLOADING': 'warning',
-    'QUEUED': 'primary',
-    'ASSIGNED': 'warning',
-    'READY': 'default',
-    'PRINTING': 'success',
-    'PAUSED': 'warning',
-    'COMPLETED': 'success',
-    'FAILED': 'danger',
-    'CANCELLED': 'default',
-    'RECONCILING': 'warning'
-  }
-  return map[status] || 'default'
-}
-
-// 获取状态显示文本
-const getStatusLabel = (status) => {
-  const map = {
-    'UPLOADING': '上传中',
-    'QUEUED': '排队中',
-    'ASSIGNED': '已分配待确认',
-    'READY': '已上传待机',
-    'PRINTING': '打印中',
-    'PAUSED': '已暂停',
-    'COMPLETED': '已完成',
-    'FAILED': '失败',
-    'CANCELLED': '已取消',
-    'RECONCILING': '状态核对中'
-  }
-  return map[status] || status
-}
 
 // 判断任务是否可以取消
 const canCancel = (status) => {

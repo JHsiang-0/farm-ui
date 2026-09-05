@@ -1,11 +1,12 @@
 <template>
   <div class="app-page-shell app-page-background">
-    <div class="app-page-toolbar mb-4">
-      <h1 class="app-page-toolbar__title app-route-title">操作日志</h1>
+    <PageHeader title="操作日志">
+      <template #actions>
       <div class="app-page-toolbar__actions">
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData">刷新</t-button>
       </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <t-card class="app-page-card management-card">
       <t-form :data="query" layout="inline" label-align="top" class="app-query-toolbar">
@@ -122,6 +123,7 @@ import { reactive, ref } from 'vue'
 import { RefreshIcon as Refresh } from 'tdesign-icons-vue-next'
 import { getAuditLogs } from '@/api/user'
 import AsyncState from '@/components/AsyncState.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import { formatDateTime } from '@/utils/formatters'

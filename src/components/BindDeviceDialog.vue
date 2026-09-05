@@ -42,9 +42,7 @@
       <TdTableColumn prop="name" label="设备名称" width="130" show-overflow-tooltip />
       <TdTableColumn prop="status" label="状态" width="85">
         <template #default="{ row }">
-          <t-tag :theme="getStatusType(row.status)" size="small">
-            {{ getStatusLabel(row.status) }}
-          </t-tag>
+          <StatusTag domain="printer" :status="row.status" :show-icon="false" />
         </template>
       </TdTableColumn>
     </TdTable>
@@ -58,10 +56,10 @@
 import { ref, computed, watch } from 'vue'
 import { confirmMessage } from '@/utils/message'
 import { getUnallocatedPrinters } from '@/api/printer'
-import { PRINTER_STATUS_MAP } from '@/utils/constants'
 import { SearchIcon as Search } from 'tdesign-icons-vue-next'
 import TdTable from './TdTable.vue'
 import TdTableColumn from './TdTableColumn.vue'
+import StatusTag from './StatusTag.vue'
 
 defineOptions({ name: 'BindDeviceDialog' })
 
@@ -94,9 +92,6 @@ const searchKeyword = ref('')
 // ============================================
 // Constants
 // ============================================
-
-/** 状态映射配置 */
-const STATUS_MAP = PRINTER_STATUS_MAP
 
 // ============================================
 // Computed Properties
@@ -134,24 +129,6 @@ watch(() => props.visible, (newVal) => {
 // ============================================
 // Methods
 // ============================================
-
-/**
- * 获取状态对应的 TDesign 标签主题
- * @param {string} status - 设备状态
- * @returns {string} TDesign 标签主题
- */
-function getStatusType(status) {
-  return STATUS_MAP[String(status || '').toUpperCase()]?.type || 'default'
-}
-
-/**
- * 获取状态显示标签
- * @param {string} status - 设备状态
- * @returns {string} 状态中文标签
- */
-function getStatusLabel(status) {
-  return STATUS_MAP[String(status || '').toUpperCase()]?.label || status
-}
 
 /**
  * 获取未分配位置的设备列表

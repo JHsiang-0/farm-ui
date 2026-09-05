@@ -1,7 +1,7 @@
 <template>
   <div class="app-page-shell app-page-background">
-    <div class="app-page-toolbar mb-4">
-      <h1 class="app-page-toolbar__title app-route-title">生产调度队列</h1>
+    <PageHeader title="生产调度队列">
+      <template #actions>
       <div class="app-page-toolbar__actions">
         <t-button variant="outline" @click="openCreateTaskDialog" size="medium">
           新建任务
@@ -10,7 +10,8 @@
           刷新
         </t-button>
       </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <t-tabs v-model:value="activeTab" class="job-queue-tabs">
       <t-tab-panel value="queue" label="待派发任务">
@@ -77,16 +78,7 @@
 
         <TdTableColumn prop="status" label="状态" width="140" align="center">
           <template #default="scope">
-            <div class="flex items-center justify-center gap-2">
-              <span v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><Loading /></span>
-              <span v-else-if="scope.row.status === 'ASSIGNED'" class="text-sm text-yellow-600"><pointer /></span>
-              <span v-else-if="scope.row.status === 'PRINTING'" class="text-sm text-gray-600"><printer /></span>
-              <span v-else-if="scope.row.status === 'COMPLETED'" class="text-sm text-green-600"><check /></span>
-              <span v-else-if="scope.row.status === 'FAILED'" class="text-sm text-red-600"><circle-close /></span>
-              <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-                {{ getStatusLabel(scope.row.status) }}
-              </t-tag>
-            </div>
+            <StatusTag domain="job" :status="scope.row.status" />
           </template>
         </TdTableColumn>
 
@@ -155,9 +147,7 @@
         </TdTableColumn>
         <TdTableColumn prop="status" label="状态" width="140" align="center">
           <template #default="scope">
-            <t-tag :theme="getStatusType(scope.row.status)" variant="light" size="small">
-              {{ getStatusLabel(scope.row.status) }}
-            </t-tag>
+            <StatusTag domain="job" :status="scope.row.status" />
           </template>
         </TdTableColumn>
         <TdTableColumn prop="progress" label="进度" width="150" align="center">
@@ -379,10 +369,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import {
-  LoadingIcon as Loading,
   RefreshIcon as Refresh,
-  LocationIcon as Pointer,
-  PrintIcon as Printer,
   TimeIcon as Clock,
   SendIcon as Promotion,
   CheckIcon as Check
@@ -396,9 +383,10 @@ import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { useJobStore } from '@/stores/jobStore'
-import { JOB_STATUS_MAP } from '@/utils/constants'
 
 defineOptions({ name: 'JobQueue' })
 
@@ -624,16 +612,6 @@ const getPriorityType = (priority) => {
   if (priority >= 50) return 'warning'
   if (priority >= 20) return 'primary'
   return 'default'
-}
-
-// 获取状态标签类型
-const getStatusType = (status) => {
-  return JOB_STATUS_MAP[status]?.type || 'default'
-}
-
-// 获取状态显示文本
-const getStatusLabel = (status) => {
-  return JOB_STATUS_MAP[status]?.label || status
 }
 
 const getProgressStatus = (status, progress) => {

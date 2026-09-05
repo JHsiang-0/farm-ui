@@ -145,9 +145,7 @@
             <div v-for="job in activeJobs.slice(0, 5)" :key="String(job.id)" class="activity-row">
               <div class="activity-row__heading">
                 <span class="activity-row__name">{{ job.fileName || `任务 #${job.id}` }}</span>
-                <t-tag :theme="jobStatus(job.status).type" variant="light" size="small">
-                  {{ jobStatus(job.status).label }}
-                </t-tag>
+                <StatusTag domain="job" :status="job.status" />
               </div>
               <div class="activity-row__meta">
                 <span>打印机：{{ job.printerId || '未分配' }}</span>
@@ -192,9 +190,7 @@
                   <small>{{ formatJobTime(job.createdAt) }}</small>
                 </span>
               </span>
-              <t-tag :theme="jobStatus(job.status).type" variant="light" size="small">
-                {{ jobStatus(job.status).label }}
-              </t-tag>
+              <StatusTag domain="job" :status="job.status" />
             </t-button>
           </div>
           <t-empty v-else description="暂无打印任务" />
@@ -262,9 +258,10 @@ import {
 import { getJobPage } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
 import AsyncState from '@/components/AsyncState.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import { useJobStore } from '@/stores/jobStore'
 import { useRealtimeStore } from '@/stores/printer/realtimeStore'
-import { JOB_STATUS_MAP, PRINTER_STATUS, PRINTER_STATUS_MAP } from '@/utils/constants'
+import { PRINTER_STATUS, PRINTER_STATUS_MAP } from '@/utils/constants'
 import { normalizePrinterStatus } from '@/utils/dataAdapters'
 import { buildSevenDayJobTrend } from '@/utils/dashboardMetrics'
 import { renderIcon } from '@/utils/tdesign'
@@ -425,10 +422,6 @@ function reconnectRealtime() {
 
 function goTo(path) {
   router.push(path)
-}
-
-function jobStatus(status) {
-  return JOB_STATUS_MAP[status] || { label: status || '未知', type: 'default' }
 }
 
 function hasProgress(job) {

@@ -109,7 +109,41 @@ body {
   margin-left: auto;
 }
 
+.async-state {
+  min-width: 0;
+}
+
+.async-state__loading {
+  display: flex;
+  min-height: 6rem;
+  align-items: center;
+  justify-content: center;
+  padding: var(--app-spacing-8) var(--app-spacing-4);
+  color: var(--app-text-secondary);
+}
+
+.async-state__empty {
+  padding: var(--app-spacing-8) var(--app-spacing-4);
+}
+
+.async-state__error {
+  margin: var(--app-spacing-3) 0;
+}
+
+.async-state--with-data {
+  position: relative;
+}
+
 @media (max-width: 768px) {
+  .app-page-header {
+    flex-direction: column;
+  }
+
+  .app-page-header__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .app-page-toolbar {
     align-items: flex-start;
     flex-direction: column;

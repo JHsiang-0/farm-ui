@@ -32,9 +32,7 @@
             ]">
                 <!-- 状态标签和进度 -->
                 <div class="flex items-center justify-between gap-3">
-                    <t-tag :theme="currentStateConfig.type" size="large" variant="dark" class="text-fluid-sm font-semibold">
-                        {{ currentStateConfig.label }}
-                    </t-tag>
+                    <StatusTag domain="printer" :status="currentState" variant="dark" size="large" />
                     <span v-if="realTimeData?.progress !== undefined && isPrintingState"
                         class="text-fluid-2xl font-bold text-gray-700">
                         {{ realTimeData.progress }}%
@@ -272,9 +270,7 @@
                         bordered
                     >
                         <template #status="slotProps">
-                            <t-tag :theme="getHistoryStatusType(slotProps.row.status)" size="small">
-                                {{ getHistoryStatusLabel(slotProps.row.status) }}
-                            </t-tag>
+                            <StatusTag domain="printer" :status="slotProps.row.status" />
                         </template>
                         <template #progress="slotProps">
                             {{ slotProps.row.progress ?? 0 }}%
@@ -388,7 +384,8 @@ import {
 import IconNozzle from '../icons/IconNozzle.vue'
 import IconBed from '../icons/IconBed.vue'
 import IconSpool from '../icons/IconSpool.vue'
-import { PRINTER_STATUS, PRINTER_STATUS_MAP, PROGRESS_STATUS_MAP } from '@/utils/constants'
+import { PRINTER_STATUS, PROGRESS_STATUS_MAP } from '@/utils/constants'
+import StatusTag from '@/components/StatusTag.vue'
 import { normalizePrinterStatus } from '@/utils/dataAdapters'
 import { formatTemp, formatDuration, formatFilament } from '@/utils/formatters'
 import { confirmSafe } from '@/api/printer'
@@ -607,11 +604,6 @@ const currentState = computed(() => {
     return normalizePrinterStatus(sourceState)
 })
 
-/** 当前状态配置 */
-const currentStateConfig = computed(() => {
-    return PRINTER_STATUS_MAP[currentState.value] || PRINTER_STATUS_MAP[PRINTER_STATUS.UNKNOWN]
-})
-
 /** 当前状态类名 */
 const currentStateClass = computed(() => {
     return currentState.value.toLowerCase()
@@ -741,9 +733,6 @@ async function handleStartPrint(action) {
     }
 }
 
-const getHistoryStatusType = status => PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.type || 'default'
-
-const getHistoryStatusLabel = status => PRINTER_STATUS_MAP[String(status || '').toUpperCase()]?.label || '未知'
 </script>
 
 <style scoped>

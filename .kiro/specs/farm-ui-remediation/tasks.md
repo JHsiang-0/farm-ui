@@ -62,7 +62,7 @@
 
 完成记录：页面壳恢复自然纵向高度，滚动责任收敛到 App Content View、TDesign Table 内容区和 Drawer Body；已通过单元测试、浏览器 E2E、Oxlint、ESLint 和生产构建。
 
-### [ ] UI-001.2 公共页面模式
+### [x] UI-001.2 公共页面模式
 
 范围：
 
@@ -81,6 +81,8 @@
 - Loading、Empty、Error 不依赖单一 Toast。
 
 提交建议：feat: 建立独立 UI 整改公共页面模式
+
+完成记录：新增 PageHeader、QueryToolbar、DataRegion、StatusTag 公共组件和状态视图模型；打印机、任务、看板及详情组件复用统一状态 Tag；AsyncState 提供区域级 Loading/Empty/Error 与重试语义；已通过单元测试、Oxlint、ESLint 和生产构建。
 
 ### [ ] UI-001.3 服务器连接和认证入口
 
