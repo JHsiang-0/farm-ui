@@ -1,323 +1,294 @@
 <template>
-  <div class="app-page-shell app-page-background">
-    <Teleport to=".app-breadcrumb__actions">
-      <div class="file-library-toolbar__actions app-page-toolbar__actions">
-        <t-space class="file-view-toggle">
-          <t-button variant="text" size="small" @click="viewMode = 'grid'"
-            :class="{ 'file-view-toggle__active': viewMode === 'grid' }" aria-label="网格视图">
-            <Grid />
-          </t-button>
-          <t-button variant="text" size="small" @click="viewMode = 'list'"
-            :class="{ 'file-view-toggle__active': viewMode === 'list' }" aria-label="列表视图">
-            <List />
-          </t-button>
-        </t-space>
-        <t-button variant="outline" theme="default" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
-          新建文件夹
-        </t-button>
-        <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
-          上传 G-Code 文件
-        </t-button>
-        <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
-          批量删除 ({{ selectedIds.length }})
-        </t-button>
-        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
-          刷新
-        </t-button>
-      </div>
-    </Teleport>
+  <div class="app-page-shell app-page-background file-library-page">
+    <div class="file-library-layout">
+      <aside class="file-library-sidebar">
+        <div class="file-library-sidebar__header">
+          <div class="file-library-sidebar__title">
+            <FolderOpened :size="16" />
+            <span>文件夹列表</span>
+          </div>
+          <t-button variant="text" size="small" aria-label="新建文件夹" @click="openCreateFolderDialog">+</t-button>
+        </div>
 
-    <div class="file-library-content-card app-page-card p-4 bg-white rounded-xl shadow-sm">
-      <!-- 搜索与筛选 -->
-      <div class="file-library-filter-row mb-4">
-        <t-breadcrumb separator="/" class="file-library-navigation">
-          <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
-            <span><folder-opened /></span>
-            <span>根目录</span>
-          </t-breadcrumb-item>
-          <t-breadcrumb-item
-            v-for="(breadcrumb, index) in breadcrumbs"
-            :key="breadcrumb.id"
-            @click.prevent="navigateTo(index)"
-          >
-            {{ breadcrumb.name }}
-          </t-breadcrumb-item>
-        </t-breadcrumb>
-        <div class="file-library-toolbar__filters">
-          <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
-          <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-full sm:w-52" size="medium"
-            @keyup.enter="handleSearch">
-            <template #prefixIcon>
-              <Search />
-            </template>
+        <div class="file-library-sidebar__search">
+          <t-input v-model="folderSearchKeyword" size="small" placeholder="搜索文件夹..." clearable>
+            <template #prefixIcon><Search /></template>
           </t-input>
-          <t-select v-model="materialFilter" placeholder="材质筛选" clearable class="w-full sm:w-40" size="medium"
-            @change="handleSearch">
-            <t-option label="PLA" value="PLA" />
-            <t-option label="ABS" value="ABS" />
-            <t-option label="PETG" value="PETG" />
-            <t-option label="TPU" value="TPU" />
-            <t-option label="尼龙" value="尼龙" />
-          </t-select>
         </div>
-      </div>
 
-      <!-- 文件列表区 -->
-      <div v-if="fileList.length > 0" class="flex-1 min-h-0 overflow-hidden flex flex-col">
-      <!-- 网格视图 -->
-      <div v-if="viewMode === 'grid'" class="file-grid-view flex-1 overflow-y-auto pb-4">
-        <!-- 文件夹 -->
-        <div
-          v-for="file in folderList"
-          :key="file.id"
-          class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
-          :class="isBatchMode && selectedIds.includes(file.id) ? 'border-primary shadow-lg' : ''"
-          @dblclick="navigateToFolder(file)"
-          @click="handleFileClick(file)"
-        >
-          <!-- 卡片选中状态 -->
-          <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
-            <t-checkbox :checked="selectedIds.includes(file.id)" @click.stop="toggleSelection(file.id)"
-              size="small" />
+        <nav class="file-library-folder-nav" aria-label="文件夹列表">
+          <button
+            type="button"
+            class="file-library-folder-item"
+            :class="{ 'file-library-folder-item--active': currentParentId === null }"
+            @click="navigateToRoot"
+          >
+            <span class="file-library-folder-item__name">
+              <FolderOpened :size="15" />
+              <span>全部切片（根目录）</span>
+            </span>
+            <span v-if="currentParentId === null" class="file-library-folder-item__count">{{ pagination.total }}</span>
+          </button>
+          <button
+            v-for="folder in filteredFolderList"
+            :key="folder.id"
+            type="button"
+            class="file-library-folder-item"
+            :class="{ 'file-library-folder-item--active': String(currentParentId) === String(folder.id) }"
+            @click="navigateToFolder(folder)"
+          >
+            <span class="file-library-folder-item__name">
+              <FolderOpened :size="15" />
+              <span>{{ folder.originalName }}</span>
+            </span>
+            <span v-if="Number.isFinite(Number(folder.fileCount))" class="file-library-folder-item__count">
+              {{ folder.fileCount }}
+            </span>
+          </button>
+        </nav>
+
+        <div class="file-library-storage">
+          <div class="file-library-storage__label">
+            <span>集群云存储空间</span>
+            <span class="file-library-storage__value">24.8 GB <em>/ 128 GB</em></span>
+          </div>
+          <div class="file-library-storage__track">
+            <span></span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="file-library-main">
+        <header class="file-library-header">
+          <t-breadcrumb separator="/" class="file-library-header__breadcrumb">
+            <t-breadcrumb-item @click.prevent="navigateToRoot">根目录</t-breadcrumb-item>
+            <t-breadcrumb-item
+              v-for="(breadcrumb, index) in breadcrumbs"
+              :key="breadcrumb.id"
+              @click.prevent="navigateTo(index)"
+            >
+              {{ breadcrumb.name }}
+            </t-breadcrumb-item>
+          </t-breadcrumb>
+
+          <div class="file-library-header__actions">
+            <div class="file-view-toggle" role="group" aria-label="视图切换">
+              <t-button
+                variant="text"
+                size="small"
+                :class="{ 'file-view-toggle__active': viewMode === 'list' }"
+                aria-label="列表视图"
+                @click="viewMode = 'list'"
+              >
+                <List />
+              </t-button>
+              <t-button
+                variant="text"
+                size="small"
+                :class="{ 'file-view-toggle__active': viewMode === 'grid' }"
+                aria-label="网格视图"
+                @click="viewMode = 'grid'"
+              >
+                <Grid />
+              </t-button>
+            </div>
+            <t-button variant="outline" theme="default" size="medium" :icon="renderIcon(FolderOpened)" @click="openCreateFolderDialog">
+              新建文件夹
+            </t-button>
+            <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
+              上传 G-Code 文件
+            </t-button>
+            <t-button :icon="renderIcon(Refresh)" :loading="loading" size="medium" @click="fetchData">
+              刷新
+            </t-button>
+          </div>
+        </header>
+
+        <section class="file-library-filters">
+          <div class="file-library-filters__fields">
+            <t-input
+              v-model="searchKeyword"
+              class="file-library-filters__search"
+              placeholder="通过文件名检索文件（按 Enter 确认）..."
+              clearable
+              size="medium"
+              @keyup.enter="handleSearch"
+            >
+              <template #prefixIcon><Search /></template>
+            </t-input>
+            <t-select v-model="modelFilter" class="file-library-filters__select" placeholder="按适配机型过滤" clearable size="medium" @change="handleSearch">
+              <t-option label="A1" value="A1" />
+              <t-option label="X1-Carbon" value="X1-Carbon" />
+              <t-option label="P1S" value="P1S" />
+            </t-select>
+            <t-select v-model="nozzleFilter" class="file-library-filters__select" placeholder="喷嘴规格" clearable size="medium" @change="handleSearch">
+              <t-option label="0.2mm 精细" value="0.2" />
+              <t-option label="0.4mm 标准" value="0.4" />
+              <t-option label="0.6mm 不锈钢" value="0.6" />
+            </t-select>
+            <t-select v-model="materialFilter" class="file-library-filters__select" placeholder="材质筛选" clearable size="medium" @change="handleSearch">
+              <t-option label="PLA" value="PLA" />
+              <t-option label="ABS" value="ABS" />
+              <t-option label="PETG" value="PETG" />
+              <t-option label="TPU" value="TPU" />
+              <t-option label="尼龙" value="尼龙" />
+            </t-select>
+          </div>
+          <t-checkbox v-model="showSliceDetails" class="file-library-filters__details">
+            展示切片详情（耗材 / 机型 / 床温）
+          </t-checkbox>
+        </section>
+
+        <div class="file-library-table-area">
+          <div v-if="loading" class="file-library-state">
+            <Refresh :size="40" class="is-loading" />
+            <p>加载中...</p>
+          </div>
+          <div v-else-if="fileList.length === 0" class="file-library-state">
+            <FolderOpened :size="64" />
+            <p>暂无文件，请上传 G-Code 文件</p>
+          </div>
+          <div v-else-if="viewMode === 'list'" class="file-library-list-view">
+            <TdTable
+              class="file-library-table"
+              :data="displayFileList"
+              :loading="loading"
+              border
+              @selection-change="handleSelectionChange"
+              @row-click="handleTableRowClick"
+              style="width: 100%"
+              height="100%"
+            >
+              <TdTableColumn type="selection" width="44" align="center" />
+              <TdTableColumn prop="originalName" label="文件名称" min-width="245">
+                <template #default="{ row }">
+                  <div class="file-library-name-cell">
+                    <div class="file-library-name-cell__icon" :class="row.folder ? 'file-library-name-cell__icon--folder' : ''">
+                      <IconFolder v-if="row.folder" :size="20" />
+                      <t-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" :alt="row.originalName" fit="cover" />
+                      <Document v-else :size="19" />
+                    </div>
+                    <div class="file-library-name-cell__content">
+                      <div class="file-library-name-cell__title" :title="row.originalName">
+                        <span>{{ row.originalName }}</span>
+                        <t-tag v-if="row.folder" size="small">文件夹</t-tag>
+                        <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small">{{ getFileTypeLabel(row) }}</t-tag>
+                      </div>
+                      <div v-if="row.folder" class="file-library-name-cell__subtext">
+                        {{ getFolderDescription(row) }}
+                      </div>
+                      <div v-else-if="showSliceDetails" class="file-library-name-cell__subtext">
+                        {{ formatFileSize(row.fileSize) }} · {{ row.printCount || 0 }} 次打印
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </TdTableColumn>
+              <TdTableColumn label="适配机型 | 喷嘴 | 热床" min-width="190">
+                <template #default="{ row }">
+                  <div v-if="row.folder" class="file-library-muted">--</div>
+                  <div v-else class="file-library-compatibility">
+                    <strong>{{ getCompatibleModel(row) }}</strong>
+                    <span v-if="showSliceDetails">{{ formatNozzle(row.nozzleSize) }} · {{ formatBedTemperature(row.bedTemp) }}</span>
+                    <span v-else>{{ formatNozzle(row.nozzleSize) }}</span>
+                  </div>
+                </template>
+              </TdTableColumn>
+              <TdTableColumn prop="estTime" label="持续时间" width="105">
+                <template #default="{ row }">{{ row.folder ? '--' : formatDuration(row.estTime) }}</template>
+              </TdTableColumn>
+              <TdTableColumn label="预估耗材 & 材质" width="160">
+                <template #default="{ row }">
+                  <div v-if="row.folder" class="file-library-muted">--</div>
+                  <div v-else class="file-library-material">
+                    <strong>{{ row.filamentWeight || 0 }}g</strong>
+                    <t-tag :theme="getMaterialTagType(row.materialType)" size="small">{{ row.materialType || 'PLA' }}</t-tag>
+                  </div>
+                </template>
+              </TdTableColumn>
+              <TdTableColumn prop="createdAt" label="上传时间" width="145">
+                <template #default="{ row }">{{ formatFileDate(row.createdAt) }}</template>
+              </TdTableColumn>
+              <TdTableColumn label="操作" width="150" fixed="right" align="center">
+                <template #default="{ row }">
+                  <div class="file-library-row-actions">
+                    <t-button v-if="row.folder" variant="outline" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click.stop="navigateToFolder(row)">
+                      打开
+                    </t-button>
+                    <t-button v-else variant="outline" theme="primary" size="small" :icon="renderIcon(Printer)" @click.stop="handlePrint(row)">
+                      新建任务
+                    </t-button>
+                    <t-button variant="text" theme="danger" size="small" :icon="renderIcon(Delete)" aria-label="删除" @click.stop="handleDelete(row.id)" />
+                  </div>
+                </template>
+              </TdTableColumn>
+            </TdTable>
           </div>
 
-          <!-- 文件夹图标 -->
-          <div class="file-card__media relative h-24 overflow-hidden bg-blue-50 flex items-center justify-center">
-            <IconFolder :size="64" class="text-blue-500" />
-          </div>
-
-          <!-- 卡片内容 -->
-          <div class="file-card__body p-2">
-            <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
-              :title="file.originalName">
-              {{ file.originalName }}
-            </h3>
-
-            <!-- 文件夹统计 -->
-            <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs text-gray-600 uppercase">类型</span>
-                <span class="text-sm font-semibold text-gray-900">文件夹</span>
+          <div v-else class="file-grid-view">
+            <div
+              v-for="file in displayFileList"
+              :key="file.id"
+              class="file-card group"
+              :class="selectedIds.includes(file.id) ? 'file-card--selected' : ''"
+              @click="handleFileClick(file)"
+            >
+              <div v-if="selectedIds.length >= 0" class="file-card__select" @click.stop="toggleSelection(file.id)">
+                <t-checkbox :checked="selectedIds.includes(file.id)" size="small" />
               </div>
-            </div>
-
-            <!-- 悬浮操作按钮 -->
-            <div class="file-card__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
-              <t-button theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click.stop="navigateToFolder(file)"
-                class="flex-1 text-xs px-1 py-1">
-                打开
-              </t-button>
-              <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
-                class="flex-1 text-xs px-1 py-1">
-                删除
-              </t-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 文件 -->
-        <div
-          v-for="file in fileItemsList"
-          :key="file.id"
-          class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
-          :class="isBatchMode && selectedIds.includes(file.id) ? 'border-primary shadow-lg' : ''"
-          @click="handleFileClick(file)">
-          <!-- 卡片选中状态 -->
-          <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
-            <t-checkbox :checked="selectedIds.includes(file.id)" @click.stop="toggleSelection(file.id)"
-              size="small" />
-          </div>
-
-          <!-- 缩略图区域 -->
-          <div class="file-card__media relative h-24 overflow-hidden bg-gray-100">
-            <t-image v-if="file.thumbnailUrl" :src="file.thumbnailUrl" :alt="file.originalName" fit="cover"
-              class="w-full h-full">
-              <template #error>
-                <div class="w-full h-full flex flex-col items-center justify-center text-gray-600 gap-1">
-                  <Picture :size="36" />
-                  <span class="text-sm">加载失败</span>
+              <div class="file-card__media" :class="file.folder ? 'file-card__media--folder' : ''">
+                <IconFolder v-if="file.folder" :size="60" />
+                <t-image v-else-if="file.thumbnailUrl" :src="file.thumbnailUrl" :alt="file.originalName" fit="cover" class="file-card__image" />
+                <template v-else>
+                  <Document :size="38" />
+                  <span>NO IMAGE</span>
+                </template>
+                <t-tag v-if="!file.folder" :theme="getMaterialTagType(file.materialType)" size="small">{{ file.materialType || 'PLA' }}</t-tag>
+              </div>
+              <div class="file-card__body">
+                <h3 :title="file.originalName">{{ file.originalName }}</h3>
+                <div v-if="file.folder" class="file-card__folder-meta">类型：文件夹</div>
+                <template v-else>
+                  <div class="file-card__metrics">
+                    <span><Clock :size="13" />{{ formatDuration(file.estTime) }}</span>
+                    <span><ScaleToOriginal :size="13" />{{ file.filamentWeight || 0 }}g</span>
+                    <span><FullScreen :size="13" />{{ file.filamentLength || 0 }}m</span>
+                    <span>{{ formatFileSize(file.fileSize) }}</span>
+                  </div>
+                  <div class="file-card__stats">
+                    <span>打印 {{ file.printCount || 0 }} 次</span>
+                    <span>{{ file.successRate || 0 }}%</span>
+                  </div>
+                </template>
+                <div class="file-card__actions">
+                  <t-button v-if="file.folder" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click.stop="navigateToFolder(file)">打开</t-button>
+                  <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click.stop="handlePrint(file)">新建任务</t-button>
+                  <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)">删除</t-button>
                 </div>
-              </template>
-            </t-image>
-            <div v-else class="w-full h-full flex flex-col items-center justify-center text-gray-600 gap-1">
-              <Document :size="36" />
-              <span class="text-sm">NO IMAGE</span>
-            </div>
-            <!-- 材质标签 -->
-            <t-tag :theme="getMaterialTagType(file.materialType)" class="absolute top-2 right-2 z-5" size="small">
-              {{ file.materialType || 'PLA' }}
-            </t-tag>
-          </div>
-
-          <!-- 卡片内容 -->
-          <div class="file-card__body p-2">
-            <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
-              :title="file.originalName">
-              {{ file.originalName }}
-            </h3>
-
-            <!-- 核心数据指标 -->
-            <div class="file-card__metrics flex gap-2 mb-2">
-              <div class="flex items-center gap-1 text-xs text-gray-600">
-                <Clock :size="14" class="text-gray-600" />
-                <span>{{ formatDuration(file.estTime) }}</span>
               </div>
-              <div class="flex items-center gap-1 text-xs text-gray-600">
-                <ScaleToOriginal :size="14" class="text-gray-600" />
-                <span>{{ file.filamentWeight || 0 }}g</span>
-              </div>
-              <div class="flex items-center gap-1 text-xs text-gray-600">
-                <FullScreen :size="14" class="text-gray-600" />
-                <span>{{ file.filamentLength || 0 }}m</span>
-              </div>
-              <div class="flex items-center gap-1 text-xs text-gray-600">
-                <span>{{ formatFileSize(file.fileSize) }}</span>
-              </div>
-            </div>
-
-            <!-- 统计信息 -->
-            <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs text-gray-600 uppercase">打印</span>
-                <span class="text-sm font-semibold text-gray-900">{{ file.printCount || 0 }}次</span>
-              </div>
-              <div class="flex items-center gap-2 flex-1 ml-2">
-                <span class="text-xs text-gray-600 w-8">成功率</span>
-                <t-progress :percentage="file.successRate || 0" :stroke-width="4" :label="false"
-                  :class="getSuccessRateClass(file.successRate)" class="flex-1" />
-                <span class="text-sm font-semibold text-gray-900 w-10 text-right">{{ file.successRate || 0 }}%</span>
-              </div>
-            </div>
-
-            <!-- 悬浮操作按钮 -->
-            <div class="file-card__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
-              <t-button theme="primary" size="small" :icon="renderIcon(Printer)" @click.stop="handlePrint(file)"
-                class="flex-1 text-xs px-1 py-1">
-                打印
-              </t-button>
-              <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
-                class="flex-1 text-xs px-1 py-1">
-                删除
-              </t-button>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 列表视图 -->
-      <div v-else class="overflow-hidden flex-1">
-        <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
-          @row-click="handleTableRowClick" border stripe style="width: 100%" height="100%">
-          <TdTableColumn type="selection" width="50" align="center" />
-
-          <TdTableColumn prop="originalName" label="文件名" min-width="200">
-            <template #default="{ row }">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                  <span v-if="row.folder" class="text-blue-500">
-                    <IconFolder />
-                  </span>
-                  <t-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="w-full h-full" />
-                  <span v-else class="text-gray-600">
-                    <Document />
-                  </span>
-                </div>
-                <span class="text-sm font-medium text-gray-900 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-                  :title="row.originalName">{{
-                    row.originalName
-                  }}</span>
-                <t-tag v-if="row.folder" size="small" class="flex-shrink-0">
-                  文件夹
-                </t-tag>
-                <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
-                  {{ row.materialType || 'PLA' }}
-                </t-tag>
-              </div>
-            </template>
-          </TdTableColumn>
-
-          <TdTableColumn prop="fileSize" label="文件大小" width="100" v-if="currentParentId">
-            <template #default="{ row }">{{ row.folder ? '-' : formatFileSize(row.fileSize) }}</template>
-          </TdTableColumn>
-
-          <TdTableColumn prop="estTime" label="预计耗时" width="85" v-if="currentParentId">
-            <template #default="{ row }">{{ row.folder ? '文件夹' : formatDuration(row.estTime) }}</template>
-          </TdTableColumn>
-
-          <TdTableColumn prop="filamentWeight" label="耗材重量" width="85" v-if="currentParentId">
-            <template #default="{ row }">{{
-              row.folder ? '-' : (row.filamentWeight || 0) + 'g'
-              }}</template>
-          </TdTableColumn>
-
-          <TdTableColumn prop="filamentLength" label="所需线长" width="85" v-if="currentParentId">
-            <template #default="{ row }">{{
-              row.folder ? '-' : (row.filamentLength || 0) + 'm'
-              }}</template>
-          </TdTableColumn>
-
-          <TdTableColumn prop="printCount" label="打印次数" width="80" v-if="currentParentId" />
-
-          <TdTableColumn prop="successRate" label="成功率" width="100" v-if="currentParentId">
-            <template #default="{ row }">
-              <div class="flex items-center gap-2" v-if="!row.folder">
-                <t-progress :percentage="row.successRate || 0" :stroke-width="6" :label="false"
-                  :class="getSuccessRateClass(row.successRate)" class="w-16" />
-                <span class="text-sm">{{ row.successRate || 0 }}%</span>
-              </div>
-              <span v-else>-</span>
-            </template>
-          </TdTableColumn>
-
-          <TdTableColumn label="操作" width="200" fixed="right">
-            <template #default="{ row }">
-              <div class="flex items-center gap-1">
-                <t-button v-if="row.folder" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
-                  打开
-                </t-button>
-                <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
-                  打印
-                </t-button>
-                <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click="handleDelete(row.id)">
-                  删除
-                </t-button>
-              </div>
-            </template>
-          </TdTableColumn>
-        </TdTable>
-      </div>
-    </div>
-
-      <!-- 空状态 -->
-      <div v-else-if="!loading" class="flex justify-center flex-1 py-16 px-4">
-      <t-empty description="暂无文件，请上传 G-Code 文件">
-        <template #image>
-          <FolderOpened :size="80" class="text-gray-400" />
-        </template>
-        <template #description>
-          <div class="text-center">
-            <p class="text-gray-600">暂无文件，请上传 G-Code 文件</p>
+        <footer class="file-library-footer">
+          <div class="file-library-footer__batch">
+            <t-button variant="outline" size="small" :disabled="selectedIds.length === 0" :icon="renderIcon(Delete)" @click="handleBatchDelete">
+              批量删除
+            </t-button>
+            <span>{{ selectedIds.length }} 已选择</span>
           </div>
-        </template>
-      </t-empty>
-    </div>
-
-      <!-- 加载状态 -->
-      <div v-if="loading" class="flex flex-col items-center justify-center flex-1 py-16 px-4 text-gray-600">
-      <Refresh :size="48" class="is-loading mb-3" />
-      <p>加载中...</p>
-    </div>
-
-      <!-- 分页 -->
-      <div v-if="fileList.length > 0" class="app-pagination-footer">
-        <t-pagination
-          v-model:current="pagination.pageNum"
-          v-model:pageSize="pagination.pageSize"
-          :total="pagination.total"
-          :show-page-size="false"
-          @change="handlePageChange"
-        />
-      </div>
+          <div class="file-library-footer__pagination">
+            <span>共 {{ displayTotal }} 条切片数据</span>
+            <t-pagination
+              v-model:current="pagination.pageNum"
+              v-model:pageSize="pagination.pageSize"
+              :total="displayTotal"
+              :page-size-options="[20, 50, 100]"
+              @change="handlePageChange"
+            />
+          </div>
+        </footer>
+      </section>
     </div>
 
     <!-- 文件上传对话框 -->
@@ -479,7 +450,6 @@ import {
   RefreshIcon as Refresh,
   DeleteIcon as Delete,
   CloudUploadIcon as UploadFilled,
-  ImageIcon as Picture,
   FileIcon as Document,
   ZoomInIcon as ScaleToOriginal,
   FullscreenIcon as FullScreen,
@@ -515,9 +485,12 @@ const loading = ref(false)
 const fileList = ref([])
 const selectedIds = ref([])
 const searchKeyword = ref('')
+const folderSearchKeyword = ref('')
+const modelFilter = ref('')
+const nozzleFilter = ref('')
 const materialFilter = ref('')
-// 后端当前不支持标签筛选，避免向接口发送未定义参数。
-const viewMode = ref('grid')
+const showSliceDetails = ref(true)
+const viewMode = ref('list')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
@@ -542,9 +515,6 @@ const jobForm = reactive({
 const detailDrawerVisible = ref(false)
 const selectedFile = ref(null)
 const FILE_DETAIL_CONTEXT_KEY = 'farm-ui:file-detail'
-// 批量操作模式
-const isBatchMode = ref(false)
-
 // 文件夹导航状态
 const currentParentId = ref(null)
 const breadcrumbs = ref([])
@@ -563,10 +533,10 @@ const folderRules = {
 
 const folderFormRef = ref(null)
 
-// 分页状态
+// 分页状态；参考界面默认展示 20 条数据。
 const pagination = reactive({
   pageNum: 1,
-  pageSize: 12,
+  pageSize: 20,
   total: 0
 })
 
@@ -575,8 +545,26 @@ const folderList = computed(() => {
   return fileList.value.filter(file => file.folder)
 })
 
-const fileItemsList = computed(() => {
-  return fileList.value.filter(file => !file.folder)
+const filteredFolderList = computed(() => {
+  const keyword = folderSearchKeyword.value.trim().toLowerCase()
+  if (!keyword) return folderList.value
+  return folderList.value.filter(file => file.originalName.toLowerCase().includes(keyword))
+})
+
+const displayFileList = computed(() => {
+  const model = modelFilter.value
+  const nozzle = nozzleFilter.value
+
+  return fileList.value.filter(file => {
+    if (file.folder) return true
+    if (model && getCompatibleModel(file) !== model) return false
+    if (nozzle && String(file.nozzleSize ?? '') !== nozzle) return false
+    return true
+  })
+})
+
+const displayTotal = computed(() => {
+  return modelFilter.value || nozzleFilter.value ? displayFileList.value.length : pagination.total
 })
 
 const restoreFileDetailContext = () => {
@@ -940,15 +928,6 @@ const getMaterialTagType = (materialType) => {
 }
 
 /**
- * 获取成功率样式类
- */
-const getSuccessRateClass = (successRate) => {
-  if (!successRate || successRate === 0) return ''
-  if (successRate < 70) return 'success-rate-warning'
-  return 'success-rate-success'
-}
-
-/**
  * 打开文件详情
  */
 const openFileDetail = (file, event) => {
@@ -1004,16 +983,10 @@ const handleFileDownload = async (file) => {
  * 处理文件点击事件
  */
 const handleFileClick = (file) => {
-  if (isBatchMode.value) {
-    // 批量操作模式：执行选择操作
-    toggleSelection(file.id)
+  if (file.folder) {
+    navigateToFolder(file)
   } else {
-    // 详情查看模式：如果是文件夹则打开，否则显示详情
-    if (file.folder) {
-      navigateToFolder(file)
-    } else {
-      openFileDetail(file)
-    }
+    openFileDetail(file)
   }
 }
 
@@ -1021,16 +994,39 @@ const handleFileClick = (file) => {
  * 处理表格行点击事件
  */
 const handleTableRowClick = (row) => {
-  if (isBatchMode.value) {
-    // 批量操作模式：表格有内置的选择功能，不额外处理
+  if (row.folder) {
+    navigateToFolder(row)
   } else {
-    // 详情查看模式：如果是文件夹则打开，否则显示详情
-    if (row.folder) {
-      navigateToFolder(row)
-    } else {
-      openFileDetail(row)
-    }
+    openFileDetail(row)
   }
+}
+
+const formatFileDate = value => {
+  if (!value) return '--'
+  return String(value).replace('T', ' ').replace(/\.\d+$/, '')
+}
+
+const formatNozzle = value => {
+  const nozzle = Number(value)
+  return Number.isFinite(nozzle) ? `${nozzle.toFixed(1)}mm` : '--'
+}
+
+const formatBedTemperature = value => {
+  const temperature = Number(value)
+  return Number.isFinite(temperature) ? `热床 ${temperature}°C` : '热床 --'
+}
+
+const getCompatibleModel = file => file.machineModel || file.model || '--'
+
+const getFileTypeLabel = file => {
+  if (file.folder) return '文件夹'
+  const extension = file.originalName?.split('.').pop()?.toLowerCase()
+  return extension === '3mf' ? '3MF' : extension === 'bgcode' ? 'BG-Code' : 'G-Code'
+}
+
+const getFolderDescription = folder => {
+  if (Number.isFinite(Number(folder.fileCount))) return `包含 ${folder.fileCount} 个切片文件`
+  return '文件夹'
 }
 
 // ============ 生命周期 ============
@@ -1040,147 +1036,649 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.file-library-filter-row {
+.file-library-page {
+  --file-primary: #00b96b;
+  --file-primary-hover: #059669;
+  --file-border: #e5e7eb;
+  --file-muted: #6b7280;
+  --file-subtle: #9ca3af;
+  color: #334155;
+}
+
+.file-library-layout {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.file-library-sidebar {
+  display: flex;
+  flex: 0 0 200px;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--file-border);
+  background: #fff;
+}
+
+.file-library-sidebar__header,
+.file-library-header,
+.file-library-filters,
+.file-library-footer {
+  display: flex;
+  align-items: center;
+}
+
+.file-library-sidebar__header {
+  height: 2.75rem;
+  justify-content: space-between;
+  padding: 0 0.875rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.file-library-sidebar__title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #374151;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.file-library-sidebar__title :deep(svg) {
+  color: var(--file-muted);
+}
+
+.file-library-sidebar__header :deep(.t-button) {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: var(--file-muted);
+  font-size: 1rem;
+}
+
+.file-library-sidebar__search {
+  padding: 0.75rem 0.625rem 0.5rem;
+}
+
+.file-library-sidebar__search :deep(.t-input) {
+  background: #f8fafc;
+}
+
+.file-library-folder-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 0.25rem;
+  overflow-y: auto;
+}
+
+.file-library-folder-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  width: 100%;
   min-width: 0;
+  margin: 0.125rem 0;
+  padding: 0.45rem 0.625rem;
+  border: 0;
+  border-radius: 0.375rem;
+  color: var(--file-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.file-library-navigation {
-  min-width: 0;
-  flex: 1;
+.file-library-folder-item:hover {
+  color: #374151;
+  background: #f8fafc;
 }
 
-.file-library-toolbar__filters,
-.file-library-toolbar__actions {
+.file-library-folder-item--active {
+  color: #059669;
+  background: #ecfdf5;
+  font-weight: 600;
+}
+
+.file-library-folder-item__name {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.file-library-toolbar__filters,
-.file-library-toolbar__actions {
-  flex-wrap: wrap;
-  gap: 0.75rem;
+.file-library-folder-item__name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.file-library-toolbar__filters {
+.file-library-folder-item__count {
+  flex-shrink: 0;
+  margin-left: 0.375rem;
+  color: var(--file-subtle);
+  font-size: 0.6875rem;
+}
+
+.file-library-folder-item--active .file-library-folder-item__count {
+  color: #059669;
+}
+
+.file-library-storage {
   flex: 0 0 auto;
-  justify-content: flex-end;
+  padding: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  color: var(--file-muted);
+  font-size: 0.6875rem;
 }
 
-.file-library-toolbar__actions {
-  justify-content: flex-end;
+.file-library-storage__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+}
+
+.file-library-storage__value {
+  color: #374151;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.file-library-storage__value em {
+  color: var(--file-subtle);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.file-library-storage__track {
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.file-library-storage__track span {
+  display: block;
+  width: 19.37%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--file-primary);
+}
+
+.file-library-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.file-library-header {
+  flex: 0 0 auto;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.file-library-header__breadcrumb {
+  min-width: 0;
+}
+
+.file-library-header__breadcrumb :deep(.t-breadcrumb__inner) {
+  color: var(--file-muted);
+  font-size: 0.75rem;
+}
+
+.file-library-header__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-library-header__actions :deep(.t-button) {
+  white-space: nowrap;
 }
 
 .file-view-toggle {
+  display: flex;
+  align-items: center;
   padding: 0.125rem;
-  background: var(--app-surface-muted);
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--file-border);
   border-radius: 0.375rem;
+  background: #f8fafc;
 }
 
 .file-view-toggle :deep(.t-button) {
   min-width: 2rem;
-  color: var(--app-text-secondary);
+  color: var(--file-muted);
 }
 
 .file-view-toggle :deep(.file-view-toggle__active) {
-  color: var(--app-primary);
-  background: var(--app-surface);
+  color: var(--file-primary);
+  background: #fff;
   box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
-/* 网格视图布局 */
-.file-grid-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(200px, 16vw, 280px)), 1fr));
-  gap: clamp(0.75rem, 1vw, 1.25rem);
-  align-content: start;
-  overflow-y: auto;
-  padding-bottom: 1rem;
+.file-library-filters {
+  flex: 0 0 auto;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
 }
 
-/* 文件卡片样式 */
-.file-card {
-  height: clamp(260px, 22vw, 320px);
+.file-library-filters__fields {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   min-width: 0;
+}
+
+.file-library-filters__search {
+  width: min(16rem, 100%);
+}
+
+.file-library-filters__select {
+  width: 9.5rem;
+}
+
+.file-library-filters__details {
+  flex: 0 0 auto;
+  color: var(--file-muted);
+  white-space: nowrap;
+}
+
+.file-library-table-area {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-}
-
-.file-card__media {
-  height: clamp(88px, 8vw, 112px);
-  flex-shrink: 0;
-}
-
-.file-card__body {
+  min-width: 0;
   min-height: 0;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
   overflow: hidden;
 }
 
-.file-card__body > h3 {
+.file-library-list-view {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-library-table {
+  height: 100%;
+}
+
+.file-library-table :deep(.t-table__content) {
+  overflow-y: auto;
+}
+
+.file-library-table :deep(.t-table th) {
+  color: var(--file-muted);
+  background: #f8fafc;
+  font-weight: 400;
+}
+
+.file-library-table :deep(.t-table td),
+.file-library-table :deep(.t-table th) {
+  height: 3.75rem;
+  padding: 0.625rem 0.75rem;
+  border-color: #f1f5f9;
+}
+
+.file-library-table :deep(.t-table__body tr:hover td) {
+  background: #f8fafc;
+}
+
+.file-library-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.file-library-name-cell__icon {
+  display: flex;
+  flex: 0 0 2rem;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.file-library-name-cell__icon--folder {
+  color: #f59e0b;
+  background: #fffbeb;
+}
+
+.file-library-name-cell__icon :deep(.t-image) {
+  width: 100%;
+  height: 100%;
+}
+
+.file-library-name-cell__content {
+  min-width: 0;
+}
+
+.file-library-name-cell__title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: #1f2937;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.file-library-name-cell__title > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-library-name-cell__title :deep(.t-tag) {
   flex-shrink: 0;
+  transform: scale(0.9);
+  transform-origin: left center;
+}
+
+.file-library-name-cell__subtext {
+  margin-top: 0.25rem;
+  overflow: hidden;
+  color: var(--file-subtle);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-library-compatibility,
+.file-library-material {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  line-height: 1.2;
+}
+
+.file-library-compatibility strong,
+.file-library-material strong {
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.file-library-compatibility span {
+  color: var(--file-muted);
+  font-size: 0.6875rem;
+}
+
+.file-library-material :deep(.t-tag) {
+  align-self: flex-start;
+}
+
+.file-library-muted {
+  color: var(--file-subtle);
+}
+
+.file-library-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.file-library-row-actions :deep(.t-button) {
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+.file-library-state {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--file-subtle);
+}
+
+.file-library-state p {
+  margin: 0;
+}
+
+.file-library-footer {
+  flex: 0 0 auto;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+  color: var(--file-muted);
+  font-size: 0.75rem;
+}
+
+.file-library-footer__batch,
+.file-library-footer__pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.file-library-footer__pagination {
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.file-library-footer__pagination :deep(.t-pagination) {
+  width: auto;
+}
+
+.file-grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 0.75rem;
+  align-content: start;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.file-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 17rem;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.5rem;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.file-card:hover,
+.file-card--selected {
+  border-color: var(--file-primary);
+  box-shadow: 0 4px 12px rgb(15 23 42 / 8%);
+}
+
+.file-card__select {
+  position: absolute;
+  z-index: 1;
+  top: 0.5rem;
+  left: 0.5rem;
+}
+
+.file-card__media {
+  position: relative;
+  display: flex;
+  height: 7rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.file-card__media--folder {
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.file-card__media :deep(.t-tag) {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.file-card__image {
+  width: 100%;
+  height: 100%;
+}
+
+.file-card__media > span {
+  font-size: 0.6875rem;
+}
+
+.file-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem;
+}
+
+.file-card__body h3 {
+  margin: 0;
+  overflow: hidden;
+  color: #1f2937;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-card__folder-meta,
+.file-card__metrics,
+.file-card__stats {
+  color: var(--file-muted);
+  font-size: 0.6875rem;
 }
 
 .file-card__metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-width: 0;
-  flex-shrink: 0;
+  gap: 0.375rem;
 }
 
-.file-card__metrics > div {
+.file-card__metrics span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-card__stats {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: #f1f5f9;
 }
 
 .file-card__actions {
-  flex-shrink: 0;
+  display: flex;
+  gap: 0.375rem;
   margin-top: auto;
 }
 
-@media (max-width: 640px) {
-  .file-library-filter-row {
-    align-items: stretch;
+.file-card__actions :deep(.t-button) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .file-library-sidebar {
+    flex-basis: 180px;
+  }
+
+  .file-library-header {
+    align-items: flex-start;
     flex-direction: column;
   }
 
-  .file-library-navigation,
-  .file-library-toolbar__filters,
-  .file-library-toolbar__actions {
+  .file-library-header__actions {
     width: 100%;
-  }
-
-  .file-library-toolbar__filters {
     justify-content: flex-end;
   }
 
-  .file-library-toolbar__actions {
-    justify-content: flex-start;
+  .file-library-filters {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .file-library-toolbar__actions > .t-button {
-    flex: 1 1 auto;
-  }
-
-  .file-card {
-    height: 260px;
-  }
-
-  .file-card__media {
-    height: 88px;
+  .file-library-filters__details {
+    align-self: flex-end;
   }
 }
 
+@media (max-width: 640px) {
+  .file-library-layout {
+    overflow: auto;
+  }
+
+  .file-library-sidebar {
+    flex-basis: 150px;
+  }
+
+  .file-library-header__actions,
+  .file-library-filters__fields {
+    justify-content: flex-start;
+  }
+
+  .file-library-header__actions {
+    flex-wrap: wrap;
+  }
+
+  .file-library-filters__search,
+  .file-library-filters__select {
+    width: 100%;
+  }
+
+  .file-library-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .file-library-footer__pagination {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
 </style>

@@ -476,8 +476,9 @@ const handleFilePage = config => {
   if (session.role !== 'ADMIN') {
     records = records.filter(item => canReadResource(session, item.userId))
   }
-  if (params.keyword) {
-    records = records.filter(item => item.originalName.toLowerCase().includes(String(params.keyword).toLowerCase()))
+  const fileName = params.fileName || params.keyword
+  if (fileName) {
+    records = records.filter(item => item.originalName.toLowerCase().includes(String(fileName).trim().toLowerCase()))
   }
   if (params.materialType) {
     records = records.filter(item => item.materialType === params.materialType)
