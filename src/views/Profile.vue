@@ -1,11 +1,6 @@
 <template>
   <div class="profile-page app-page-shell app-page-background">
-    <div class="app-page-toolbar profile-toolbar">
-      <div>
-        <h1 class="app-page-toolbar__title app-route-title">个人中心</h1>
-        <p class="profile-toolbar__description">管理个人资料与登录安全设置</p>
-      </div>
-    </div>
+    <PageHeader title="个人中心" description="管理个人资料与登录安全设置" />
     <div class="profile-grid">
       <t-card title="个人资料" class="profile-card">
         <t-loading v-if="profileLoading && !profileLoaded" class="profile-loading" />
@@ -14,6 +9,7 @@
           <template #operation><t-button size="small" variant="outline" @click="loadProfile">重试</t-button></template>
         </t-alert>
         <t-form v-else :data="profileForm" :rules="profileRules" label-align="top" @submit="saveProfile">
+          <t-alert v-if="profileSaveError" theme="error" :close-btn="false" class="mb-4">{{ profileSaveError }}</t-alert>
           <t-form-item label="用户名">
             <t-input :value="userStore.userInfo.username" disabled />
           </t-form-item>
@@ -31,6 +27,7 @@
       </t-card>
 
       <t-card title="修改密码" class="profile-card">
+        <t-alert v-if="passwordError" theme="error" :close-btn="false" class="mb-4">{{ passwordError }}</t-alert>
         <t-form :data="passwordForm" :rules="passwordRules" label-align="top" @submit="savePassword">
           <t-form-item name="oldPassword" label="当前密码">
             <t-input v-model="passwordForm.oldPassword" type="password" autocomplete="current-password" />
@@ -55,6 +52,7 @@ import { useRouter } from 'vue-router'
 import { changePassword, getProfile, updateProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import { confirmMessage, message } from '@/utils/message'
+import PageHeader from '@/components/layout/PageHeader.vue'
 
 defineOptions({ name: 'ProfileView' })
 
@@ -65,6 +63,8 @@ const profileLoading = ref(false)
 const profileLoaded = ref(false)
 const profileError = ref('')
 const passwordLoading = ref(false)
+const profileSaveError = ref('')
+const passwordError = ref('')
 const profileForm = reactive({ email: '', phone: '' })
 const savedProfile = reactive({ email: '', phone: '' })
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
@@ -110,6 +110,7 @@ const loadProfile = async () => {
 const saveProfile = async ({ validateResult }) => {
   if (validateResult !== true) return
   profileLoading.value = true
+  profileSaveError.value = ''
   try {
     const data = {
       email: profileForm.email.trim() || null,
@@ -121,7 +122,8 @@ const saveProfile = async ({ validateResult }) => {
     userStore.userInfo = { ...userStore.userInfo, ...data }
     message.success('资料保存成功')
   } catch (error) {
-    message.error(error?.message || '资料保存失败，请重试。')
+    profileSaveError.value = error?.message || '资料保存失败，请重试。'
+    message.error(profileSaveError.value)
   } finally {
     profileLoading.value = false
   }
@@ -153,6 +155,7 @@ const savePassword = async ({ validateResult }) => {
     return
   }
   passwordLoading.value = true
+  passwordError.value = ''
   try {
     await changePassword(userId, {
       oldPassword: passwordForm.oldPassword,
@@ -163,7 +166,8 @@ const savePassword = async ({ validateResult }) => {
     userStore.logout()
     await router.replace({ name: 'login' })
   } catch (error) {
-    message.error(error?.message || '密码修改失败，请检查当前密码后重试。')
+    passwordError.value = error?.message || '密码修改失败，请检查当前密码后重试。'
+    message.error(passwordError.value)
   } finally {
     passwordLoading.value = false
   }
@@ -183,25 +187,12 @@ onUnmounted(() => window.removeEventListener('beforeunload', handleBeforeUnload)
 </script>
 
 <style scoped>
-.profile-toolbar {
-  flex: 0 0 auto;
-  margin-bottom: var(--app-spacing-6);
-}
-
-.profile-toolbar__description {
-  margin: 6px 0 0;
-  color: var(--app-text-secondary);
-}
-
 .profile-grid {
   display: grid;
-  flex: 1 1 auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--app-spacing-6);
   width: min(100%, 1080px);
   margin: 0 auto;
-  min-height: 0;
-  overflow: auto;
 }
 
 .profile-card {

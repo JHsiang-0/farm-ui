@@ -1,11 +1,10 @@
 <template>
   <div class="app-page-shell app-page-background">
-    <div class="app-page-toolbar mb-4">
-      <h1 class="app-page-toolbar__title app-route-title">用户管理</h1>
-      <div class="app-page-toolbar__actions">
+    <PageHeader title="用户管理" description="管理操作员账号、角色和启用状态">
+      <template #actions>
         <t-button theme="primary" @click="openCreate">新增用户</t-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <t-card class="app-page-card management-card">
       <t-form :data="query" layout="inline" label-align="top" class="app-query-toolbar">
@@ -30,14 +29,18 @@
         </t-form-item>
       </t-form>
       <AsyncState
-        v-if="loading || loadError || users.length === 0"
+        v-if="users.length === 0"
         :loading="loading"
         :error="loadError"
-        :empty="users.length === 0"
+        :empty="!loading && !loadError"
         empty-description="暂无用户"
         @retry="fetchUsers"
       />
-      <TdTable v-else :data="users" :loading="loading" class="management-table">
+      <t-alert v-if="loadError && users.length" theme="error" :close-btn="false" class="mb-3">
+        {{ loadError }}
+        <template #operation><t-button size="small" variant="outline" @click="fetchUsers">重试</t-button></template>
+      </t-alert>
+      <TdTable v-if="users.length" :data="users" :loading="loading" :height="usersTableHeight" class="management-table">
         <TdTableColumn prop="id" label="ID" width="80" />
         <TdTableColumn prop="username" label="用户名" />
         <TdTableColumn prop="role" label="角色" />
@@ -53,7 +56,7 @@
           </template>
         </TdTableColumn>
       </TdTable>
-      <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize" :total="pagination.total" class="mt-4 justify-center" @change="fetchUsers" />
+      <t-pagination v-if="pagination.total > pagination.pageSize" v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize" :total="pagination.total" class="mt-4 justify-center" @change="fetchUsers" />
     </t-card>
 
     <t-dialog v-model:visible="dialogVisible" :header="dialogTitle" @confirm="submitUser" @cancel="closeDialog"
@@ -86,6 +89,7 @@ import { confirmMessage, message } from '@/utils/message'
 import { createAdminUser, getAdminUsers, setAdminUserEnabled, updateAdminUser } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import AsyncState from '@/components/AsyncState.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 
@@ -99,6 +103,9 @@ const dialogVisible = ref(false)
 const dialogError = ref('')
 const formRef = ref(null)
 const users = ref([])
+const usersTableHeight = computed(() => users.value.length > 8
+  ? 'clamp(320px, calc(100vh - 320px), 720px)'
+  : undefined)
 const query = reactive({ username: '', email: '', role: '', enabled: undefined })
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const form = reactive({ id: null, username: '', password: '', confirmPassword: '', email: '', phone: '', role: 'OPERATOR' })
@@ -217,6 +224,7 @@ const toggleUser = async user => {
     await fetchUsers()
   } catch (error) {
     message.error(getUserErrorMessage(error, enabled ? '启用用户失败，请重试。' : '禁用用户失败，请重试。'))
+    await fetchUsers()
   }
 }
 onMounted(fetchUsers)

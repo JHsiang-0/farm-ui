@@ -33,12 +33,34 @@
       <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
         <SettingIcon size="19" />
       </t-button>
+      <t-tag
+        size="small"
+        variant="light"
+        :theme="realtimeTheme"
+        :title="realtimeDescription"
+        aria-live="polite"
+        class="app-header__realtime-status"
+      >
+        {{ realtimeLabel }}
+      </t-tag>
+      <t-button
+        v-if="!isWsConnected || isRealtimeStale"
+        variant="text"
+        size="small"
+        class="app-header__reconnect"
+        aria-label="重新连接实时状态"
+        @click="reconnectRealtime"
+      >
+        重连
+      </t-button>
       <AppUserMenu />
     </div>
   </t-header>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import {
   DesktopIcon,
@@ -50,6 +72,7 @@ import {
 } from 'tdesign-icons-vue-next'
 import { message } from '@/utils/message'
 import { enterAppFullscreen } from '@/utils/fullscreen'
+import { useRealtimeStore } from '@/stores/printer/realtimeStore'
 import AppUserMenu from './AppUserMenu.vue'
 
 defineOptions({ name: 'AppHeader' })
@@ -64,6 +87,27 @@ defineProps({
 defineEmits(['toggle-sidebar'])
 
 const router = useRouter()
+const realtimeStore = useRealtimeStore()
+const { wsConnectionState, isWsConnected, isRealtimeStale, isRecovering } = storeToRefs(realtimeStore)
+
+const realtimeLabel = computed(() => {
+  if (isRecovering.value) return '恢复中'
+  if (isRealtimeStale.value) return '数据陈旧'
+  if (isWsConnected.value) return '实时已连接'
+  return wsConnectionState.value === 'CONNECTING' ? '实时连接中' : '实时未连接'
+})
+const realtimeTheme = computed(() => {
+  if (isRecovering.value || isRealtimeStale.value) return 'warning'
+  return isWsConnected.value ? 'success' : 'default'
+})
+const realtimeDescription = computed(() => (
+  isRealtimeStale.value
+    ? '实时连接异常，当前数据可能不是最新'
+    : isWsConnected.value
+      ? '实时设备状态已连接'
+      : '实时设备状态尚未连接'
+))
+const reconnectRealtime = () => realtimeStore.connectWs()
 
 const openFullscreenDashboard = async () => {
   try {
@@ -103,6 +147,15 @@ const openFullscreenDashboard = async () => {
   gap: 0.5rem;
 }
 
+.app-header__realtime-status {
+  white-space: nowrap;
+}
+
+.app-header__reconnect {
+  padding: 0 4px;
+  color: var(--app-primary);
+}
+
 .header-icon-button {
   display: inline-flex;
   align-items: center;
@@ -128,6 +181,10 @@ const openFullscreenDashboard = async () => {
   }
 
   .app-header__right .app-header__optional-action {
+    display: none;
+  }
+
+  .app-header__realtime-status {
     display: none;
   }
 }

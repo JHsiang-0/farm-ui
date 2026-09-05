@@ -5,8 +5,12 @@ import fs from 'node:fs'
 const userSource = fs.readFileSync(new URL('../src/views/UserManagement.vue', import.meta.url), 'utf8')
 const profileSource = fs.readFileSync(new URL('../src/views/Profile.vue', import.meta.url), 'utf8')
 const auditSource = fs.readFileSync(new URL('../src/views/AuditLog.vue', import.meta.url), 'utf8')
+const headerSource = fs.readFileSync(new URL('../src/components/layout/AppHeader.vue', import.meta.url), 'utf8')
 
 test('用户管理覆盖正式筛选、完整表单规则、编辑和当前管理员保护', () => {
+  assert.match(userSource, /<PageHeader title="用户管理"/)
+  assert.match(userSource, /loadError && users\.length/)
+  assert.match(userSource, /:height="usersTableHeight"/)
   assert.match(userSource, /query\.enabled/)
   assert.match(userSource, /formRules/)
   assert.match(userSource, /updateAdminUser\(form\.id, data\)/)
@@ -19,6 +23,9 @@ test('用户管理覆盖正式筛选、完整表单规则、编辑和当前管�
 })
 
 test('个人中心使用真实资料接口、脏状态取消和改密后重新登录', () => {
+  assert.match(profileSource, /<PageHeader title="个人中心"/)
+  assert.match(profileSource, /profileSaveError/)
+  assert.match(profileSource, /passwordError/)
   assert.match(profileSource, /getProfile\(userId\)/)
   assert.match(profileSource, /updateProfile\(userId, data\)/)
   assert.match(profileSource, /profileDirty/)
@@ -32,6 +39,11 @@ test('个人中心使用真实资料接口、脏状态取消和改密后重新�
 })
 
 test('审计页面使用正式筛选并通过详情 Drawer 展示白名单字段', () => {
+  assert.match(auditSource, /getAuditActionLabel/)
+  assert.match(auditSource, /getAuditTargetLabel/)
+  assert.match(auditSource, /logsTableHeight/)
+  assert.match(auditSource, /loadError && logs\.length/)
+  assert.doesNotMatch(auditSource, /\{\{ row\.action \|\| '-' \}\}/)
   assert.match(auditSource, /actorId/)
   assert.match(auditSource, /targetType/)
   assert.match(auditSource, /query\.dateRange/)
@@ -41,4 +53,12 @@ test('审计页面使用正式筛选并通过详情 Drawer 展示白名单字段
   assert.match(auditSource, /traceId/)
   assert.match(auditSource, /仅展示后端审计安全视图中的白名单字段/)
   assert.doesNotMatch(auditSource, /requestBody|responseBody|password|token|secret|stackTrace/)
+})
+
+test('全局 Header 显示真实实时连接状态并提供恢复入口', () => {
+  assert.match(headerSource, /useRealtimeStore/)
+  assert.match(headerSource, /实时已连接/)
+  assert.match(headerSource, /实时未连接/)
+  assert.match(headerSource, /重新连接实时状态/)
+  assert.match(headerSource, /realtimeStore\.connectWs\(\)/)
 })

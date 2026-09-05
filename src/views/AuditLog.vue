@@ -47,14 +47,18 @@
       </t-form>
 
       <AsyncState
-        v-if="loading || loadError || logs.length === 0"
+        v-if="logs.length === 0"
         :loading="loading"
         :error="loadError"
-        :empty="logs.length === 0"
+        :empty="!loading && !loadError"
         empty-description="暂无操作日志"
         @retry="fetchData"
       />
-      <TdTable v-else :data="logs" :loading="loading" class="management-table" @row-click="openDetail">
+      <t-alert v-if="loadError && logs.length" theme="error" :close-btn="false" class="mb-3">
+        {{ loadError }}
+        <template #operation><t-button size="small" variant="outline" @click="fetchData">重试</t-button></template>
+      </t-alert>
+      <TdTable v-if="logs.length" :data="logs" :loading="loading" :height="logsTableHeight" class="management-table" @row-click="openDetail">
         <TdTableColumn prop="actorUsername" label="操作者" min-width="140">
           <template #default="{ row }">
             <span>{{ row.actorUsername || (row.actorId ? `用户 #${row.actorId}` : '未识别用户') }}</span>
@@ -66,12 +70,11 @@
           </template>
         </TdTableColumn>
         <TdTableColumn prop="action" label="动作" min-width="180">
-          <template #default="{ row }"><span class="font-mono text-sm">{{ row.action || '-' }}</span></template>
+          <template #default="{ row }"><span>{{ getAuditActionLabel(row.action) }}</span></template>
         </TdTableColumn>
         <TdTableColumn prop="targetType" label="目标" min-width="180">
           <template #default="{ row }">
-            <span>{{ row.targetType || '-' }}{{ row.targetId ? ` #${row.targetId}` : '' }}</span>
-            <span v-if="row.targetLabel" class="block text-xs text-gray-500">{{ row.targetLabel }}</span>
+            <span>{{ getAuditTargetLabel(row) }}</span>
           </template>
         </TdTableColumn>
         <TdTableColumn prop="occurredAt" label="发生时间" min-width="180">
@@ -79,8 +82,8 @@
         </TdTableColumn>
         <TdTableColumn prop="result" label="结果" width="100">
           <template #default="{ row }">
-            <t-tag :theme="row.result === 'SUCCESS' ? 'success' : 'danger'" size="small">
-              {{ row.result === 'SUCCESS' ? '成功' : '失败' }}
+            <t-tag :theme="getAuditResultView(row.result).theme" size="small">
+              {{ getAuditResultView(row.result).label }}
             </t-tag>
           </template>
         </TdTableColumn>
@@ -105,11 +108,9 @@
         <t-descriptions-item label="日志 ID">{{ selectedLog.id || '—' }}</t-descriptions-item>
         <t-descriptions-item label="操作者">{{ selectedLog.actorUsername || '—' }}（{{ selectedLog.actorId || '—' }}）</t-descriptions-item>
         <t-descriptions-item label="角色">{{ selectedLog.actorRole || '—' }}</t-descriptions-item>
-        <t-descriptions-item label="动作">{{ selectedLog.action || '—' }}</t-descriptions-item>
-        <t-descriptions-item label="目标类型">{{ selectedLog.targetType || '—' }}</t-descriptions-item>
-        <t-descriptions-item label="目标 ID">{{ selectedLog.targetId || '—' }}</t-descriptions-item>
-        <t-descriptions-item label="目标名称">{{ selectedLog.targetLabel || '—' }}</t-descriptions-item>
-        <t-descriptions-item label="结果">{{ selectedLog.result || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="动作">{{ getAuditActionLabel(selectedLog.action) }}</t-descriptions-item>
+        <t-descriptions-item label="目标">{{ getAuditTargetLabel(selectedLog) }}</t-descriptions-item>
+        <t-descriptions-item label="结果">{{ getAuditResultView(selectedLog.result).label }}</t-descriptions-item>
         <t-descriptions-item label="错误码">{{ selectedLog.errorCode || '—' }}</t-descriptions-item>
         <t-descriptions-item label="发生时间">{{ formatDateTime(selectedLog.occurredAt) }}</t-descriptions-item>
         <t-descriptions-item label="追踪 ID">{{ selectedLog.traceId || '—' }}</t-descriptions-item>
@@ -119,7 +120,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { RefreshIcon as Refresh } from 'tdesign-icons-vue-next'
 import { getAuditLogs } from '@/api/user'
 import AsyncState from '@/components/AsyncState.vue'
@@ -129,12 +130,16 @@ import TdTableColumn from '@/components/TdTableColumn.vue'
 import { formatDateTime } from '@/utils/formatters'
 import { message } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
+import { getAuditActionLabel, getAuditResultView, getAuditTargetLabel } from '@/utils/auditView'
 
 defineOptions({ name: 'AuditLog' })
 
 const loading = ref(false)
 const loadError = ref('')
 const logs = ref([])
+const logsTableHeight = computed(() => logs.value.length > 12
+  ? 'clamp(360px, calc(100vh - 360px), 720px)'
+  : undefined)
 const detailVisible = ref(false)
 const selectedLog = ref(null)
 const query = reactive({ actorId: '', action: '', targetType: '', targetId: '', result: '', dateRange: [] })
