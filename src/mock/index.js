@@ -331,13 +331,25 @@ const handlePrinterPage = config => {
   requireSession(config, ['ADMIN', 'OPERATOR'])
   const params = getParams(config)
   let records = mockState.printers
-  if (params.name) {
-    records = records.filter(item => item.name.toLowerCase().includes(String(params.name).toLowerCase()))
+  const keyword = String(params.keyword || params.name || '').trim().toLowerCase()
+  if (keyword) {
+    records = records.filter(item => [
+      item.name,
+      item.ipAddress,
+      item.macAddress,
+      item.machineNumber
+    ].some(value => String(value || '').toLowerCase().includes(keyword)))
   }
   if (params.status) {
-    records = params.status === 'ATTENTION'
+    records = String(params.status).toUpperCase() === 'ATTENTION'
       ? records.filter(item => ATTENTION_PRINTER_STATUSES.includes(String(item.status || '').toUpperCase()))
-      : records.filter(item => item.status === params.status)
+      : records.filter(item => String(item.status || '').toUpperCase() === String(params.status).toUpperCase())
+  }
+  if (params.firmwareType) {
+    records = records.filter(item => String(item.firmwareType || '').toUpperCase() === String(params.firmwareType).toUpperCase())
+  }
+  if (params.zone) {
+    records = records.filter(item => item.zone === params.zone)
   }
   return getPageData(records.map(cloneMockData), params)
 }
@@ -762,7 +774,9 @@ const route = async config => {
   fail(404, 404, `Mock 未实现接口：${method} ${path}`)
 }
 
-export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.MODE === 'desktop-mock'
+export const isMockEnabled = import.meta.env.VITE_USE_MOCK === 'true'
+  || import.meta.env.MODE === 'mock'
+  || import.meta.env.MODE === 'desktop-mock'
 
 if (import.meta.env.DEV) {
   window.__FARM_RESET_MOCK__ = resetMockState

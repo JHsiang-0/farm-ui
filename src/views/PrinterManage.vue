@@ -1,5 +1,5 @@
 <template>
-  <div class="app-page-shell app-page-background relative">
+  <div class="printer-manage-page app-page-shell app-page-background relative">
     <!-- 设备详情抽屉 -->
     <DeviceDetailDrawer
       v-model="detailDrawerVisible"
@@ -56,7 +56,7 @@
           v-model="nameKeyword"
           class="printer-filter-toolbar__search"
           clearable
-          placeholder="搜索打印机名称..."
+          placeholder="快速搜索名称、IP、MAC 或机位号..."
           @clear="handleSearch"
           @enter="handleSearch"
         >
@@ -64,13 +64,81 @@
             <span><search /></span>
           </template>
         </t-input>
-        <span class="printer-filter-toolbar__tip">点击设备行可查看详情</span>
-        <t-button variant="outline" size="small" @click="handleResetFilters">
-          重置筛选
-        </t-button>
+        <div class="printer-filter-toolbar__filters">
+          <span class="printer-filter-toolbar__label">运行工况</span>
+          <t-select
+            :value="activeStatusFilterKey"
+            class="printer-filter-toolbar__select"
+            :options="statusFilterOptions"
+            @change="applyStatusFilter"
+          />
+          <span class="printer-filter-toolbar__label">所属区域</span>
+          <t-select
+            v-model="queryParams.zone"
+            class="printer-filter-toolbar__select"
+            :options="zoneOptions"
+            :disabled="!isMockEnabled"
+            @change="value => applyFilter('zone', value)"
+          />
+          <span class="printer-filter-toolbar__label">固件协议</span>
+          <t-select
+            v-model="queryParams.firmwareType"
+            class="printer-filter-toolbar__select"
+            :options="firmwareOptions"
+            :disabled="!isMockEnabled"
+            @change="value => applyFilter('firmwareType', value)"
+          />
+          <t-button variant="outline" size="small" @click="handleResetFilters">
+            重置
+          </t-button>
+        </div>
       </div>
 
-      <div class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+      <div class="printer-batch-toolbar">
+        <div class="printer-batch-toolbar__left">
+          <t-button
+            size="small"
+            variant="outline"
+            :disabled="selectedPrinterRows.length === 0"
+            @click="handleBatchRefresh"
+          >
+            批量刷新
+          </t-button>
+          <span>总计 <strong>{{ total }}</strong> 台</span>
+          <span>已选择 <strong>{{ selectedPrinterRows.length }}</strong> 台</span>
+          <t-button
+            v-if="selectedPrinterRows.length > 0"
+            variant="text"
+            size="small"
+            @click="clearPrinterSelection"
+          >
+            清除选择
+          </t-button>
+        </div>
+        <div class="printer-view-toggle" aria-label="设备列表视图切换">
+          <span>视图：</span>
+          <t-button
+            size="small"
+            variant="text"
+            :class="{ 'printer-view-toggle__active': viewMode === 'list' }"
+            :aria-label="'列表视图'"
+            @click="viewMode = 'list'"
+          >
+            <view-list :size="16" />
+          </t-button>
+          <t-button
+            size="small"
+            variant="text"
+            :class="{ 'printer-view-toggle__active': viewMode === 'grid' }"
+            :aria-label="'网格视图'"
+            @click="viewMode = 'grid'"
+          >
+            <grid-view :size="16" />
+          </t-button>
+        </div>
+      </div>
+
+      <div v-if="viewMode === 'list'" class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         <TdTable
           :data="tableData"
           :loading="loading"
@@ -78,25 +146,35 @@
           class="printer-manage-table min-h-0 flex-1 overflow-hidden rounded-lg"
           :header-cell-style="{ background: '#f9fafb' }"
           @row-click="handleRowClick"
+          @selection-change="handlePrinterSelectionChange"
           row-class-name="cursor-pointer hover:bg-gray-50"
           height="100%"
         >
+        <TdTableColumn type="selection" width="42" align="center" />
         <TdTableColumn prop="id" label="ID" width="68" align="center">
           <template #default="scope">
             <span class="font-mono font-semibold text-gray-600">{{ scope.row.id }}</span>
           </template>
         </TdTableColumn>
 
-        <TdTableColumn prop="name" label="打印机" min-width="180">
+        <TdTableColumn prop="name" label="打印机" width="150">
           <template #default="scope">
             <div class="printer-table-primary">
-              <div class="flex items-center gap-2 font-medium text-gray-900">
+              <div class="flex min-w-0 items-center gap-2 font-medium text-gray-900">
                 <printer :size="16" :stroke-color="getStatusColor(scope.row.status)" />
                 <span class="truncate" :title="scope.row.name">{{ scope.row.name }}</span>
               </div>
-              <span class="printer-table-secondary">
-                {{ scope.row.machineNumber || `#${scope.row.id}` }}
-              </span>
+            </div>
+          </template>
+        </TdTableColumn>
+
+        <TdTableColumn label="标签 / 编号" width="104" align="center">
+          <template #default="scope">
+            <div class="printer-table-primary printer-table-primary--center">
+              <t-tag size="small" variant="light-outline" theme="default">
+                {{ scope.row.zone || getZoneLabel(scope.row) }}
+              </t-tag>
+              <span class="printer-table-secondary">{{ scope.row.machineNumber || `#${scope.row.id}` }}</span>
             </div>
           </template>
         </TdTableColumn>
@@ -138,7 +216,31 @@
           </template>
         </TdTableColumn>
 
-        <TdTableColumn label="耗材 / 喷嘴" width="118" align="center">
+        <TdTableColumn label="进度 / 层数" width="124" align="center">
+          <template #default="scope">
+            <div class="printer-table-primary">
+              <t-progress
+                :percentage="getProgress(scope.row)"
+                :label="false"
+                :stroke-width="5"
+                :status="getProgressStatus(scope.row)"
+              />
+              <span class="printer-table-secondary printer-table-secondary--centered">
+                {{ getProgressText(scope.row) }}
+              </span>
+            </div>
+          </template>
+        </TdTableColumn>
+
+        <TdTableColumn label="打印速度" width="82" align="center">
+          <template #default="scope">
+            <span class="printer-table-secondary printer-table-secondary--centered">
+              {{ scope.row.printSpeed ? `${scope.row.printSpeed}%` : '-' }}
+            </span>
+          </template>
+        </TdTableColumn>
+
+        <TdTableColumn label="耗材材质" width="108" align="center">
           <template #default="scope">
             <div class="printer-table-primary printer-table-primary--center">
               <t-tag size="small" theme="warning" variant="light">
@@ -195,14 +297,55 @@
         </TdTable>
       </div>
 
+      <div v-else class="printer-grid-view">
+        <article v-for="printerItem in tableData" :key="printerItem.id" class="printer-grid-card" @click="handleRowClick(printerItem)">
+          <div class="printer-grid-card__header">
+            <div class="printer-table-primary">
+              <span class="font-medium text-gray-900">{{ printerItem.name }}</span>
+              <span class="printer-table-secondary">{{ printerItem.machineNumber || `#${printerItem.id}` }}</span>
+            </div>
+            <t-tag :theme="getStatusType(printerItem.status)" variant="light" size="small">
+              {{ getStatusLabel(printerItem.status) }}
+            </t-tag>
+          </div>
+          <div class="printer-grid-card__body">
+            <span>{{ printerItem.ipAddress || '-' }}</span>
+            <span>{{ printerItem.firmwareType || '-' }}</span>
+            <span>{{ printerItem.currentMaterial || '未装载' }} · {{ printerItem.nozzleSize || '-' }} mm</span>
+          </div>
+          <div class="printer-grid-card__progress">
+            <span>打印进度</span>
+            <strong>{{ getProgress(printerItem) }}%</strong>
+            <t-progress :percentage="getProgress(printerItem)" :label="false" :stroke-width="5" :status="getProgressStatus(printerItem)" />
+          </div>
+          <div class="printer-grid-card__actions" @click.stop>
+            <t-button v-if="shouldShowSafeButton(printerItem)" size="small" theme="warning" @click="handleConfirmSafe(printerItem)">
+              确认清理
+            </t-button>
+            <t-button v-if="shouldShowStartButton(printerItem)" size="small" theme="success" @click="handleStartJob(printerItem)">
+              启动打印
+            </t-button>
+            <t-button v-if="isAdmin" size="small" theme="primary" @click="handleEdit(printerItem)">编辑</t-button>
+          </div>
+        </article>
+        <t-empty v-if="!loading && tableData.length === 0" description="暂无打印机数据" />
+      </div>
+
       <div class="printer-manage-card__footer app-pagination-footer">
+        <span class="printer-manage-card__total">共 {{ total }} 台设备</span>
         <t-pagination
           v-model:current="queryParams.pageNum"
           v-model:pageSize="queryParams.pageSize"
           :total="total"
-          :show-page-size="false"
+          :page-size-options="[10, 20, 50, 100]"
+          :show-page-size="true"
           @change="fetchData"
         />
+      </div>
+      <div class="printer-network-status">
+        <span class="printer-network-status__connected">● {{ isMockEnabled ? 'Mock 演示数据已连接' : '接口数据已连接' }}</span>
+        <span>活跃设备节点：{{ onlinePrinterCount }} / {{ printerSummary.total }}</span>
+        <span>待关注设备：{{ printerSummary.attention }} 台</span>
       </div>
     </t-card>
 
@@ -418,7 +561,9 @@ import {
   SearchIcon as Search,
   FolderAddIcon as FolderAdd,
   CheckCircleIcon as CircleCheck,
-  CloseCircleIcon as CircleClose
+  CloseCircleIcon as CircleClose,
+  GridViewIcon as GridView,
+  ViewListIcon as ViewList
 } from 'tdesign-icons-vue-next'
 import {
   getPrinterList,
@@ -432,6 +577,7 @@ import {
 import { startJob } from '@/api/job'
 import { message, confirmMessage } from '@/utils/message'
 import { renderIcon } from '@/utils/tdesign'
+import { isMockEnabled } from '@/mock'
 import { useUserStore } from '@/stores/user'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -450,18 +596,44 @@ const total = ref(0)
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 20,
-  name: Array.isArray(route.query.name) ? route.query.name[0] : (route.query.name || '')
+  keyword: Array.isArray(route.query.keyword)
+    ? route.query.keyword[0]
+    : (route.query.keyword || route.query.name || ''),
+  firmwareType: Array.isArray(route.query.firmwareType) ? route.query.firmwareType[0] : (route.query.firmwareType || ''),
+  zone: Array.isArray(route.query.zone) ? route.query.zone[0] : (route.query.zone || '')
 })
-const nameKeyword = ref(queryParams.name)
+const nameKeyword = ref(queryParams.keyword)
+const viewMode = ref('list')
+const selectedPrinterRows = ref([])
 
 const summaryData = ref([])
 const summaryTotal = ref(null)
 const statusFilterConfig = {
   PRINTING: { label: '打印中', theme: 'primary' },
   IDLE: { label: '空闲打印机', theme: 'success' },
+  PAUSED: { label: '已暂停', theme: 'warning' },
+  OFFLINE: { label: '离线', theme: 'default' },
   ATTENTION: { label: '异常设备', theme: 'danger' }
 }
-const attentionStatuses = new Set(['ERROR', 'OFFLINE', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR'])
+const attentionStatuses = new Set(['ERROR', 'OFFLINE', 'UNKNOWN', 'PAUSED', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR'])
+const statusFilterOptions = [
+  { label: '全部运行状态', value: '' },
+  { label: '打印中', value: 'PRINTING' },
+  { label: '空闲打印机', value: 'IDLE' },
+  { label: '已暂停', value: 'PAUSED' },
+  { label: '离线', value: 'OFFLINE' },
+  { label: '需要关注', value: 'ATTENTION' }
+]
+const firmwareOptions = [
+  { label: '全部固件协议', value: '' },
+  { label: 'Klipper', value: 'KLIPPER' },
+  { label: 'RRF', value: 'RRF' }
+]
+const zoneOptions = [
+  { label: '全部所属区域', value: '' },
+  { label: 'A区', value: 'A区' },
+  { label: 'B区', value: 'B区' }
+]
 
 const activeStatusFilterKey = computed(() => {
   const value = Array.isArray(route.query.status) ? route.query.status[0] : route.query.status
@@ -490,6 +662,26 @@ const printerStatusTabs = computed(() => [
   { key: 'IDLE', label: '空闲打印机', count: printerSummary.value.idle },
   { key: 'ATTENTION', label: '需要关注', count: printerSummary.value.attention }
 ])
+
+const onlinePrinterCount = computed(() => summaryData.value.filter(item => {
+  return !['OFFLINE', 'UNKNOWN', 'FAULT', 'SYS_ERROR'].includes(String(item.status || '').toUpperCase())
+}).length)
+
+const buildPrinterQuery = (includeStatus = true, pageNum = queryParams.pageNum, pageSize = queryParams.pageSize) => {
+  const params = { pageNum, pageSize }
+  if (isMockEnabled) {
+    if (queryParams.keyword) params.keyword = queryParams.keyword
+    if (queryParams.firmwareType) params.firmwareType = queryParams.firmwareType
+    if (queryParams.zone) params.zone = queryParams.zone
+  } else if (queryParams.keyword) {
+    // 真实接口当前仅支持 name，避免将 Mock 专用筛选参数发送到后端。
+    params.name = queryParams.keyword
+  }
+  if (includeStatus && activeStatusFilterKey.value) {
+    params.status = activeStatusFilterKey.value
+  }
+  return params
+}
 
 // ===== 设备详情抽屉状态 =====
 const detailDrawerVisible = ref(false)
@@ -545,6 +737,7 @@ const getStatusColor = (status) => {
   const map = {
     'PRINTING': '#1d4ed8',
     'IDLE': '#059669',
+    'PAUSED': '#d97706',
     'ERROR': '#dc2626',
     'OFFLINE': '#6b7280'
   }
@@ -557,6 +750,7 @@ const getStatusType = (status) => {
   const map = {
     'PRINTING': 'primary',
     'IDLE': 'success',
+    'PAUSED': 'warning',
     'ERROR': 'danger',
     'OFFLINE': 'default'
   }
@@ -574,6 +768,30 @@ const getStatusLabel = (status) => {
     UNKNOWN: '未知'
   }
   return map[String(status || '').toUpperCase()] || '未知'
+}
+
+const getZoneLabel = (printer) => {
+  const zone = String(printer.machineNumber || '').split('-')[0]
+  return zone ? `${zone}区` : '未分区'
+}
+
+const getProgress = (printer) => {
+  const progress = Number(printer.progress)
+  return Number.isFinite(progress) ? Math.min(Math.max(progress, 0), 100) : 0
+}
+
+const getProgressText = (printer) => {
+  const currentLayer = Number(printer.currentLayer)
+  const totalLayers = Number(printer.totalLayers)
+  if (totalLayers > 0 && currentLayer >= 0) return `${getProgress(printer)}% · ${currentLayer}/${totalLayers} 层`
+  return getProgress(printer) > 0 ? `${getProgress(printer)}%` : '-'
+}
+
+const getProgressStatus = (printer) => {
+  const status = String(printer.status || '').toUpperCase()
+  if (['ERROR', 'OFFLINE', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR'].includes(status)) return 'exception'
+  if (getProgress(printer) >= 100) return 'success'
+  return 'active'
 }
 
 // 判断是否应该显示"确认清理"按钮
@@ -687,20 +905,14 @@ const restorePrinterDetailContext = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getPrinterList({
-      ...queryParams,
-      ...(activeStatusFilterKey.value ? { status: activeStatusFilterKey.value } : {})
-    })
+    const res = await getPrinterList(buildPrinterQuery())
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
+    selectedPrinterRows.value = []
 
     // 顶部状态统计始终使用未筛选的数据，避免切换分页或状态标签后数字失真。
     try {
-      const summaryRes = await getPrinterList({
-        pageNum: 1,
-        pageSize: 100,
-        ...(queryParams.name ? { name: queryParams.name } : {})
-      })
+      const summaryRes = await getPrinterList(buildPrinterQuery(false, 1, 100))
       summaryData.value = summaryRes.data?.records || []
       summaryTotal.value = summaryRes.data?.total || 0
     } catch {
@@ -731,30 +943,72 @@ const applyStatusFilter = (status) => {
 const handleSearch = () => {
   const name = nameKeyword.value.trim()
   const query = { ...route.query }
-  queryParams.name = name
+  queryParams.keyword = name
   queryParams.pageNum = 1
   if (name) {
-    query.name = name
-  } else {
+    query.keyword = name
     delete query.name
+  } else {
+    delete query.keyword
+    delete query.name
+  }
+  router.replace({ path: route.path, query })
+}
+
+const applyFilter = (key, value) => {
+  const query = { ...route.query }
+  queryParams[key] = value || ''
+  queryParams.pageNum = 1
+  if (value) {
+    query[key] = value
+  } else {
+    delete query[key]
   }
   router.replace({ path: route.path, query })
 }
 
 const handleResetFilters = () => {
   nameKeyword.value = ''
-  queryParams.name = ''
+  queryParams.keyword = ''
+  queryParams.firmwareType = ''
+  queryParams.zone = ''
   queryParams.pageNum = 1
   const query = { ...route.query }
+  delete query.keyword
   delete query.name
   delete query.status
+  delete query.firmwareType
+  delete query.zone
   router.replace({ path: route.path, query })
 }
 
-watch(() => [route.query.status, route.query.name], () => {
+const handlePrinterSelectionChange = (selection) => {
+  selectedPrinterRows.value = Array.isArray(selection) ? selection : []
+}
+
+const clearPrinterSelection = () => {
+  selectedPrinterRows.value = []
+}
+
+const handleBatchRefresh = () => {
+  message.success(`已刷新 ${selectedPrinterRows.value.length} 台设备`)
+  fetchData()
+}
+
+watch(() => [
+  route.query.status,
+  route.query.name,
+  route.query.keyword,
+  route.query.firmwareType,
+  route.query.zone
+], () => {
   queryParams.pageNum = 1
-  queryParams.name = Array.isArray(route.query.name) ? route.query.name[0] : (route.query.name || '')
-  nameKeyword.value = queryParams.name
+  queryParams.keyword = Array.isArray(route.query.keyword)
+    ? route.query.keyword[0]
+    : (route.query.keyword || route.query.name || '')
+  queryParams.firmwareType = Array.isArray(route.query.firmwareType) ? route.query.firmwareType[0] : (route.query.firmwareType || '')
+  queryParams.zone = Array.isArray(route.query.zone) ? route.query.zone[0] : (route.query.zone || '')
+  nameKeyword.value = queryParams.keyword
   fetchData()
 })
 
@@ -919,7 +1173,16 @@ onMounted(() => {
 }
 
 .printer-manage-card__footer :deep(.t-pagination) {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.printer-manage-card__total {
+  flex: 0 0 auto;
+  margin-right: 1rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .printer-manage-card__table {
@@ -936,6 +1199,7 @@ onMounted(() => {
 .printer-manage-table :deep(.t-table th),
 .printer-manage-table :deep(.t-table td) {
   padding: 0.75rem 0.625rem;
+  text-align: center;
   vertical-align: middle;
 }
 
@@ -1058,21 +1322,165 @@ onMounted(() => {
 }
 
 .printer-filter-toolbar__search {
-  width: min(100%, 20rem);
+  width: min(100%, 19rem);
 }
 
-.printer-filter-toolbar__tip {
-  margin-right: auto;
+.printer-filter-toolbar__filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.printer-filter-toolbar__label {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.printer-filter-toolbar__select {
+  width: 8rem;
+}
+
+.printer-batch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.printer-batch-toolbar__left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.printer-batch-toolbar__left strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+.printer-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.printer-view-toggle :deep(.t-button) {
+  min-width: 2rem;
+  padding: 0.25rem;
+  color: #9ca3af;
+}
+
+.printer-view-toggle :deep(.printer-view-toggle__active) {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.printer-grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 0.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.25rem;
+}
+
+.printer-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 12rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.printer-grid-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.printer-grid-card__header,
+.printer-grid-card__progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.printer-grid-card__body {
+  display: grid;
+  gap: 0.35rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.printer-grid-card__progress {
+  flex-wrap: wrap;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.printer-grid-card__progress :deep(.t-progress) {
+  flex-basis: 100%;
+}
+
+.printer-grid-card__progress strong {
+  color: #111827;
+}
+
+.printer-grid-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.printer-network-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  flex: 0 0 auto;
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.25rem 0;
+  border-top: 1px solid #f0f2f5;
   color: #9ca3af;
   font-size: 0.75rem;
 }
 
+.printer-network-status__connected {
+  color: #059669;
+}
+
 .printer-table-primary {
   display: flex;
+  align-items: center;
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
   line-height: 1.25;
+  text-align: center;
+}
+
+.printer-table-primary > :deep(.t-progress) {
+  width: 100%;
 }
 
 .printer-table-primary--center {
@@ -1091,6 +1499,11 @@ onMounted(() => {
 .printer-table-secondary--muted {
   color: #9ca3af;
   font-family: inherit;
+}
+
+.printer-table-secondary--centered {
+  width: 100%;
+  text-align: center;
 }
 
 .printer-table-inline-status {
@@ -1114,6 +1527,11 @@ onMounted(() => {
   flex: 0 0 auto;
 }
 
+.printer-manage-page :deep(.t-table th),
+.printer-manage-page :deep(.t-table td) {
+  text-align: center;
+}
+
 @media (max-width: 1100px) {
   .printer-status-tabs {
     gap: 0.75rem;
@@ -1130,8 +1548,28 @@ onMounted(() => {
     display: none;
   }
 
-  .printer-filter-toolbar__tip {
-    display: none;
+  .printer-filter-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .printer-filter-toolbar__search,
+  .printer-filter-toolbar__filters {
+    width: 100%;
+  }
+
+  .printer-filter-toolbar__filters {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .printer-batch-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .printer-network-status {
+    gap: 0.5rem 1rem;
   }
 }
 </style>
