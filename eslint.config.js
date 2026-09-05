@@ -21,6 +21,16 @@ export default defineConfig([
     },
   },
 
+  {
+    name: 'playwright/node-files',
+    files: ['playwright.config.js', 'tests/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
 
   {
