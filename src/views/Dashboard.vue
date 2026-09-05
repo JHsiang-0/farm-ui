@@ -3,812 +3,517 @@
     <header class="dashboard-heading">
       <div>
         <h1 class="app-route-title">概览仪表盘</h1>
+        <p class="dashboard-heading__description">基于打印机 REST 快照与实时状态的生产概览</p>
       </div>
-      <div class="dashboard-heading__actions">
-        <t-button :icon="renderIcon(RefreshIcon)" :loading="loading" @click="fetchOverview" size="medium">
-          刷新
-        </t-button>
+      <t-space class="dashboard-heading__actions">
+        <t-button :loading="loading" :icon="renderIcon(RefreshIcon)" @click="fetchOverview">刷新数据</t-button>
         <t-button theme="primary" @click="goTo('/printers')">
           <template #icon><PrintIcon /></template>
           设备管理
         </t-button>
-      </div>
+      </t-space>
     </header>
 
-    <AsyncState v-if="loading" :loading="true" />
-    <AsyncState v-else-if="loadError" :error="loadError" @retry="fetchOverview" />
+    <AsyncState
+      v-if="!hasLoadedOnce"
+      :loading="loading"
+      :error="loadError"
+      :empty="!loading && !loadError"
+      empty-description="暂无可用概览数据"
+      @retry="fetchOverview"
+    />
 
-    <section class="stat-grid" aria-label="设备和任务统计">
-      <t-card
-        v-for="stat in statCards"
-        :key="stat.key"
-        bordered
-        class="stat-card"
-        :class="[`stat-card--${stat.tone}`, { 'stat-card--interactive': stat.to }]"
-        :role="stat.to ? 'button' : undefined"
-        :tabindex="stat.to ? 0 : undefined"
-        :aria-label="stat.to ? `查看${stat.label}` : undefined"
-        @click="stat.to && goTo(stat.to)"
-        @keydown.enter.prevent="stat.to && goTo(stat.to)"
-        @keydown.space.prevent="stat.to && goTo(stat.to)"
-      >
-        <div class="stat-card__topline">
-          <span class="stat-card__label">{{ stat.label }}</span>
-          <span class="stat-card__icon"><component :is="stat.icon" :size="22" /></span>
-        </div>
-        <div class="stat-card__value">{{ stat.value }}</div>
-        <div class="stat-card__footer">
-          <span>{{ stat.description }}</span>
-          <ChevronRightIcon :size="16" />
-        </div>
-      </t-card>
-    </section>
-
-    <section class="dashboard-grid">
-      <t-card bordered class="dashboard-card trend-card">
-        <template #header>
-          <div class="card-heading">
-            <div>
-              <h2>打印任务趋势</h2>
-              <p>最近 7 天创建的打印任务数量</p>
-            </div>
-            <t-tag theme="primary" variant="light">任务统计</t-tag>
-          </div>
+    <template v-else>
+      <t-alert v-if="loadError" class="dashboard-alert" theme="warning" :close-btn="false">
+        <template #default>{{ loadError }}</template>
+        <template #operation>
+          <t-button size="small" variant="outline" :loading="loading" @click="fetchOverview">重试</t-button>
         </template>
+      </t-alert>
 
-        <div class="trend-chart">
-          <svg viewBox="0 0 640 230" role="img" aria-label="打印任务趋势图">
-            <line
-              v-for="line in chartGridLines"
-              :key="line.y"
-              x1="24"
-              x2="616"
-              :y1="line.y"
-              :y2="line.y"
-              class="chart-grid-line"
-            />
-            <polygon :points="chartAreaPoints" class="chart-area" />
-            <polyline :points="chartPoints" class="chart-line" />
-            <circle
-              v-for="point in chartPointList"
-              :key="point.label"
-              :cx="point.x"
-              :cy="point.y"
-              r="4"
-              class="chart-point"
-            />
-          </svg>
-          <div class="chart-labels">
-            <span v-for="item in trendData" :key="item.label">{{ item.label }}</span>
-          </div>
-        </div>
-      </t-card>
+      <section class="dashboard-meta" aria-label="实时数据状态">
+        <t-space size="small">
+          <span class="dashboard-meta__label">实时连接</span>
+          <t-tag :theme="connectionTheme" variant="light">{{ connectionLabel }}</t-tag>
+        </t-space>
+        <span>最后更新：{{ lastUpdateLabel }}</span>
+      </section>
 
-      <t-card bordered class="dashboard-card status-card">
-        <template #header>
-          <div class="card-heading">
-            <div>
-              <h2>设备状态</h2>
-              <p>当前打印机运行状态分布</p>
-            </div>
-          </div>
-        </template>
+      <section class="stat-grid" aria-label="设备和任务统计">
+        <t-card
+          v-for="stat in statCards"
+          :key="stat.key"
+          bordered
+          hover-shadow
+          class="stat-card"
+          :class="{ 'stat-card--interactive': stat.to }"
+          :role="stat.to ? 'button' : undefined"
+          :tabindex="stat.to ? 0 : undefined"
+          :aria-label="stat.to ? `查看${stat.title}` : undefined"
+          @click="stat.to && goTo(stat.to)"
+          @keydown.enter.prevent="stat.to && goTo(stat.to)"
+          @keydown.space.prevent="stat.to && goTo(stat.to)"
+        >
+          <t-statistic :title="stat.title" :value="stat.value" :loading="stat.loading">
+            <template #prefix>
+              <span class="stat-card__icon"><component :is="stat.icon" :size="20" /></span>
+            </template>
+            <template #extra>{{ stat.description }}</template>
+          </t-statistic>
+        </t-card>
+      </section>
 
-        <div class="status-overview">
-          <div class="status-donut" :style="donutStyle">
-            <div class="status-donut__content">
-              <strong>{{ totalPrinters }}</strong>
-              <span>台设备</span>
-            </div>
-          </div>
-          <div class="status-legend">
-            <div v-for="item in statusSegments" :key="item.status" class="status-legend__item">
-              <span class="status-legend__name">
-                <i :style="{ backgroundColor: item.color }" />
-                {{ item.label }}
-              </span>
-              <strong>{{ item.count }}</strong>
-            </div>
-          </div>
-        </div>
-      </t-card>
-    </section>
-
-    <section class="bottom-grid">
-      <t-card bordered class="dashboard-card recent-card">
-        <template #header>
-          <div class="card-heading">
-            <div>
-              <h2>最近打印任务</h2>
-              <p>查看最新任务和当前处理状态</p>
-            </div>
-            <t-button variant="text" @click="goTo('/tasks/history')">查看全部</t-button>
-          </div>
-        </template>
-
-        <div v-if="recentJobs.length" class="job-list">
-          <div v-for="job in recentJobs" :key="job.id" class="job-row">
-            <div class="job-row__main">
-              <span class="job-row__icon"><FileIcon :size="18" /></span>
+      <section class="dashboard-grid">
+        <t-card bordered class="dashboard-card trend-card">
+          <template #header>
+            <div class="card-heading">
               <div>
-                <strong>{{ job.fileName || `任务 #${job.id}` }}</strong>
-                <span>{{ formatJobTime(job.createdAt) }}</span>
+                <h2>近 7 日任务趋势</h2>
+                <p>按真实任务的创建或完成时间统计</p>
+              </div>
+              <t-tag theme="primary" variant="light">任务趋势</t-tag>
+            </div>
+          </template>
+          <div v-if="trendData.length" class="trend-chart">
+            <svg viewBox="0 0 640 230" role="img" aria-label="近七日打印任务趋势图">
+              <line
+                v-for="line in chartGridLines"
+                :key="line"
+                x1="24"
+                x2="616"
+                :y1="line"
+                :y2="line"
+                class="chart-grid-line"
+              />
+              <polygon :points="chartAreaPoints" class="chart-area" />
+              <polyline :points="chartPoints" class="chart-line" />
+              <circle
+                v-for="point in chartPointList"
+                :key="point.label"
+                :cx="point.x"
+                :cy="point.y"
+                r="4"
+                class="chart-point"
+              />
+            </svg>
+            <div class="chart-labels">
+              <span v-for="item in trendData" :key="item.key">{{ item.label }}</span>
+            </div>
+          </div>
+          <t-empty v-else description="近 7 日暂无任务记录" />
+        </t-card>
+
+        <t-card bordered class="dashboard-card status-card">
+          <template #header>
+            <div class="card-heading">
+              <div>
+                <h2>设备状态分布</h2>
+                <p>实时状态优先，断开时回退到 REST 快照</p>
               </div>
             </div>
-            <t-tag :theme="getJobStatusType(job.status)" variant="light" size="small">
-              {{ getJobStatusLabel(job.status) }}
-            </t-tag>
-          </div>
-        </div>
-        <t-empty v-else description="暂无打印任务" />
-      </t-card>
-
-      <t-card bordered class="dashboard-card alert-card">
-        <template #header>
-          <div class="card-heading">
-            <div>
-              <h2>设备提醒</h2>
-              <p>需要关注的设备状态</p>
+          </template>
+          <div v-if="totalPrinters" class="status-list">
+            <div v-for="item in statusSegments" :key="item.key" class="status-list__item">
+              <div class="status-list__heading">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.count }}</strong>
+              </div>
+              <t-progress
+                :percentage="item.percent"
+                :status="item.progressStatus"
+                :show-info="false"
+                size="small"
+              />
             </div>
-            <t-button variant="text" @click="goTo('/printers')">设备列表</t-button>
           </div>
-        </template>
+          <t-empty v-else description="暂无打印机设备" />
+        </t-card>
+      </section>
 
-        <div v-if="attentionPrinters.length" class="alert-list">
-          <button
-            v-for="printer in attentionPrinters"
-            :key="printer.id"
-            type="button"
-            class="alert-row"
-            @click="goTo('/printers')"
-          >
-            <span class="alert-row__icon"><ErrorCircleIcon :size="18" /></span>
-            <span class="alert-row__content">
-              <strong>{{ printer.name || `打印机 #${printer.id}` }}</strong>
-              <span>{{ getPrinterStatusLabel(printer.status) }}</span>
-            </span>
-            <ChevronRightIcon :size="16" />
-          </button>
-        </div>
-        <t-empty v-else description="设备运行正常" />
-      </t-card>
-    </section>
+      <section class="dashboard-grid dashboard-grid--three">
+        <t-card bordered class="dashboard-card activity-card">
+          <template #header>
+            <div class="card-heading">
+              <div>
+                <h2>活动任务进度</h2>
+                <p>来自任务 Store 的 REST/WS 合并状态</p>
+              </div>
+              <t-tag theme="primary" variant="light">{{ activeJobs.length }} 项</t-tag>
+            </div>
+          </template>
+          <div v-if="activeJobs.length" class="activity-list">
+            <div v-for="job in activeJobs.slice(0, 5)" :key="String(job.id)" class="activity-row">
+              <div class="activity-row__heading">
+                <span class="activity-row__name">{{ job.fileName || `任务 #${job.id}` }}</span>
+                <t-tag :theme="jobStatus(job.status).type" variant="light" size="small">
+                  {{ jobStatus(job.status).label }}
+                </t-tag>
+              </div>
+              <div class="activity-row__meta">
+                <span>打印机：{{ job.printerId || '未分配' }}</span>
+                <span v-if="hasProgress(job)">{{ progressValue(job) }}%</span>
+                <span v-else>进度未上报</span>
+              </div>
+              <t-progress
+                v-if="hasProgress(job)"
+                :percentage="progressValue(job)"
+                :status="job.status === 'RECONCILING' ? 'warning' : 'active'"
+                :show-info="false"
+                size="small"
+              />
+            </div>
+          </div>
+          <t-empty v-else description="当前没有活动任务" />
+        </t-card>
+
+        <t-card bordered class="dashboard-card recent-card">
+          <template #header>
+            <div class="card-heading">
+              <div>
+                <h2>最近任务</h2>
+                <p>来自任务分页接口的最新记录</p>
+              </div>
+              <t-button variant="text" @click="goTo('/tasks/history')">查看全部</t-button>
+            </div>
+          </template>
+          <div v-if="recentJobs.length" class="job-list">
+            <t-button
+              v-for="job in recentJobs.slice(0, 5)"
+              :key="String(job.id)"
+              variant="text"
+              block
+              class="job-row"
+              @click="goTo(`/tasks/history?jobId=${job.id}`)"
+            >
+              <span class="job-row__main">
+                <FileIcon :size="18" />
+                <span class="job-row__content">
+                  <strong>{{ job.fileName || `任务 #${job.id}` }}</strong>
+                  <small>{{ formatJobTime(job.createdAt) }}</small>
+                </span>
+              </span>
+              <t-tag :theme="jobStatus(job.status).type" variant="light" size="small">
+                {{ jobStatus(job.status).label }}
+              </t-tag>
+            </t-button>
+          </div>
+          <t-empty v-else description="暂无打印任务" />
+        </t-card>
+
+        <t-card bordered class="dashboard-card alert-card">
+          <template #header>
+            <div class="card-heading">
+              <div>
+                <h2>异常设备</h2>
+                <p>需要关注的离线、未知或故障设备</p>
+              </div>
+              <t-button variant="text" @click="goTo('/printers')">设备列表</t-button>
+            </div>
+          </template>
+          <div v-if="attentionPrinters.length" class="alert-list">
+            <t-button
+              v-for="printer in attentionPrinters.slice(0, 5)"
+              :key="String(printer.id)"
+              variant="text"
+              block
+              class="alert-row"
+              @click="goTo('/printers')"
+            >
+              <span class="alert-row__main">
+                <ErrorCircleIcon :size="18" />
+                <span class="alert-row__content">
+                  <strong>{{ printer.name || `打印机 #${printer.id}` }}</strong>
+                  <small>{{ printerStatusLabel(printer.status) }}</small>
+                </span>
+              </span>
+              <ChevronRightIcon :size="16" />
+            </t-button>
+          </div>
+          <t-empty v-else description="暂无需要处理的设备" />
+        </t-card>
+      </section>
+
+      <section class="quick-links" aria-label="快捷入口">
+        <span class="quick-links__title">快捷入口</span>
+        <t-space>
+          <t-button variant="outline" @click="goTo('/printers')">打印机管理</t-button>
+          <t-button variant="outline" @click="goTo('/files')">文件库</t-button>
+          <t-button variant="outline" @click="goTo('/tasks/queue')">任务队列</t-button>
+          <t-button variant="outline" @click="goTo('/dashboard/fullscreen')">全屏监控</t-button>
+        </t-space>
+      </section>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import {
   ChevronRightIcon,
-  CheckCircleIcon,
   DashboardIcon,
   ErrorCircleIcon,
   FileIcon,
   PrintIcon,
-  RefreshIcon
+  RefreshIcon,
+  TaskIcon
 } from 'tdesign-icons-vue-next'
-import { getPrinterList } from '@/api/printer'
 import { getJobPage } from '@/api/job'
-import { renderIcon } from '@/utils/tdesign'
+import { getPrinterList } from '@/api/printer'
 import AsyncState from '@/components/AsyncState.vue'
-import { countBy } from '@/utils/realtimePerformance'
+import { useJobStore } from '@/stores/jobStore'
+import { useRealtimeStore } from '@/stores/printer/realtimeStore'
+import { JOB_STATUS_MAP, PRINTER_STATUS, PRINTER_STATUS_MAP } from '@/utils/constants'
+import { normalizePrinterStatus } from '@/utils/dataAdapters'
+import { buildSevenDayJobTrend } from '@/utils/dashboardMetrics'
+import { renderIcon } from '@/utils/tdesign'
 
 defineOptions({ name: 'DashboardView' })
 
 const router = useRouter()
+const jobStore = useJobStore()
+const realtimeStore = useRealtimeStore()
+const { queueJobs, activeJobs } = storeToRefs(jobStore)
+const { statusMap, wsConnectionState, isWsConnected, isRealtimeStale, isRecovering } = storeToRefs(realtimeStore)
+
 const loading = ref(false)
 const loadError = ref('')
+const hasLoadedOnce = ref(false)
 const printers = ref([])
-const jobs = ref([])
+const recentJobs = ref([])
+const failedJobTotal = ref(null)
+const trendJobs = ref([])
+const overviewReferenceTime = ref(null)
+const lastUpdateAt = ref(null)
 
-const statusConfig = [
-  { status: 'PRINTING', label: '打印中', color: '#0052d9' },
-  { status: 'IDLE', label: '空闲', color: '#2ba471' },
-  { status: 'PAUSED', label: '暂停', color: '#e37318' },
-  { status: 'ERROR', label: '故障', color: '#d54941' },
-  { status: 'OFFLINE', label: '离线', color: '#8f959e' }
+const statusSegmentsConfig = [
+  { key: PRINTER_STATUS.PRINTING, label: '打印中', progressStatus: 'active' },
+  { key: PRINTER_STATUS.PREPARING, label: '准备中', progressStatus: 'warning' },
+  { key: PRINTER_STATUS.PAUSED, label: '已暂停', progressStatus: 'warning' },
+  { key: PRINTER_STATUS.IDLE, label: '空闲', progressStatus: 'success' },
+  { key: PRINTER_STATUS.ERROR, label: '故障', progressStatus: 'error' },
+  { key: PRINTER_STATUS.OFFLINE, label: '离线', progressStatus: 'active' },
+  { key: PRINTER_STATUS.UNKNOWN, label: '未知', progressStatus: 'active' }
 ]
 
-const printerStatusCounts = computed(() => countBy(printers.value, item => item.status))
-const totalPrinters = computed(() => printers.value.length)
-const printingPrinters = computed(() => printerStatusCounts.value.PRINTING || 0)
-const idlePrinters = computed(() => printerStatusCounts.value.IDLE || 0)
-const onlinePrinters = computed(() => totalPrinters.value - (printerStatusCounts.value.OFFLINE || 0))
-const attentionStatuses = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
-const isAttentionPrinter = printer => attentionStatuses.includes(String(printer.status || '').toUpperCase())
-const attentionPrinterCount = computed(() => printers.value.filter(isAttentionPrinter).length)
+const effectivePrinters = computed(() => printers.value.map(printer => {
+  const realtime = statusMap.value.get(String(printer.id))
+  const status = normalizePrinterStatus(realtime?.unifiedState || realtime?.state || printer.status)
+  return { ...printer, status, realtime }
+}))
+
+const printerStatusCounts = computed(() => effectivePrinters.value.reduce((counts, printer) => {
+  counts[printer.status] = (counts[printer.status] || 0) + 1
+  return counts
+}, {}))
+
+const totalPrinters = computed(() => effectivePrinters.value.length)
+const busyPrinters = computed(() => [PRINTER_STATUS.PREPARING, PRINTER_STATUS.PRINTING, PRINTER_STATUS.PAUSED]
+  .reduce((count, status) => count + (printerStatusCounts.value[status] || 0), 0))
+const idlePrinters = computed(() => printerStatusCounts.value[PRINTER_STATUS.IDLE] || 0)
+const offlinePrinters = computed(() => printerStatusCounts.value[PRINTER_STATUS.OFFLINE] || 0)
+const unknownPrinters = computed(() => printerStatusCounts.value[PRINTER_STATUS.UNKNOWN] || 0)
+const attentionPrinters = computed(() => effectivePrinters.value.filter(printer => [
+  PRINTER_STATUS.ERROR,
+  PRINTER_STATUS.OFFLINE,
+  PRINTER_STATUS.UNKNOWN
+].includes(printer.status)))
 
 const statCards = computed(() => [
-  {
-    key: 'printers',
-    label: '打印机总数',
-    value: totalPrinters.value,
-    description: `${onlinePrinters.value} 台设备在线`,
-    icon: DashboardIcon,
-    tone: 'primary',
-    to: '/printers'
-  },
-  {
-    key: 'printing',
-    label: '正在打印',
-    value: printingPrinters.value,
-    description: '实时打印中的设备',
-    icon: PrintIcon,
-    tone: 'blue',
-    to: { path: '/printers', query: { status: 'PRINTING' } }
-  },
-  {
-    key: 'idle',
-    label: '空闲打印机',
-    value: idlePrinters.value,
-    description: '当前可分配任务的设备',
-    icon: CheckCircleIcon,
-    tone: 'orange',
-    to: { path: '/printers', query: { status: 'IDLE' } }
-  },
-  {
-    key: 'errors',
-    label: '异常设备',
-    value: attentionPrinterCount.value,
-    description: attentionPrinterCount.value ? '请及时处理异常' : '当前运行正常',
-    icon: ErrorCircleIcon,
-    tone: attentionPrinterCount.value ? 'red' : 'green',
-    to: { path: '/printers', query: { status: 'ATTENTION' } }
-  }
+  { key: 'total', title: '打印机总数', value: totalPrinters.value, description: '已纳入当前看板的设备', icon: DashboardIcon, to: '/printers' },
+  { key: 'busy', title: '忙碌设备', value: busyPrinters.value, description: '准备中、打印中或暂停', icon: PrintIcon, to: '/printers' },
+  { key: 'idle', title: '空闲设备', value: idlePrinters.value, description: '当前处于 IDLE 状态', icon: TaskIcon, to: { path: '/printers', query: { status: 'IDLE' } } },
+  { key: 'offline', title: '离线设备', value: offlinePrinters.value, description: 'REST/实时状态为 OFFLINE', icon: ErrorCircleIcon, to: { path: '/printers', query: { status: 'OFFLINE' } } },
+  { key: 'unknown', title: '未知设备', value: unknownPrinters.value, description: '尚未取得可靠状态', icon: ErrorCircleIcon, to: { path: '/printers', query: { status: 'UNKNOWN' } } },
+  { key: 'queued', title: '排队任务', value: queueJobs.value.length, description: '来自 QUEUED 队列接口', icon: TaskIcon, to: '/tasks/queue' },
+  { key: 'active', title: '活动任务', value: activeJobs.value.length, description: 'ASSIGNED 至 RECONCILING', icon: PrintIcon, to: '/tasks/queue' },
+  { key: 'failed', title: '失败任务', value: failedJobTotal.value === null ? '—' : failedJobTotal.value, description: '来自 FAILED 分页接口', icon: ErrorCircleIcon, to: '/tasks/history' }
 ])
 
 const statusSegments = computed(() => {
   const total = totalPrinters.value
-  return statusConfig.map(item => ({
-    ...item,
-    count: printerStatusCounts.value[item.status] || 0,
-    percent: total ? ((printerStatusCounts.value[item.status] || 0) / total) * 100 : 0
-  }))
-})
-
-const donutStyle = computed(() => {
-  if (!totalPrinters.value) return { background: '#e7e7e7' }
-
-  let start = 0
-  const segments = statusSegments.value
-    .filter(item => item.percent > 0)
-    .map(item => {
-      const end = start + item.percent
-      const segment = `${item.color} ${start}% ${end}%`
-      start = end
-      return segment
-    })
-
-  return { background: `conic-gradient(${segments.join(', ')})` }
-})
-
-const trendData = computed(() => {
-  const counts = new Map()
-  jobs.value.forEach(job => {
-    const date = job.createdAt?.slice(0, 10)
-    if (date) counts.set(date, (counts.get(date) || 0) + 1)
-  })
-
-  const dates = [...counts.keys()].sort()
-  const endDate = dates.length ? new Date(`${dates[dates.length - 1]}T00:00:00`) : new Date()
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(endDate)
-    date.setDate(endDate.getDate() - 6 + index)
-    const isoDate = date.toISOString().slice(0, 10)
-    return {
-      label: isoDate.slice(5),
-      value: counts.get(isoDate) || 0
-    }
+  return statusSegmentsConfig.map(item => {
+    const count = printerStatusCounts.value[item.key] || 0
+    return { ...item, count, percent: total ? Math.round((count / total) * 100) : 0 }
   })
 })
 
+const trendData = computed(() => trendJobs.value.length
+  ? buildSevenDayJobTrend(trendJobs.value, overviewReferenceTime.value || new Date())
+  : [])
 const chartPointList = computed(() => {
   const width = 640
   const height = 230
   const paddingX = 24
   const paddingY = 24
-  const max = Math.max(...trendData.value.map(item => item.value), 1)
-  const step = (width - paddingX * 2) / (trendData.value.length - 1)
-
+  const max = Math.max(...trendData.value.map(item => item.count), 1)
+  const step = (width - paddingX * 2) / Math.max(trendData.value.length - 1, 1)
   return trendData.value.map((item, index) => ({
     label: item.label,
     x: paddingX + step * index,
-    y: height - paddingY - (item.value / max) * (height - paddingY * 2)
+    y: height - paddingY - (item.count / max) * (height - paddingY * 2)
   }))
 })
-
 const chartPoints = computed(() => chartPointList.value.map(point => `${point.x},${point.y}`).join(' '))
-const chartAreaPoints = computed(() => {
-  const points = chartPointList.value
-  if (!points.length) return ''
-  return `${points[0].x},206 ${chartPoints.value} ${points[points.length - 1].x},206`
+const chartAreaPoints = computed(() => chartPointList.value.length
+  ? `${chartPointList.value[0].x},206 ${chartPoints.value} ${chartPointList.value.at(-1).x},206`
+  : '')
+const chartGridLines = [24, 70, 116, 162, 206]
+
+const connectionLabel = computed(() => {
+  if (isRecovering.value) return '恢复中'
+  if (isRealtimeStale.value) return '数据陈旧'
+  if (isWsConnected.value) return '已连接'
+  return wsConnectionState.value === 'CONNECTING' ? '连接中' : '未连接'
 })
-const chartGridLines = [24, 70, 116, 162, 206].map(y => ({ y }))
+const connectionTheme = computed(() => {
+  if (isRecovering.value || isRealtimeStale.value) return 'warning'
+  return isWsConnected.value ? 'success' : 'default'
+})
+const lastUpdateLabel = computed(() => lastUpdateAt.value
+  ? new Date(lastUpdateAt.value).toLocaleString('zh-CN', { hour12: false })
+  : '暂无成功更新')
 
-const recentJobs = computed(() => [...jobs.value]
-  .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
-  .slice(0, 5))
+function markUpdated() {
+  lastUpdateAt.value = Date.now()
+}
 
-const attentionPrinters = computed(() => printers.value
-  .filter(isAttentionPrinter)
-  .slice(0, 5))
-
-const fetchOverview = async () => {
+async function fetchOverview() {
   loading.value = true
   loadError.value = ''
-  const [printerResult, jobResult] = await Promise.allSettled([
+  const rangeEnd = new Date()
+  const rangeStart = new Date(rangeEnd)
+  rangeStart.setDate(rangeStart.getDate() - 6)
+  const range = { startTime: rangeStart.toISOString(), endTime: rangeEnd.toISOString() }
+  const results = await Promise.allSettled([
     getPrinterList({ pageNum: 1, pageSize: 100 }),
-    getJobPage({ pageNum: 1, pageSize: 100 })
+    jobStore.refresh(),
+    getJobPage({ pageNum: 1, pageSize: 100 }),
+    getJobPage({ pageNum: 1, pageSize: 100, status: 'FAILED' }),
+    getJobPage({ pageNum: 1, pageSize: 100, status: 'COMPLETED', ...range }),
+    getJobPage({ pageNum: 1, pageSize: 100, status: 'FAILED', ...range }),
+    getJobPage({ pageNum: 1, pageSize: 100, status: 'CANCELLED', ...range })
   ])
 
-  if (printerResult.status === 'fulfilled') {
-    printers.value = printerResult.value.data?.records || []
+  const [printerResult, , recentResult, failedResult, completedResult, failedTrendResult, cancelledResult] = results
+  if (printerResult.status === 'fulfilled') printers.value = printerResult.value.data?.records || []
+  if (recentResult.status === 'fulfilled') recentJobs.value = recentResult.value.data?.records || []
+  if (failedResult.status === 'fulfilled') {
+    const data = failedResult.value.data || {}
+    failedJobTotal.value = Number.isFinite(Number(data.total)) ? Number(data.total) : (data.records || []).length
   }
-  if (jobResult.status === 'fulfilled') {
-    jobs.value = jobResult.value.data?.records || []
+  const trendResults = [completedResult, failedTrendResult, cancelledResult]
+    .filter(result => result.status === 'fulfilled')
+    .flatMap(result => result.value.data?.records || [])
+  if (completedResult.status === 'fulfilled' || failedTrendResult.status === 'fulfilled' || cancelledResult.status === 'fulfilled') {
+    trendJobs.value = trendResults
+    overviewReferenceTime.value = rangeEnd
   }
-  const failedCount = [printerResult, jobResult].filter(result => result.status === 'rejected').length
-  if (failedCount) loadError.value = failedCount === 2 ? '概览数据加载失败，请重试' : '部分概览数据加载失败，请重试'
+
+  const failedCount = results.filter(result => result.status === 'rejected').length
+  if (failedCount === results.length) loadError.value = '概览数据加载失败，请重试'
+  else if (failedCount) loadError.value = '部分概览数据加载失败，已展示可用数据'
+  if (results.some(result => result.status === 'fulfilled')) markUpdated()
+  hasLoadedOnce.value = true
   loading.value = false
 }
 
-const goTo = path => {
+function reconnectRealtime() {
+  if (!isWsConnected.value) realtimeStore.connectWs()
+}
+
+function goTo(path) {
   router.push(path)
 }
 
-const getJobStatusLabel = status => ({
-  QUEUED: '排队中',
-  ASSIGNED: '已分配',
-  READY: '待启动',
-  PRINTING: '打印中',
-  PAUSED: '已暂停',
-  COMPLETED: '已完成',
-  FAILED: '失败',
-  CANCELLED: '已取消'
-}[status] || status || '未知')
+function jobStatus(status) {
+  return JOB_STATUS_MAP[status] || { label: status || '未知', type: 'default' }
+}
 
-const getJobStatusType = status => ({
-  QUEUED: 'primary',
-  ASSIGNED: 'warning',
-  READY: 'warning',
-  PRINTING: 'success',
-  PAUSED: 'warning',
-  FAILED: 'danger',
-  CANCELLED: 'default',
-  COMPLETED: 'default'
-}[status] || 'default')
+function hasProgress(job) {
+  const value = Number(job?.progress)
+  return Number.isFinite(value) && value >= 0 && value <= 100
+}
 
-const getPrinterStatusLabel = status => ({
-  ERROR: '设备报告异常，请检查打印机',
-  OFFLINE: '设备当前处于离线状态',
-  PAUSED: '设备已暂停打印'
-}[status] || '设备需要关注')
+function progressValue(job) {
+  return Math.min(100, Math.max(0, Number(job.progress)))
+}
 
-const formatJobTime = value => value ? String(value).replace('T', ' ').slice(0, 16) : '时间未知'
+function printerStatusLabel(status) {
+  return PRINTER_STATUS_MAP[status]?.label || '未知'
+}
 
-onMounted(fetchOverview)
+function formatJobTime(value) {
+  return value ? String(value).replace('T', ' ').slice(0, 16) : '时间未知'
+}
+
+watch(statusMap, value => {
+  if (value.size) markUpdated()
+})
+
+onMounted(() => {
+  fetchOverview()
+  reconnectRealtime()
+})
+
+onUnmounted(() => {
+  realtimeStore.disconnectWs()
+})
 </script>
 
 <style scoped>
-.dashboard-page {
-  min-width: 0;
-  padding-bottom: 1.5rem;
-}
-
-.dashboard-heading,
-.card-heading,
-.stat-card__topline,
-.stat-card__footer,
-.job-row,
-.job-row__main,
-.alert-row {
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-heading,
-.card-heading,
-.stat-card__topline,
-.stat-card__footer {
-  justify-content: space-between;
-}
-
-.dashboard-heading {
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.dashboard-heading h1,
-.card-heading h2,
-.card-heading p,
-.dashboard-heading p {
-  margin: 0;
-}
-
-.dashboard-heading h1 {
-  color: var(--app-text-primary);
-}
-
-.card-heading p {
-  margin-top: 0.25rem !important;
-  color: var(--app-text-secondary);
-  font-size: 0.8125rem;
-}
-
-.dashboard-heading__actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.stat-card,
-.dashboard-card {
-  background: var(--app-surface);
-  border-color: var(--app-border);
-  border-radius: 8px;
-}
-
-.stat-card {
-  min-width: 0;
-}
-
-.stat-card--interactive {
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.stat-card--interactive:hover {
-  box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
-  transform: translateY(-2px);
-}
-
-.stat-card--interactive:focus-visible {
-  outline: 2px solid var(--app-primary);
-  outline-offset: 2px;
-}
-
-.stat-card :deep(.t-card__body) {
-  padding: 1.25rem;
-}
-
-.stat-card__label {
-  color: var(--app-text-secondary);
-  font-size: 0.8125rem;
-}
-
-.stat-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  color: var(--app-primary);
-  background: #e8f3ff;
-  border-radius: 50%;
-}
-
-.stat-card__value {
-  margin: 0.75rem 0 0.625rem;
-  color: var(--app-text-primary);
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.stat-card__footer {
-  color: var(--app-text-secondary);
-  font-size: 0.75rem;
-}
-
-.stat-card--primary {
-  color: #fff;
-  background: var(--app-primary);
-  border-color: var(--app-primary);
-}
-
-.stat-card--primary .stat-card__label,
-.stat-card--primary .stat-card__value,
-.stat-card--primary .stat-card__footer {
-  color: #fff;
-}
-
-.stat-card--primary .stat-card__icon {
-  color: #fff;
-  background: rgb(255 255 255 / 18%);
-}
-
-.stat-card--blue .stat-card__icon {
-  color: #0052d9;
-}
-
-.stat-card--orange .stat-card__icon {
-  color: #e37318;
-  background: #fff1e9;
-}
-
-.stat-card--green .stat-card__icon {
-  color: #2ba471;
-  background: #e8f8f2;
-}
-
-.stat-card--red .stat-card__icon {
-  color: #d54941;
-  background: #fff0ed;
-}
-
-.dashboard-grid,
-.bottom-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.bottom-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 0;
-}
-
-.dashboard-card :deep(.t-card__header) {
-  padding: 1.25rem 1.5rem 0;
-  border-bottom: 0;
-}
-
-.dashboard-card :deep(.t-card__body) {
-  padding: 1.25rem 1.5rem 1.5rem;
-}
-
-.card-heading h2 {
-  color: var(--app-text-primary);
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.trend-chart {
-  width: 100%;
-  padding-top: 0.5rem;
-}
-
-.trend-chart svg {
-  display: block;
-  width: 100%;
-  height: 230px;
-  overflow: visible;
-}
-
-.chart-grid-line {
-  stroke: #e7e7e7;
-  stroke-width: 1;
-}
-
-.chart-area {
-  fill: rgb(0 82 217 / 10%);
-}
-
-.chart-line {
-  fill: none;
-  stroke: #0052d9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.chart-point {
-  fill: #fff;
-  stroke: #0052d9;
-  stroke-width: 3;
-}
-
-.chart-labels {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 0.5rem;
-  color: var(--app-text-placeholder);
-  font-size: 0.6875rem;
-}
-
-.status-overview {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 1.5rem;
-  min-height: 250px;
-}
-
-.status-donut {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 176px;
-  height: 176px;
-  padding: 18px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-donut::before {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--app-surface);
-  border-radius: 50%;
-  content: '';
-}
-
-.status-donut__content {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: var(--app-text-secondary);
-}
-
-.status-donut__content strong {
-  color: var(--app-text-primary);
-  font-size: 1.75rem;
-  line-height: 1.2;
-}
-
-.status-donut__content span {
-  font-size: 0.75rem;
-}
-
-.status-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-  min-width: 110px;
-}
-
-.status-legend__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--app-text-secondary);
-  font-size: 0.8125rem;
-}
-
-.status-legend__name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.status-legend__name i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.status-legend__item strong {
-  color: var(--app-text-primary);
-}
-
-.job-list,
-.alert-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.job-row,
-.alert-row {
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 58px;
-  padding: 0.625rem 0;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.job-row:last-child,
-.alert-row:last-child {
-  border-bottom: 0;
-}
-
-.job-row__main {
-  min-width: 0;
-  gap: 0.75rem;
-}
-
-.job-row__icon,
-.alert-row__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  color: var(--app-primary);
-  background: #e8f3ff;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.job-row__main > div,
-.alert-row__content {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 0.25rem;
-}
-
-.job-row strong,
-.alert-row strong {
-  overflow: hidden;
-  color: var(--app-text-primary);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.job-row span,
-.alert-row span {
-  color: var(--app-text-secondary);
-  font-size: 0.75rem;
-}
-
-.alert-row {
-  width: 100%;
-  color: var(--app-text-secondary);
-  text-align: left;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.alert-row:hover {
-  background: var(--app-surface-muted);
-}
-
-.alert-row__icon {
-  color: var(--app-danger);
-  background: #fff0ed;
-}
-
-.alert-row__content {
-  flex: 1;
-}
-
-@media (max-width: 1100px) {
-  .stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-grid,
-  .bottom-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .dashboard-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .dashboard-heading__actions {
-    width: 100%;
-  }
-
-  .dashboard-heading__actions .t-button {
-    flex: 1;
-  }
-
-  .stat-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .status-overview {
-    flex-direction: column;
-    padding: 0.5rem 0;
-  }
-}
+.dashboard-page { min-width: 0; padding-bottom: var(--app-spacing-6); }
+.dashboard-heading, .dashboard-meta, .card-heading, .status-list__heading, .activity-row__heading, .activity-row__meta, .job-row, .alert-row, .job-row__main, .alert-row__main { display: flex; align-items: center; }
+.dashboard-heading, .dashboard-meta, .card-heading, .status-list__heading, .activity-row__heading, .activity-row__meta, .job-row, .alert-row { justify-content: space-between; }
+.dashboard-heading { gap: var(--app-spacing-4); margin-bottom: var(--app-spacing-4); }
+.dashboard-heading h1, .dashboard-heading p, .card-heading h2, .card-heading p { margin: 0; }
+.dashboard-heading h1, .card-heading h2 { color: var(--app-text-primary); }
+.dashboard-heading__description, .card-heading p { margin-top: var(--app-spacing-1) !important; color: var(--app-text-secondary); font-size: var(--app-font-size-caption); }
+.dashboard-heading__actions { flex-shrink: 0; }
+.dashboard-alert { margin-bottom: var(--app-spacing-4); }
+.dashboard-meta { margin-bottom: var(--app-spacing-4); color: var(--app-text-secondary); font-size: var(--app-font-size-caption); }
+.dashboard-meta__label { color: var(--app-text-secondary); }
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--app-spacing-4); margin-bottom: var(--app-spacing-4); }
+.stat-card, .dashboard-card { min-width: 0; background: var(--app-surface); border-color: var(--app-border); }
+.stat-card--interactive { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.stat-card--interactive:hover { transform: translateY(-2px); }
+.stat-card--interactive:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
+.stat-card :deep(.t-card__body) { padding: var(--app-spacing-4); }
+.stat-card :deep(.t-statistic__title) { color: var(--app-text-secondary); }
+.stat-card :deep(.t-statistic__content) { color: var(--app-text-primary); }
+.stat-card :deep(.t-statistic__extra) { color: var(--app-text-secondary); font-size: var(--app-font-size-caption); }
+.stat-card__icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: var(--app-primary); background: var(--app-primary-light); border-radius: var(--app-radius-round); }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: var(--app-spacing-4); margin-bottom: var(--app-spacing-4); }
+.dashboard-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-card :deep(.t-card__header) { padding: var(--app-spacing-4) var(--app-spacing-6) 0; border-bottom: 0; }
+.dashboard-card :deep(.t-card__body) { padding: var(--app-spacing-4) var(--app-spacing-6) var(--app-spacing-6); }
+.card-heading h2 { font-size: var(--app-font-size-subtitle); font-weight: 600; }
+.trend-chart { width: 100%; padding-top: var(--app-spacing-2); }
+.trend-chart svg { display: block; width: 100%; height: 230px; overflow: visible; }
+.chart-grid-line { stroke: var(--app-border); stroke-width: 1; }
+.chart-area { fill: var(--app-primary-light); }
+.chart-line { fill: none; stroke: var(--app-primary); stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
+.chart-point { fill: var(--app-surface); stroke: var(--app-primary); stroke-width: 3; }
+.chart-labels { display: flex; justify-content: space-between; padding: 0 var(--app-spacing-2); color: var(--app-text-placeholder); font-size: 0.6875rem; }
+.status-list, .activity-list, .job-list, .alert-list { display: flex; flex-direction: column; gap: var(--app-spacing-3); }
+.status-list__item { display: grid; gap: var(--app-spacing-1); }
+.status-list__heading, .activity-row__meta { color: var(--app-text-secondary); font-size: var(--app-font-size-caption); }
+.status-list__heading strong { color: var(--app-text-primary); }
+.activity-row, .job-row, .alert-row { min-width: 0; padding: var(--app-spacing-2) 0; border-bottom: 1px solid var(--app-border); }
+.activity-row:last-child, .job-row:last-child, .alert-row:last-child { border-bottom: 0; }
+.activity-row__heading { gap: var(--app-spacing-2); }
+.activity-row__name, .job-row strong, .alert-row strong { overflow: hidden; color: var(--app-text-primary); font-size: var(--app-font-size-body); text-overflow: ellipsis; white-space: nowrap; }
+.activity-row__meta { margin: var(--app-spacing-2) 0 var(--app-spacing-1); }
+.job-row, .alert-row { height: auto; justify-content: space-between; color: var(--app-text-secondary); text-align: left; }
+.job-row__main, .alert-row__main { min-width: 0; gap: var(--app-spacing-3); }
+.job-row__main > svg, .alert-row__main > svg { flex-shrink: 0; color: var(--app-primary); }
+.alert-row__main > svg { color: var(--app-danger); }
+.job-row__content, .alert-row__content { display: flex; flex-direction: column; min-width: 0; gap: var(--app-spacing-1); }
+.job-row small, .alert-row small { color: var(--app-text-secondary); font-size: var(--app-font-size-caption); }
+.quick-links { display: flex; align-items: center; justify-content: space-between; gap: var(--app-spacing-4); padding: var(--app-spacing-4); background: var(--app-surface); border: 1px solid var(--app-border); border-radius: var(--app-radius-medium); }
+.quick-links__title { color: var(--app-text-primary); font-weight: 600; }
+@media (max-width: 1200px) { .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-grid--three { grid-template-columns: 1fr 1fr; } .alert-card { grid-column: span 2; } }
+@media (max-width: 800px) { .dashboard-heading, .dashboard-meta, .quick-links { align-items: flex-start; flex-direction: column; } .dashboard-heading__actions, .quick-links .t-space { width: 100%; } .dashboard-heading__actions .t-button { flex: 1; } .dashboard-grid, .dashboard-grid--three { grid-template-columns: 1fr; } .alert-card { grid-column: auto; } }
+@media (max-width: 520px) { .stat-grid { grid-template-columns: 1fr; } .dashboard-card :deep(.t-card__header), .dashboard-card :deep(.t-card__body) { padding-left: var(--app-spacing-4); padding-right: var(--app-spacing-4); } }
 </style>

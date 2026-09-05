@@ -33,6 +33,7 @@ export function usePrinterStore() {
   const {
     rawDeviceList,
     loading,
+    error: deviceError,
     version,
     deviceById,
     totalDevices,
@@ -65,6 +66,7 @@ export function usePrinterStore() {
     // ============================================
     rawDeviceList,
     loading,
+    deviceError,
     version,
 
     // ============================================

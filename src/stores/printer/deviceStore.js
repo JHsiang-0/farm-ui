@@ -20,6 +20,9 @@ export const useDeviceStore = defineStore('device', () => {
   /** 加载状态 */
   const loading = ref(false)
 
+  /** 最近一次打印机快照请求错误，供看板原位恢复使用 */
+  const error = ref(null)
+
   /** 数据版本号 */
   const version = ref(0)
 
@@ -106,6 +109,7 @@ export const useDeviceStore = defineStore('device', () => {
    */
   async function fetchDeviceData() {
     loading.value = true
+    error.value = null
     try {
       const response = await getPrinterList({ pageSize: 100 })
       const records = response.data?.records || []
@@ -120,9 +124,10 @@ export const useDeviceStore = defineStore('device', () => {
       // 直接赋值，触发 rawDeviceList 的响应式更新，deviceMatrix computed 会自动重新计算
       rawDeviceList.value = filtered
       version.value++
-    } catch (error) {
-      console.error('[DeviceStore] 获取设备数据失败:', error)
-      throw error
+    } catch (requestError) {
+      console.error('[DeviceStore] 获取设备数据失败:', requestError)
+      error.value = requestError
+      throw requestError
     } finally {
       loading.value = false
     }
@@ -188,6 +193,7 @@ export const useDeviceStore = defineStore('device', () => {
     // State
     rawDeviceList,
     loading,
+    error,
     version,
     detailsById,
     detailLoading,
