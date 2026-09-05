@@ -170,6 +170,22 @@ export function normalizePrinter(record) {
   return normalized
 }
 
+/**
+ * 规范化打印机详情聚合响应。
+ * 后端详情契约返回 { printer, realtimeStatus, currentJob }，列表返回 PrinterVO；
+ * 页面统一接收 PrinterVO 字段并保留两个聚合字段，避免把聚合对象误当成设备。
+ */
+export function normalizePrinterDetail(data) {
+  if (!data || typeof data !== 'object') return data
+  if (!data.printer || typeof data.printer !== 'object') return normalizePrinter(data)
+
+  return {
+    ...normalizePrinter(data.printer),
+    realtimeStatus: data.realtimeStatus || null,
+    currentJob: data.currentJob || null
+  }
+}
+
 export function normalizePrintFile(record) {
   const normalized = normalizeIdFields(record, ['id', 'parentId', 'userId'])
 

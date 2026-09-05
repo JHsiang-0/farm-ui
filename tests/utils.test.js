@@ -8,6 +8,7 @@ import {
   normalizePrintFilePageParams,
   normalizePageResponse,
   normalizePrinter,
+  normalizePrinterDetail,
   normalizePrinterStatus,
   normalizePrintJob,
   normalizePrintFile
@@ -102,6 +103,19 @@ test('uses one canonical printer status set and never persists ONLINE', () => {
   assert.equal(normalizePrinterStatus('preparing'), PRINTER_STATUS.PREPARING)
   assert.equal(normalizePrinterStatus('online'), PRINTER_STATUS.UNKNOWN)
   assert.equal(normalizePrinter({ id: 1, status: 'ONLINE' }).status, PRINTER_STATUS.UNKNOWN)
+})
+
+test('flattens the formal printer detail aggregate without losing realtime and job data', () => {
+  const detail = normalizePrinterDetail({
+    printer: { id: 565, name: 'RRF-192.168.0.88', status: 'IDLE' },
+    realtimeStatus: null,
+    currentJob: null
+  })
+  assert.equal(detail.id, '565')
+  assert.equal(detail.name, 'RRF-192.168.0.88')
+  assert.equal(detail.status, PRINTER_STATUS.IDLE)
+  assert.equal(detail.realtimeStatus, null)
+  assert.equal(detail.currentJob, null)
 })
 
 test('normalizes firmware and job status aliases without changing RRF', () => {

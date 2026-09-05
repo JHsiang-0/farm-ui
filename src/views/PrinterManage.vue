@@ -20,6 +20,7 @@
       @history-query="handleHistoryQuery"
       @history-page-change="handleHistoryPageChange"
       @closed="clearPrinterDetailContext"
+      @retry="retryPrinterDetail"
     />
 
     <!-- 页面标题与操作栏 -->
@@ -49,7 +50,7 @@
       </div>
     </div>
 
-    <div class="printer-filter-bar app-page-card">
+    <div class="printer-filter-bar">
       <t-input
         v-model="keyword"
         clearable
@@ -67,7 +68,7 @@
     </div>
 
     <!-- 数据表格 -->
-    <t-card class="printer-manage-card app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+    <t-card class="printer-manage-card app-page-card">
       <div class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         <AsyncState
           v-if="loading || loadError || tableData.length === 0"
@@ -82,10 +83,10 @@
           :data="displayTableData"
           :loading="loading"
           style="width: 100%"
-          class="min-h-0 flex-1 overflow-hidden rounded-lg"
+          class="printer-table"
           :header-cell-style="{ background: 'var(--td-bg-color-secondarycontainer)' }"
           @row-click="handleRowClick"
-          row-class-name="cursor-pointer hover:bg-gray-50"
+          row-class-name="printer-table-row"
           height="100%"
         >
         <TdTableColumn prop="id" label="ID" width="80" align="center">
@@ -756,6 +757,11 @@ const loadPrinterDetail = async deviceId => {
   }
 }
 
+const retryPrinterDetail = () => {
+  const deviceId = selectedDevice.value?.id
+  if (deviceId) loadPrinterDetail(deviceId)
+}
+
 const loadPrinterAnalytics = async deviceId => {
   historyLoading.value = true
   statisticsLoading.value = true
@@ -1043,19 +1049,22 @@ const handleBatchAdd = async () => {
 .printer-filter-bar {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: var(--app-spacing-3);
   margin-bottom: var(--app-spacing-4);
   padding: var(--app-spacing-3);
   background: var(--app-surface);
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-medium);
+  border-radius: var(--app-radius);
 }
 
 .printer-filter-bar .t-input { width: min(320px, 100%); }
 .printer-filter-bar .t-select { width: 180px; }
 
 .printer-manage-card {
-  height: 100%;
+  flex: 1 1 0%;
+  height: auto;
+  min-height: 0;
 }
 
 .printer-manage-card :deep(.t-card__body) {
@@ -1063,6 +1072,7 @@ const handleBatchAdd = async () => {
   flex: 1 1 0%;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .printer-manage-card :deep(.t-card__footer) {
@@ -1073,6 +1083,28 @@ const handleBatchAdd = async () => {
 .printer-manage-card__table {
   flex: 1 1 0%;
   min-height: 0;
+  overflow: hidden;
+}
+
+.printer-table {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.printer-table :deep(.t-table) {
+  width: 100%;
+  min-width: 0;
+}
+
+.printer-table :deep(.t-table__content) {
+  min-height: 0;
+}
+
+.printer-table-row :deep(td) {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

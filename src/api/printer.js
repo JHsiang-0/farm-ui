@@ -4,6 +4,7 @@ import {
   normalizePageParams,
   normalizePageResponse,
   normalizePrinter,
+  normalizePrinterDetail,
   normalizeId,
   normalizePrinterStatus
 } from '@/utils/dataAdapters'
@@ -41,7 +42,7 @@ export function getPrinterDetail(id) {
   return request({
     url: `/api/v1/printers/${id}`,
     method: 'get'
-  }).then(normalizePrinterResponse)
+  }).then(normalizePrinterDetailResponse)
 }
 
 /**
@@ -49,6 +50,10 @@ export function getPrinterDetail(id) {
  */
 function normalizePrinterResponse(response) {
   return mapResponseData(response, normalizePrinter)
+}
+
+function normalizePrinterDetailResponse(response) {
+  return mapResponseData(response, normalizePrinterDetail)
 }
 
 const normalizeStatusHistory = record => {

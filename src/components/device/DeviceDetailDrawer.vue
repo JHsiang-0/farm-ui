@@ -17,7 +17,11 @@
             <t-loading text="正在加载打印机详情..." />
         </div>
 
-        <t-empty v-else-if="detailError" type="fail" description="打印机详情加载失败，请关闭后重试" />
+        <t-result v-else-if="detailError" theme="error" title="打印机详情加载失败" :description="detailError">
+            <template #extra>
+                <t-button theme="primary" @click="emit('retry')">重试</t-button>
+            </template>
+        </t-result>
 
         <div v-else-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
             <!-- 实时状态概览卡片 -->
@@ -524,7 +528,8 @@ const emit = defineEmits([
     'remove',
     'closed',
     'history-query',
-    'history-page-change'
+    'history-page-change',
+    'retry'
 ])
 
 const historyRangeModel = ref([])
@@ -591,7 +596,8 @@ watch(() => props.modelValue, (newVal) => {
 /** 抽屉标题 */
 const drawerTitle = computed(() => {
     if (!props.device) return '设备详细信息'
-    return `${props.device.machineNumber || props.device.name} - 详细信息`
+    const deviceName = props.device.machineNumber || props.device.name || `打印机 #${props.device.id || '-'}`
+    return `${deviceName} - 详细信息`
 })
 
 /** 当前状态 */
