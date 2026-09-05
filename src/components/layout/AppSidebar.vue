@@ -1,22 +1,26 @@
 <template>
   <t-aside
     class="app-sidebar"
-    :class="{ 'app-sidebar--mobile-hidden': props.collapsed }"
-    :width="props.collapsed ? '64px' : '232px'"
+    :class="{
+      'app-sidebar--collapsed': props.collapsed && !props.isMobile,
+      'app-sidebar--mobile-hidden': props.isMobile && !props.mobileOpen,
+      'app-sidebar--mobile-open': props.isMobile && props.mobileOpen
+    }"
+    :width="props.isMobile ? 'var(--app-sidebar-mobile-width)' : (props.collapsed ? 'var(--app-sidebar-collapsed-width)' : 'var(--app-sidebar-width)')"
   >
     <button
       type="button"
       class="app-brand"
-      aria-label="嘉东 FabMatrix"
-      :title="props.collapsed ? '嘉东 FabMatrix' : ''"
+      aria-label="FabMatrix"
+      :title="props.collapsed && !props.isMobile ? 'FabMatrix' : ''"
       @click="goDashboard"
     >
       <img src="/icon.png" alt="" aria-hidden="true" class="app-brand__logo">
-      <span v-if="!props.collapsed" class="app-brand__name">嘉东 FabMatrix</span>
+      <span v-if="!props.collapsed || props.isMobile" class="app-brand__name">FabMatrix</span>
     </button>
 
-    <t-menu :value="activePath" :collapsed="props.collapsed" theme="light" class="app-menu">
-      <t-menu-group v-for="group in visibleGroups" :key="group.key" :title="props.collapsed ? '' : group.label">
+    <t-menu :value="activePath" :collapsed="props.collapsed && !props.isMobile" theme="light" class="app-menu">
+      <t-menu-group v-for="group in visibleGroups" :key="group.key" :title="props.collapsed && !props.isMobile ? '' : group.label">
         <t-menu-item
           v-for="item in group.items"
           :key="item.key"
@@ -31,9 +35,9 @@
       </t-menu-group>
     </t-menu>
 
-    <div v-if="!props.collapsed" class="app-sidebar__footer">
-      <span>FabMatrix 3D 打印生产管理平台</span>
-      <span>v1.0.0</span>
+    <div v-if="!props.collapsed || props.isMobile" class="app-sidebar__footer">
+      <span>FabMatrix</span>
+      <span>生产管理平台</span>
     </div>
   </t-aside>
 </template>
@@ -48,6 +52,14 @@ defineOptions({ name: 'AppSidebar' })
 
 const props = defineProps({
   collapsed: {
+    type: Boolean,
+    default: false
+  },
+  isMobile: {
+    type: Boolean,
+    default: false
+  },
+  mobileOpen: {
     type: Boolean,
     default: false
   }
@@ -84,16 +96,16 @@ const handleItemClick = item => {
   background: var(--app-surface);
   border-right: 1px solid var(--app-border);
   flex-shrink: 0;
-  transition: width 0.2s ease;
+  transition: width 0.2s ease, transform 0.2s ease;
 }
 
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--app-spacing-3);
   width: 100%;
-  height: 64px;
-  padding: 0 1.25rem;
+  height: var(--app-header-height);
+  padding: 0 var(--app-spacing-5);
   color: var(--app-text-primary);
   text-align: left;
   background: var(--app-surface);
@@ -125,7 +137,7 @@ const handleItemClick = item => {
 
 .app-menu {
   min-height: 0;
-  padding: 0.75rem 0.5rem;
+  padding: var(--app-spacing-3) var(--app-spacing-2);
   border-right: 0;
   overflow-y: auto;
   flex: 1;
@@ -134,8 +146,8 @@ const handleItemClick = item => {
 .app-sidebar__footer {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 1rem 1.25rem;
+  gap: var(--app-spacing-1);
+  padding: var(--app-spacing-4) var(--app-spacing-5);
   color: var(--app-text-placeholder);
   font-size: 0.75rem;
   border-top: 1px solid var(--app-border);
@@ -143,19 +155,19 @@ const handleItemClick = item => {
 }
 
 :deep(.t-menu__group-title) {
-  padding: 0.75rem 0.75rem 0.375rem;
+  padding: var(--app-spacing-3) var(--app-spacing-3) var(--app-spacing-1);
   color: var(--app-text-placeholder);
   font-size: 0.75rem;
 }
 
 :deep(.t-menu__item) {
-  margin: 0.125rem 0;
-  border-radius: 6px;
+  margin: var(--app-spacing-1) 0;
+  border-radius: var(--app-radius);
 }
 
 :deep(.t-menu__item.t-is-active) {
-  color: #0052d9;
-  background: #e8f3ff;
+  color: var(--app-primary);
+  background: var(--app-primary-light);
 }
 
 @media (max-width: 768px) {
@@ -165,6 +177,7 @@ const handleItemClick = item => {
     bottom: 0;
     left: 0;
     z-index: 20;
+    width: var(--app-sidebar-mobile-width) !important;
     transform: translateX(0);
   }
 

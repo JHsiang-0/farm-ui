@@ -25,9 +25,7 @@
         <DesktopIcon :size="19" />
       </button>
       <button type="button" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
-        <t-badge :count="3" color="#e34d59">
-          <MailIcon :size="19" />
-        </t-badge>
+        <MailIcon :size="19" />
       </button>
       <button type="button" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
         <HelpCircleIcon :size="19" />
@@ -84,8 +82,8 @@ const openFullscreenDashboard = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  padding: 0 1.5rem;
+  height: var(--app-header-height);
+  padding: 0 var(--app-content-padding);
   background: var(--app-surface);
   border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
@@ -126,7 +124,7 @@ const openFullscreenDashboard = async () => {
 
 @media (max-width: 768px) {
   .app-header {
-    padding: 0 1rem;
+    padding: 0 var(--app-spacing-4);
   }
 
   .app-header__right .app-header__optional-action {

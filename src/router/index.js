@@ -62,7 +62,8 @@ const router = createRouter({
         {
           path: 'profile',
           name: 'profile',
-          component: () => import('../views/Profile.vue')
+          component: () => import('../views/Profile.vue'),
+          meta: { title: '个人中心', hideBreadcrumb: true }
         },
         {
           path: 'files',

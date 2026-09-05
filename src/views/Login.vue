@@ -4,7 +4,7 @@
       <div class="logo-section">
         <a href="/" class="logo-link" @click.prevent>
           <span class="logo-mark">3D</span>
-          <span>3D 打印农场</span>
+          <span>FabMatrix</span>
         </a>
       </div>
 
@@ -20,7 +20,7 @@
 
       <div class="intro-content">
         <h1>智能管理每一台打印机</h1>
-        <p>实时掌握设备、任务与文件，让打印农场运行更简单。</p>
+        <p>实时掌握设备、任务与文件，让生产管理更简单。</p>
       </div>
 
       <div class="grid-overlay" />
@@ -32,7 +32,7 @@
       <div class="form-wrapper">
         <div class="mobile-logo">
           <span class="logo-mark">3D</span>
-          <span>3D 打印农场</span>
+          <span>FabMatrix</span>
       </div>
 
         <header class="form-header">
@@ -133,7 +133,7 @@
       </div>
     </section>
 
-    <footer class="login-footer">© 2024 3D 打印农场管理系统</footer>
+    <footer class="login-footer">© 2024 FabMatrix 生产管理平台</footer>
   </main>
 </template>
 

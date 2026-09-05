@@ -1,9 +1,23 @@
 <template>
   <t-layout v-cloak class="app-shell">
-    <AppSidebar :collapsed="sidebarCollapsed" />
+    <AppSidebar
+      :collapsed="sidebarCollapsed"
+      :is-mobile="isMobile"
+      :mobile-open="mobileSidebarOpen"
+    />
+    <button
+      v-if="isMobile && mobileSidebarOpen"
+      type="button"
+      class="app-sidebar-overlay"
+      aria-label="关闭导航菜单"
+      @click="closeMobileSidebar"
+    />
 
     <t-layout class="app-main-layout">
-      <AppHeader :collapsed="sidebarCollapsed" @toggle-sidebar="toggleSidebar" />
+      <AppHeader
+        :collapsed="isMobile ? !mobileSidebarOpen : sidebarCollapsed"
+        @toggle-sidebar="toggleSidebar"
+      />
 
       <t-content class="app-content">
         <div class="app-content__inner">
@@ -22,7 +36,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppBreadcrumb from '@/components/layout/AppBreadcrumb.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
@@ -30,10 +45,39 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
 defineOptions({ name: 'AppLayout' })
 
 const sidebarCollapsed = ref(false)
+const mobileSidebarOpen = ref(false)
+const isMobile = ref(false)
+const route = useRoute()
+let mediaQuery
 
 const toggleSidebar = () => {
+  if (isMobile.value) {
+    mobileSidebarOpen.value = !mobileSidebarOpen.value
+    return
+  }
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
+
+const closeMobileSidebar = () => {
+  mobileSidebarOpen.value = false
+}
+
+const syncViewport = event => {
+  isMobile.value = event.matches
+  if (!isMobile.value) closeMobileSidebar()
+}
+
+watch(() => route.fullPath, closeMobileSidebar)
+
+onMounted(() => {
+  mediaQuery = window.matchMedia('(max-width: 768px)')
+  isMobile.value = mediaQuery.matches
+  mediaQuery.addEventListener('change', syncViewport)
+})
+
+onUnmounted(() => {
+  mediaQuery?.removeEventListener('change', syncViewport)
+})
 </script>
 
 <style scoped>
@@ -43,6 +87,18 @@ const toggleSidebar = () => {
   height: 100%;
   min-width: 0;
   overflow: hidden;
+}
+
+.app-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: var(--td-mask-active);
+  border: 0;
+  cursor: pointer;
 }
 
 .app-content {
@@ -62,7 +118,7 @@ const toggleSidebar = () => {
   height: 100%;
   min-width: 0;
   min-height: 100%;
-  padding: 1.5rem;
+  padding: var(--app-content-padding);
 }
 
 .app-content__view {
@@ -89,7 +145,7 @@ const toggleSidebar = () => {
 
 @media (max-width: 768px) {
   .app-content__inner {
-    padding: 1rem;
+    padding: var(--app-spacing-4);
   }
 }
 </style>

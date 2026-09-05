@@ -1,0 +1,119 @@
+/*
+ * FabMatrix semantic theme layer.
+ * TDesign owns the raw palette and component tokens. Application code uses
+ * these semantic aliases so page styles do not depend on concrete colors.
+ */
+:root {
+  --app-page-background: var(--td-bg-color-page);
+  --app-surface: var(--td-bg-color-container);
+  --app-surface-muted: var(--td-bg-color-secondarycontainer);
+  --app-surface-hover: var(--td-bg-color-container-hover);
+  --app-surface-active: var(--td-bg-color-container-active);
+  --app-border: var(--td-border-level-1-color);
+  --app-border-strong: var(--td-border-level-2-color);
+  --app-text-primary: var(--td-text-color-primary);
+  --app-text-secondary: var(--td-text-color-secondary);
+  --app-text-placeholder: var(--td-text-color-placeholder);
+  --app-text-disabled: var(--td-text-color-disabled);
+  --app-text-on-brand: var(--td-text-color-anti);
+  --app-primary: var(--td-brand-color);
+  --app-primary-hover: var(--td-brand-color-hover);
+  --app-primary-active: var(--td-brand-color-active);
+  --app-primary-light: var(--td-brand-color-light);
+  --app-success: var(--td-success-color);
+  --app-success-light: var(--td-success-color-light);
+  --app-warning: var(--td-warning-color);
+  --app-warning-light: var(--td-warning-color-light);
+  --app-danger: var(--td-error-color);
+  --app-danger-light: var(--td-error-color-light);
+  --app-font-family: var(--td-font-family);
+  --app-font-family-medium: var(--td-font-family-medium);
+  --app-font-body: var(--td-font-body-medium);
+  --app-font-title: var(--td-font-title-large);
+  --app-radius-small: var(--td-radius-small);
+  --app-radius: var(--td-radius-medium);
+  --app-radius-large: var(--td-radius-large);
+  --app-shadow: var(--td-shadow-1);
+  --app-shadow-raised: var(--td-shadow-2);
+  --app-spacing-1: 4px;
+  --app-spacing-2: 8px;
+  --app-spacing-3: 12px;
+  --app-spacing-4: 16px;
+  --app-spacing-5: 20px;
+  --app-spacing-6: 24px;
+  --app-spacing-8: 32px;
+  --app-sidebar-width: 232px;
+  --app-sidebar-collapsed-width: 64px;
+  --app-sidebar-mobile-width: 280px;
+  --app-header-height: 64px;
+  --app-content-padding: var(--app-spacing-6);
+  --app-page-max-width: 1600px;
+  color-scheme: light;
+}
+
+:root.dark,
+:root[theme-mode='dark'] {
+  color-scheme: dark;
+}
+
+html,
+body {
+  font-family: var(--app-font-family);
+  color: var(--app-text-primary);
+  background: var(--app-page-background);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+.app-surface {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+}
+
+.app-page-background {
+  background-color: var(--app-page-background);
+}
+
+.app-page-container {
+  width: 100%;
+  max-width: var(--app-page-max-width);
+  margin: 0 auto;
+}
+
+.app-card {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+}
+
+.app-filter-toolbar,
+.app-data-toolbar,
+.app-action-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-spacing-3) var(--app-spacing-4);
+}
+
+.app-action-toolbar {
+  justify-content: flex-end;
+}
+
+.app-state-placeholder {
+  color: var(--app-text-secondary);
+}
+
+.app-focus-ring:focus-visible,
+.app-icon-button:focus-visible,
+.app-brand:focus-visible {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
+}

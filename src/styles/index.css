@@ -26,19 +26,8 @@ body {
 }
 
 :root {
-  --app-page-background: #f3f4f6;
-  --app-surface: #fff;
-  --app-surface-muted: #f5f7fa;
-  --app-border: #e7e7e7;
-  --app-text-primary: #1f2329;
-  --app-text-secondary: #646a73;
-  --app-text-placeholder: #8f959e;
-  --app-primary: #0052d9;
-  --app-success: #2ba471;
-  --app-warning: #e37318;
-  --app-danger: #d54941;
-  --app-page-title-size: 1.5rem;
-  --app-page-title-line-height: 1.35;
+  --app-page-title-size: var(--td-font-size-title-large);
+  --app-page-title-line-height: var(--td-line-height-title-large);
 }
 
 .app-route-title {
@@ -78,7 +67,7 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.75rem 1rem;
+  gap: var(--app-spacing-3) var(--app-spacing-4);
   min-height: 2.025rem;
 }
 
@@ -114,8 +103,4 @@ body {
   .app-page-toolbar__actions {
     margin-left: 0;
   }
-}
-
-.app-page-background {
-  background-color: var(--app-page-background);
 }

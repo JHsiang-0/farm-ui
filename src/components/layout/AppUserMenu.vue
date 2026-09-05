@@ -14,10 +14,6 @@
           <template #prefix><UserIcon /></template>
           个人中心
         </t-dropdown-item>
-        <t-dropdown-item value="settings">
-          <template #prefix><SettingIcon /></template>
-          系统设置
-        </t-dropdown-item>
         <t-dropdown-item value="logout" divider>
           <template #prefix><PoweroffIcon /></template>
           退出登录
@@ -32,7 +28,6 @@ import { useRouter } from 'vue-router'
 import {
   ChevronDownIcon,
   PoweroffIcon,
-  SettingIcon,
   UserIcon
 } from 'tdesign-icons-vue-next'
 import { useUserStore } from '@/stores/user'
@@ -47,9 +42,7 @@ const handleCommand = item => {
   const command = typeof item === 'string' ? item : item?.value
 
   if (command === 'profile') {
-    message.info('个人中心功能将在后续版本开放')
-  } else if (command === 'settings') {
-    message.info('系统设置功能将在后续版本开放')
+    router.push('/profile')
   } else if (command === 'logout') {
     confirmMessage('确定要退出登录吗？', '提示', {
       confirmButtonText: '确定',
