@@ -29,8 +29,6 @@
             </t-select>
           </div>
 
-          <t-input v-model="queryForm.keyword" placeholder="搜索文件名或任务ID" clearable style="width: 190px" />
-
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">打印机 ID</span>
             <t-input v-model="queryForm.printerId" placeholder="请输入设备 ID" clearable style="width: 140px" />
@@ -110,11 +108,13 @@
         <TdTableColumn prop="progress" label="打印进度" width="140" align="center">
           <template #default="scope">
             <t-progress
+              v-if="hasValue(scope.row.progress)"
               :percentage="scope.row.progress"
               :status="getProgressStatus(scope.row.status, scope.row.progress)"
               :stroke-width="6"
               :label="true"
             />
+            <span v-else>-</span>
           </template>
         </TdTableColumn>
 
@@ -188,13 +188,15 @@
     <TaskDetailDrawer
       v-model="detailDrawerVisible"
       :task="selectedJob"
+      :loading="detailLoading"
+      :error="detailErrorText"
       @update:model-value="handleTaskDetailVisibility"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import {
   RefreshIcon as Refresh,
   SearchIcon as Search,
@@ -217,6 +219,8 @@ defineOptions({ name: 'JobHistory' })
 const loading = ref(false)
 const loadError = ref('')
 const jobStore = useJobStore()
+const detailLoading = computed(() => jobStore.detailLoading)
+const detailErrorText = computed(() => jobStore.detailError?.message || '')
 const tableData = ref([])
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
@@ -254,7 +258,6 @@ const queryForm = reactive({
   status: '',
   dateRange: [],
   printerId: '',
-  keyword: ''
 })
 
 // 分页信息
@@ -300,9 +303,11 @@ const getStatusLabel = (status) => {
 
 // 判断任务是否可以取消
 const canCancel = (status) => {
-  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'UPLOADING', 'READY', 'PRINTING', 'PAUSED', 'RECONCILING']
   return cancelableStatuses.includes(status)
 }
+
+const hasValue = value => value !== undefined && value !== null && value !== ''
 
 // 获取进度条状态
 const getProgressStatus = (status, progress) => {
@@ -368,10 +373,6 @@ const buildParams = () => {
     params.status = queryForm.status
   }
 
-  if (queryForm.keyword.trim()) {
-    params.keyword = queryForm.keyword.trim()
-  }
-
   if (queryForm.dateRange && queryForm.dateRange.length === 2) {
     params.startTime = queryForm.dateRange[0]
     params.endTime = queryForm.dateRange[1]
@@ -395,7 +396,6 @@ const handleReset = () => {
   queryForm.status = ''
   queryForm.dateRange = []
   queryForm.printerId = ''
-  queryForm.keyword = ''
   pagination.pageNum = 1
   fetchData()
 }

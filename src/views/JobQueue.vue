@@ -3,6 +3,9 @@
     <div class="app-page-toolbar mb-4">
       <h1 class="app-page-toolbar__title app-route-title">生产调度队列</h1>
       <div class="app-page-toolbar__actions">
+        <t-button variant="outline" @click="openCreateTaskDialog" size="medium">
+          新建任务
+        </t-button>
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchQueue" size="medium">
           刷新
         </t-button>
@@ -42,14 +45,14 @@
         <TdTableColumn label="耗材要求" width="120" align="center">
           <template #default="scope">
             <t-tag theme="warning" variant="light" size="small">
-              {{ scope.row.materialType || '任意' }}
+              {{ scope.row.materialType || '-' }}
             </t-tag>
           </template>
         </TdTableColumn>
 
         <TdTableColumn label="喷嘴要求" width="100" align="center">
           <template #default="scope">
-            <span class="font-medium text-gray-700">{{ scope.row.nozzleSize ? scope.row.nozzleSize + 'mm' : '任意' }}</span>
+            <span class="font-medium text-gray-700">{{ formatOptionalUnit(scope.row.nozzleSize, 'mm') }}</span>
           </template>
         </TdTableColumn>
 
@@ -67,7 +70,7 @@
               size="small"
               class="min-w-10 text-center"
             >
-              {{ scope.row.priority }}
+              {{ formatOptional(scope.row.priority) }}
             </t-tag>
           </template>
         </TdTableColumn>
@@ -125,7 +128,7 @@
             </t-button>
             <t-popconfirm content="确定要取消这个任务吗？"
               theme="danger"
-              @confirm="handleCancel(scope.row.id)"
+              @confirm="handleCancel(scope.row)"
               :disabled="!canCancel(scope.row.status)"
             >
               <template>
@@ -175,7 +178,8 @@
         </TdTableColumn>
         <TdTableColumn prop="progress" label="进度" width="150" align="center">
           <template #default="scope">
-            <t-progress :percentage="scope.row.progress || 0" :status="getProgressStatus(scope.row.status, scope.row.progress)" />
+            <t-progress v-if="hasValue(scope.row.progress)" :percentage="scope.row.progress" :status="getProgressStatus(scope.row.status, scope.row.progress)" />
+            <span v-else>-</span>
           </template>
         </TdTableColumn>
         <TdTableColumn prop="updatedAt" label="最近更新" min-width="160" align="center">
@@ -208,12 +212,36 @@
               @click="handleStart(scope.row)">
               启动打印
             </t-button>
+            <t-button
+              v-if="scope.row.status === 'PRINTING' && scope.row.printerId"
+              size="small"
+              theme="warning"
+              variant="text"
+              :loading="isActionLoading('pause', scope.row)"
+              @click="handlePause(scope.row)">
+              暂停
+            </t-button>
+            <t-button
+              v-if="scope.row.status === 'PAUSED' && scope.row.printerId"
+              size="small"
+              theme="success"
+              variant="text"
+              :loading="isActionLoading('resume', scope.row)"
+              @click="handleResume(scope.row)">
+              恢复
+            </t-button>
             <t-popconfirm
               v-if="canCancel(scope.row.status)"
               content="确定要取消这个任务吗？"
               theme="danger"
-              @confirm="handleCancel(scope.row.id)">
-              <t-button size="small" theme="danger" variant="outline">取消</t-button>
+              @confirm="handleCancel(scope.row)">
+              <t-button
+                size="small"
+                theme="danger"
+                variant="outline"
+                :loading="isActionLoading('cancel', scope.row)"
+                aria-label="取消任务"
+              >取消</t-button>
             </t-popconfirm>
           </template>
         </TdTableColumn>
@@ -237,7 +265,7 @@
       <div class="mb-5">
         <t-alert
           :title="`为任务 #${currentJob?.id} 选择打印机`" theme="info"
-          :closable="false"
+          :close-btn="false"
 
         />
       </div>
@@ -266,7 +294,7 @@
           <t-alert
             v-if="idlePrinters.length === 0 && !loadingPrinters"
             title="当前没有空闲的打印机，请等待其他任务完成" theme="warning"
-            :closable="false"
+            :close-btn="false"
 
             class="mt-3"
           />
@@ -287,9 +315,121 @@
         </div>
       </template>
     </t-dialog>
+    <t-dialog
+      v-model:visible="createTaskDialogVisible"
+      header="新建打印任务"
+      width="560px"
+      :footer="false"
+      destroy-on-close
+    >
+      <t-alert
+        v-if="createTaskError"
+        theme="error"
+        :title="createTaskError"
+        :close-btn="false"
+        class="mb-4"
+      />
+      <t-form :data="createTaskForm" :rules="createTaskRules" ref="createTaskFormRef" label-width="92px">
+        <t-form-item label="切片文件" name="fileId">
+          <t-select
+            v-model="createTaskForm.fileId"
+            placeholder="请选择当前账号可见的文件"
+            :loading="taskFilesLoading"
+            :disabled="createTaskSubmitting"
+            class="w-full"
+          >
+            <t-option
+              v-for="file in taskFiles"
+              :key="file.id"
+              :label="file.originalName || `文件 #${file.id}`"
+              :value="file.id"
+            />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="目标打印机">
+          <t-select
+            v-model="createTaskForm.printerId"
+            placeholder="不指定，进入待派发队列"
+            clearable
+            :loading="taskPrintersLoading"
+            :disabled="createTaskSubmitting"
+            class="w-full"
+          >
+            <t-option
+              v-for="printer in taskPrinters"
+              :key="printer.id"
+              :label="`${printer.name}（${printer.id}）`"
+              :value="printer.id"
+            />
+          </t-select>
+          <div class="text-xs text-gray-500 mt-1">指定打印机只进入已派发状态，不会绕过现场安全确认。</div>
+        </t-form-item>
+        <t-form-item label="优先级" name="priority">
+          <t-input-number
+            v-model="createTaskForm.priority"
+            :min="0"
+            :max="100"
+            :step="1"
+            :disabled="createTaskSubmitting"
+            class="w-full"
+          />
+        </t-form-item>
+        <t-form-item label="打印份数" name="copies">
+          <t-input-number
+            v-model="createTaskForm.copies"
+            :min="1"
+            :max="99"
+            :step="1"
+            :disabled="createTaskSubmitting"
+            class="w-full"
+          />
+        </t-form-item>
+      </t-form>
+      <t-alert
+        v-if="createTaskResults.length"
+        :theme="createTaskResults.every(result => result.status === 'SUCCESS') ? 'success' : 'warning'"
+        :title="createTaskResults.every(result => result.status === 'SUCCESS') ? '任务创建完成' : '部分任务未创建成功'"
+        :close-btn="false"
+        class="mb-4"
+      />
+      <div v-if="createTaskResults.length" class="mb-4 space-y-2">
+        <div v-for="result in createTaskResults" :key="result.index" class="flex items-center justify-between gap-3 text-sm">
+          <span>第 {{ result.index + 1 }} 份</span>
+          <span :class="result.status === 'SUCCESS' ? 'text-green-600' : 'text-red-600'">
+            {{ result.status === 'SUCCESS' ? `已创建任务 #${result.jobId}` : result.message }}
+          </span>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <t-button @click="createTaskDialogVisible = false">关闭</t-button>
+          <t-button
+            v-if="createTaskResults.some(result => result.status === 'FAILED' && result.retryable)"
+            variant="outline"
+            theme="warning"
+            :loading="createTaskSubmitting"
+            @click="retryFailedTaskCreations"
+          >
+            重试失败项
+          </t-button>
+          <t-button
+            v-else
+            theme="primary"
+            :loading="createTaskSubmitting"
+            :disabled="taskFilesLoading || taskFiles.length === 0"
+            @click="submitCreateTask"
+          >
+            创建任务
+          </t-button>
+        </div>
+      </template>
+    </t-dialog>
+
     <TaskDetailDrawer
       v-model="detailDrawerVisible"
       :task="selectedJob"
+      :loading="detailLoading"
+      :error="detailErrorText"
       @update:model-value="handleTaskDetailVisibility"
     />
   </div>
@@ -308,8 +448,9 @@ import {
   CloseCircleIcon as CircleClose,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
-import { cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob } from '@/api/job'
-import { confirmSafe, getPrinterList } from '@/api/printer'
+import { cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob, createPrintJob } from '@/api/job'
+import { confirmSafe, getPrinterList, pausePrinter, resumePrinter } from '@/api/printer'
+import { getFileTree } from '@/api/printFile'
 import { message, confirmMessage } from '@/utils/message'
 import { formatDateTime } from '@/utils/formatters'
 import { renderIcon } from '@/utils/tdesign'
@@ -331,10 +472,13 @@ const {
   activePageSize,
   activeTotal,
   queueError,
-  activeError
+  activeError,
+  detailLoading,
+  detailError
 } = storeToRefs(jobStore)
 const queueLoading = computed(() => jobStore.queueLoading)
 const loading = computed(() => jobStore.queueLoading || jobStore.activeLoading)
+const detailErrorText = computed(() => detailError.value?.message || '')
 const fetchActive = () => jobStore.fetchActive()
 
 // 派单弹窗状态
@@ -347,6 +491,30 @@ const loadingPrinters = ref(false)
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
 const JOB_QUEUE_DETAIL_CONTEXT_KEY = 'farm-ui:job-queue-detail'
+const createTaskDialogVisible = ref(false)
+const createTaskSubmitting = ref(false)
+const createTaskError = ref('')
+const createTaskFormRef = ref(null)
+const taskFiles = ref([])
+const taskPrinters = ref([])
+const taskFilesLoading = ref(false)
+const taskPrintersLoading = ref(false)
+const createTaskResults = ref([])
+const createTaskBatchKey = ref('')
+const actionLoadingKey = ref('')
+
+const createTaskForm = ref({
+  fileId: undefined,
+  printerId: undefined,
+  priority: 0,
+  copies: 1
+})
+
+const createTaskRules = {
+  fileId: [{ required: true, message: '请选择切片文件', trigger: 'change' }],
+  priority: [{ required: true, message: '请输入优先级', trigger: 'change' }],
+  copies: [{ required: true, message: '请输入打印份数', trigger: 'change' }]
+}
 
 const openTaskDetail = async job => {
   selectedJob.value = job
@@ -380,6 +548,138 @@ const restoreTaskDetailContext = () => {
   if (job) openTaskDetail(job)
 }
 
+const hasValue = value => value !== undefined && value !== null && value !== ''
+
+const formatOptional = value => hasValue(value) ? value : '-'
+
+const formatOptionalUnit = (value, unit) => hasValue(value) ? `${value}${unit}` : '-'
+
+const isActionLoading = (action, job) => actionLoadingKey.value === `${action}:${job.id}`
+
+const flattenTaskFiles = (nodes, result = []) => {
+  nodes.forEach(node => {
+    if (node.folder !== true) {
+      result.push({
+        id: node.id,
+        originalName: node.name,
+        fileSize: node.fileSize,
+        materialType: node.materialType
+      })
+    }
+    if (Array.isArray(node.children)) flattenTaskFiles(node.children, result)
+  })
+  return result
+}
+
+const loadCreateTaskResources = async () => {
+  taskFilesLoading.value = true
+  taskPrintersLoading.value = true
+  createTaskError.value = ''
+  const [fileResult, printerResult] = await Promise.allSettled([
+    getFileTree(),
+    getPrinterList({ pageNum: 1, pageSize: 100, status: 'IDLE' })
+  ])
+
+  if (fileResult.status === 'fulfilled') {
+    taskFiles.value = flattenTaskFiles(Array.isArray(fileResult.value.data) ? fileResult.value.data : [])
+  } else {
+    taskFiles.value = []
+    createTaskError.value = '文件列表加载失败，请重试'
+  }
+  if (printerResult.status === 'fulfilled') {
+    taskPrinters.value = (printerResult.value.data?.records || []).filter(printer => printer.status === 'IDLE')
+  } else {
+    taskPrinters.value = []
+    createTaskError.value = createTaskError.value
+      ? `${createTaskError.value}；空闲打印机列表加载失败，仍可创建待派发任务`
+      : '空闲打印机列表加载失败，仍可创建待派发任务'
+  }
+
+  taskFilesLoading.value = false
+  taskPrintersLoading.value = false
+}
+
+const openCreateTaskDialog = () => {
+  createTaskForm.value = {
+    fileId: undefined,
+    printerId: undefined,
+    priority: 0,
+    copies: 1
+  }
+  createTaskResults.value = []
+  createTaskError.value = ''
+  createTaskBatchKey.value = `task-${Date.now()}`
+  createTaskDialogVisible.value = true
+  loadCreateTaskResources()
+}
+
+const getCreateTaskError = error => error?.message || '任务创建失败，可使用相同幂等键重试'
+
+const isRetryableCreateTaskError = error => {
+  const status = error?.response?.status ?? error?.status
+  return ![400, 401, 403, 404, 409, 422].includes(status)
+}
+
+const submitCreateTask = async (retryOnly = false) => {
+  if (createTaskSubmitting.value) return
+  try {
+    await createTaskFormRef.value?.validate()
+  } catch {
+    return
+  }
+
+  const indexes = retryOnly
+    ? createTaskResults.value
+      .filter(result => result.status === 'FAILED' && result.retryable)
+      .map(result => result.index)
+    : Array.from({ length: createTaskForm.value.copies }, (_, index) => index)
+  if (!indexes.length) return
+
+  createTaskSubmitting.value = true
+  const nextResults = retryOnly ? createTaskResults.value.slice() : []
+  try {
+    for (const index of indexes) {
+      try {
+        const response = await createPrintJob({
+          fileId: createTaskForm.value.fileId,
+          priority: createTaskForm.value.priority,
+          ...(createTaskForm.value.printerId ? { printerId: createTaskForm.value.printerId } : {}),
+          idempotencyKey: `${createTaskBatchKey.value}-${index}`
+        })
+        if (!hasValue(response.data)) {
+          throw new Error('服务端未返回任务 ID')
+        }
+        const existingIndex = nextResults.findIndex(result => result.index === index)
+        const result = { index, status: 'SUCCESS', jobId: response.data, message: '任务创建成功', retryable: false }
+        if (existingIndex > -1) nextResults.splice(existingIndex, 1, result)
+        else nextResults.push(result)
+      } catch (error) {
+        const existingIndex = nextResults.findIndex(result => result.index === index)
+        const result = {
+          index,
+          status: 'FAILED',
+          jobId: null,
+          message: getCreateTaskError(error),
+          retryable: isRetryableCreateTaskError(error)
+        }
+        if (existingIndex > -1) nextResults.splice(existingIndex, 1, result)
+        else nextResults.push(result)
+      }
+    }
+    createTaskResults.value = nextResults.sort((left, right) => left.index - right.index)
+    const successCount = nextResults.filter(result => result.status === 'SUCCESS').length
+    const failedCount = nextResults.filter(result => result.status === 'FAILED').length
+    if (successCount > 0) await fetchQueue()
+    if (failedCount === 0) message.success(`已创建 ${successCount} 个任务`)
+    else if (successCount > 0) message.warning(`已创建 ${successCount} 个任务，${failedCount} 个任务失败`)
+    else message.error('任务创建失败，请检查失败项')
+  } finally {
+    createTaskSubmitting.value = false
+  }
+}
+
+const retryFailedTaskCreations = () => submitCreateTask(true)
+
 // 获取优先级标签类型
 const getPriorityType = (priority) => {
   if (priority >= 80) return 'danger'
@@ -406,7 +706,7 @@ const getProgressStatus = (status, progress) => {
 
 // 判断任务是否可以取消
 const canCancel = (status) => {
-  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED']
+  const cancelableStatuses = ['QUEUED', 'ASSIGNED', 'UPLOADING', 'READY', 'PRINTING', 'PAUSED', 'RECONCILING']
   return cancelableStatuses.includes(status)
 }
 
@@ -423,15 +723,41 @@ const handleActivePageChange = ({ current }) => {
   activePage.value = current
 }
 
-const handleCancel = async (id) => {
+const runJobAction = async (job, action, requestAction, successText) => {
+  const key = `${action}:${job.id}`
+  if (actionLoadingKey.value) return
+  actionLoadingKey.value = key
   try {
-    await cancelJob(id)
-    message.success('任务已取消')
-    fetchQueue()
-  } catch {
-    // 错误在拦截器处理
+    await requestAction()
+    message.success(successText)
+    await fetchQueue()
+  } catch (error) {
+    console.error(`${successText}失败:`, error)
+    message.error(error?.message || `${successText}失败`)
+  } finally {
+    actionLoadingKey.value = ''
   }
 }
+
+const handleCancel = job => runJobAction(job, 'cancel', () => cancelJob(job.id), '任务已取消')
+
+const handlePause = job => confirmMessage(
+  `确认暂停任务 #${job.id}？设备将收到暂停请求。`,
+  '暂停打印确认',
+  { confirmButtonText: '暂停打印', cancelButtonText: '取消', type: 'warning' }
+).then(() => runJobAction(job, 'pause', () => pausePrinter(job.printerId), '暂停请求已发送'))
+  .catch(error => {
+    if (error !== 'cancel') console.error('暂停打印失败:', error)
+  })
+
+const handleResume = job => confirmMessage(
+  `确认恢复任务 #${job.id}？设备将继续执行当前打印。`,
+  '恢复打印确认',
+  { confirmButtonText: '恢复打印', cancelButtonText: '取消', type: 'warning' }
+).then(() => runJobAction(job, 'resume', () => resumePrinter(job.printerId), '恢复请求已发送'))
+  .catch(error => {
+    if (error !== 'cancel') console.error('恢复打印失败:', error)
+  })
 
 const handleRequeue = async id => {
   try {
@@ -489,7 +815,7 @@ const submitAssign = async () => {
 const handleConfirmSafe = async job => {
   try {
     await confirmMessage(
-      `请确认打印机 ${job.printerName || job.printerId} 的热床已清理且可以安全打印。`,
+      `请确认打印机 #${job.printerId} 的热床已清理且可以安全打印。`,
       '现场安全确认',
       { confirmButtonText: '确认安全', cancelButtonText: '返回检查', type: 'warning' }
     )
