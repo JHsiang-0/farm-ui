@@ -8,6 +8,7 @@
     <t-drawer :visible="modelValue" :header="drawerTitle"
         :size="drawerSize"
         :destroy-on-close="true"
+        :show-in-attached-element="true"
         class="printer-detail-drawer"
         :class="{ 'is-mobile': isMobile, 'is-tablet': isTablet }"
         @update:visible="handleVisibleChange">
@@ -561,6 +562,17 @@ async function handleStartPrint(action) {
 </script>
 
 <style scoped>
+.printer-detail-drawer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.printer-detail-drawer :deep(.t-drawer__content-wrapper) {
+    height: 100%;
+}
+
 /* ============================================
    抽屉整体样式 - 响应式优化
    ============================================ */
