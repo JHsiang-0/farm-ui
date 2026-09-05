@@ -465,7 +465,7 @@ onUnmounted(stopPreviewExpiryTimer)
 </script>
 
 <style scoped>
-.batch-dispatch-page { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: auto; color: var(--app-text-primary); }
+.batch-dispatch-page { display: flex; flex-direction: column; min-height: 100%; overflow: visible; color: var(--app-text-primary); }
 .page-header { flex: 0 0 auto; margin-bottom: 16px; }
 .page-header__description, .hint { color: var(--app-text-secondary); margin: 6px 0 12px; }
 .panel { margin-bottom: 16px; }

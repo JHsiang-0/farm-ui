@@ -8,6 +8,7 @@ const sidebarSource = await readFile(new URL('../src/components/layout/AppSideba
 const userMenuSource = await readFile(new URL('../src/components/layout/AppUserMenu.vue', import.meta.url), 'utf8')
 const headerSource = await readFile(new URL('../src/components/layout/AppHeader.vue', import.meta.url), 'utf8')
 const loginSource = await readFile(new URL('../src/views/Login.vue', import.meta.url), 'utf8')
+const layoutSource = await readFile(new URL('../src/layout/index.vue', import.meta.url), 'utf8')
 
 test('FabMatrix theme maps application semantics to installed TDesign tokens', () => {
   assert.match(themeSource, /--app-primary:\s*var\(--td-brand-color\)/)
@@ -22,6 +23,8 @@ test('responsive shell keeps desktop dimensions in semantic tokens', () => {
   assert.match(themeSource, /--app-sidebar-collapsed-width:\s*64px/)
   assert.match(themeSource, /--app-sidebar-mobile-width:\s*280px/)
   assert.match(themeSource, /--app-content-padding:\s*var\(--app-spacing-6\)/)
+  assert.match(layoutSource, /\.app-content \{[\s\S]*overflow: hidden/)
+  assert.match(layoutSource, /\.app-content__view \{[\s\S]*overflow: auto/)
 })
 
 test('navigation follows the T208-1 information architecture', () => {

@@ -106,7 +106,7 @@ onUnmounted(() => {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   background: var(--app-page-background);
 }
 
@@ -117,7 +117,8 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding: var(--app-content-padding);
 }
 
@@ -126,6 +127,7 @@ onUnmounted(() => {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .fade-transform-leave-active,
