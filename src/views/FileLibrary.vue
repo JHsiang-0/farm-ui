@@ -49,7 +49,7 @@
 
         <div class="file-library-storage">
           <div class="file-library-storage__label">
-            <span>集群云存储空间</span>
+            <span>储存空间</span>
             <span class="file-library-storage__value">24.8 GB <em>/ 128 GB</em></span>
           </div>
           <div class="file-library-storage__track">
@@ -278,11 +278,12 @@
             <span>{{ selectedIds.length }} 已选择</span>
           </div>
           <div class="file-library-footer__pagination">
-            <span>共 {{ displayTotal }} 条切片数据</span>
+            <span>共 {{ gcodeFileTotal }} 个 G-Code 文件</span>
             <t-pagination
               v-model:current="pagination.pageNum"
               v-model:pageSize="pagination.pageSize"
               :total="displayTotal"
+              :total-content="false"
               :page-size-options="[20, 50, 100]"
               @change="handlePageChange"
             />
@@ -567,6 +568,17 @@ const displayTotal = computed(() => {
   return modelFilter.value || nozzleFilter.value ? displayFileList.value.length : pagination.total
 })
 
+const gcodeFileTotal = computed(() => displayFileList.value.filter(file => !file.folder).length)
+
+const sortFileRecords = records => [...records].sort((a, b) => {
+  if (a.folder !== b.folder) return a.folder ? -1 : 1
+
+  const createdAtDiff = new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  if (createdAtDiff !== 0) return createdAtDiff
+
+  return String(b.id).localeCompare(String(a.id), undefined, { numeric: true })
+})
+
 const restoreFileDetailContext = () => {
   const fileId = sessionStorage.getItem(FILE_DETAIL_CONTEXT_KEY)
   if (!fileId || selectedFile.value) return
@@ -591,7 +603,7 @@ const fetchData = async () => {
       parentId: currentParentId.value
     }
     const res = await getFileList(params)
-    fileList.value = res.data?.records || []
+    fileList.value = sortFileRecords(res.data?.records || [])
     pagination.total = res.data?.total || 0
 
     // 清空选中状态（如果当前页数据变化）
@@ -1181,6 +1193,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.375rem;
+  white-space: nowrap;
 }
 
 .file-library-storage__value {
@@ -1483,7 +1496,14 @@ onMounted(() => {
 
 .file-library-footer__pagination {
   justify-content: flex-end;
+  gap: 1.25rem;
+  margin-left: auto;
   min-width: 0;
+}
+
+.file-library-footer__pagination > span {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .file-library-footer__pagination :deep(.t-pagination) {

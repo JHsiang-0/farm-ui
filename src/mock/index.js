@@ -483,6 +483,14 @@ const handleFilePage = config => {
   if (params.materialType) {
     records = records.filter(item => item.materialType === params.materialType)
   }
+  records.sort((a, b) => {
+    if (a.folder !== b.folder) return a.folder ? -1 : 1
+
+    const createdAtDiff = new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    if (createdAtDiff !== 0) return createdAtDiff
+
+    return String(b.id).localeCompare(String(a.id), undefined, { numeric: true })
+  })
   return getPageData(records.map(publicFile), params)
 }
 
