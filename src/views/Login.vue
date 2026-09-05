@@ -40,6 +40,15 @@
             <p class="form-subtitle">{{ setupMode ? '首次使用请创建本地管理员账户' : '请输入您的账户信息以继续操作' }}</p>
         </header>
 
+        <t-alert v-if="setupStatusError" class="setup-status-alert" theme="warning" :close-btn="false">
+          <template #message>初始化状态暂时无法读取，请先使用登录；也可以重试。</template>
+          <template #operation>
+            <t-button size="small" variant="outline" :loading="setupStatusLoading" @click="loadSetupStatus">
+              重试
+            </t-button>
+          </template>
+        </t-alert>
+
         <form class="login-form" @submit.prevent="handleLogin">
           <div class="form-group">
             <label class="form-label" for="username">用户名</label>
@@ -51,10 +60,12 @@
               placeholder="请输入用户名"
               autocomplete="username"
               required
+              :aria-invalid="Boolean(errors.username)"
+              :aria-describedby="errors.username ? 'username-error' : undefined"
               @focus="isTyping = true"
               @blur="isTyping = false"
             >
-            <p v-if="errors.username" class="error-message">{{ errors.username }}</p>
+            <p v-if="errors.username" id="username-error" class="error-message" role="alert">{{ errors.username }}</p>
           </div>
 
           <div class="form-group">
@@ -68,6 +79,8 @@
                 placeholder="请输入密码"
                 autocomplete="current-password"
                 required
+                :aria-invalid="Boolean(errors.password)"
+                :aria-describedby="errors.password ? 'password-error' : undefined"
                 @focus="isTyping = true"
                 @blur="isTyping = false"
               >
@@ -89,7 +102,7 @@
                 </svg>
               </button>
             </div>
-            <p v-if="errors.password" class="error-message">{{ errors.password }}</p>
+            <p v-if="errors.password" id="password-error" class="error-message" role="alert">{{ errors.password }}</p>
           </div>
 
           <div v-if="setupMode" class="form-group">
@@ -102,8 +115,10 @@
               placeholder="请再次输入密码"
               autocomplete="new-password"
               required
+              :aria-invalid="Boolean(errors.confirmPassword)"
+              :aria-describedby="errors.confirmPassword ? 'confirm-password-error' : undefined"
             >
-            <p v-if="errors.confirmPassword" class="error-message">{{ errors.confirmPassword }}</p>
+            <p v-if="errors.confirmPassword" id="confirm-password-error" class="error-message" role="alert">{{ errors.confirmPassword }}</p>
           </div>
 
           <div v-if="!setupMode" class="form-options">
@@ -114,9 +129,12 @@
             <button class="text-link" type="button" @click="showForgotMessage">忘记密码？</button>
           </div>
 
-          <div v-if="errorMessage" class="error-alert" role="alert">{{ errorMessage }}</div>
+          <t-alert v-if="errorMessage" class="error-alert" theme="error" :close-btn="false" role="alert">
+            {{ errorMessage }}
+          </t-alert>
 
           <button class="submit-button" type="submit" :disabled="loading">
+            <t-loading v-if="loading" size="small" inherit-color />
             <span>{{ loading ? '处理中…' : (setupMode ? '创建管理员并进入系统' : '登录') }}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14" />
@@ -155,6 +173,8 @@ const setupMode = ref(false)
 const rememberMe = ref(false)
 const showPassword = ref(false)
 const isTyping = ref(false)
+const setupStatusLoading = ref(false)
+const setupStatusError = ref(false)
 const loginFailed = ref(false)
 const loginSuccess = ref(false)
 const errorMessage = ref('')
@@ -211,12 +231,17 @@ const showForgotMessage = () => {
 }
 
 const loadSetupStatus = async () => {
+  setupStatusLoading.value = true
+  setupStatusError.value = false
   try {
     const response = await getFirstAdminSetupStatus()
     setupMode.value = response?.data?.setupAvailable === true
   } catch (error) {
+    setupStatusError.value = true
     // 初始化状态查询失败时仍保留普通登录入口，避免后端临时不可用导致页面无法使用。
     console.warn('[Login] 首次管理员初始化状态查询失败', error)
+  } finally {
+    setupStatusLoading.value = false
   }
 }
 

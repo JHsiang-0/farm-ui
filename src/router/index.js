@@ -19,6 +19,18 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/403',
+      name: 'forbidden',
+      component: () => import('../views/RouteResult.vue'),
+      meta: { title: '无权访问', requiresAuth: true, roles: APP_ROLES }
+    },
+    {
+      path: '/404',
+      name: 'not-found',
+      component: () => import('../views/RouteResult.vue'),
+      meta: { title: '页面不存在', requiresAuth: false }
+    },
+    {
       path: '/dashboard/fullscreen',
       name: 'fullscreen-dashboard',
       component: () => import('../views/FullscreenDashboard.vue'),
@@ -97,6 +109,11 @@ const router = createRouter({
           component: () => import('../views/BatchDispatch.vue')
         }
       ]
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found-fallback',
+      redirect: { name: 'not-found' }
     }
   ]
 })
@@ -124,8 +141,10 @@ router.beforeEach(async (to) => {
   }
 
   if (access === ROUTE_ACCESS.RESTORE_REQUIRED) {
+    const hadStoredToken = Boolean(userStore.token)
     const restored = await userStore.restoreSession()
     if (!restored) {
+      if (hadStoredToken) message.warning('登录状态已失效，请重新登录')
       return requiresAuth
         ? { name: 'login', query: { redirect: to.fullPath } }
         : undefined
@@ -152,7 +171,7 @@ router.beforeEach(async (to) => {
 
   if (access === ROUTE_ACCESS.FORBIDDEN) {
     message.error('当前账号没有访问该页面的权限')
-    return { name: 'printers' }
+    return { name: 'forbidden', query: { from: to.fullPath } }
   }
 })
 
