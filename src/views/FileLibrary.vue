@@ -1,7 +1,8 @@
 <template>
   <div class="app-page-shell app-page-background">
-    <Teleport to=".app-breadcrumb__actions">
-      <div class="file-library-toolbar__actions app-page-toolbar__actions">
+    <div class="app-page-toolbar file-library-page-toolbar">
+      <h1 class="app-page-toolbar__title app-route-title">文件库</h1>
+      <div class="file-library-toolbar__actions">
         <t-space class="file-view-toggle">
           <t-button variant="text" size="small" @click="viewMode = 'grid'"
             :class="{ 'file-view-toggle__active': viewMode === 'grid' }" aria-label="网格视图">
@@ -26,9 +27,9 @@
           刷新
         </t-button>
       </div>
-    </Teleport>
+    </div>
 
-    <div class="file-library-content-card app-page-card p-4 bg-white rounded-xl shadow-sm">
+    <div class="file-library-content-card">
       <t-card class="file-tree-card mb-4" bordered>
         <template #header>
           <div class="flex items-center justify-between gap-3">
@@ -97,7 +98,7 @@
         empty-description="暂无文件，请上传 G-Code 文件"
         @retry="fetchData"
       />
-      <div v-else class="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div v-else class="file-library-list">
       <!-- 网格视图 -->
       <div v-if="viewMode === 'grid'" class="file-grid-view flex-1 overflow-y-auto pb-4">
         <!-- 文件夹 -->
@@ -105,7 +106,7 @@
           v-for="file in folderList"
           :key="file.id"
           class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
-          :class="isBatchMode && selectedIds.includes(file.id) ? 'border-primary shadow-lg' : ''"
+          :class="{ 'file-card--selected': isBatchMode && selectedIds.includes(file.id) }"
           @dblclick="navigateToFolder(file)"
           @click="handleFileClick(file)"
         >
@@ -156,7 +157,7 @@
           v-for="file in fileItemsList"
           :key="file.id"
           class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
-          :class="isBatchMode && selectedIds.includes(file.id) ? 'border-primary shadow-lg' : ''"
+          :class="{ 'file-card--selected': isBatchMode && selectedIds.includes(file.id) }"
           @click="handleFileClick(file)">
           <!-- 卡片选中状态 -->
           <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
@@ -241,7 +242,7 @@
       </div>
 
       <!-- 列表视图 -->
-      <div v-else class="overflow-hidden flex-1">
+      <div v-else class="file-library-list">
         <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
           @row-click="handleTableRowClick" border stripe style="width: 100%" height="100%">
           <TdTableColumn type="selection" width="50" align="center" />
@@ -1301,9 +1302,32 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.file-library-page-toolbar {
+  flex: 0 0 auto;
+  margin-bottom: var(--app-spacing-4);
+}
+
+.file-library-content-card {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--app-spacing-4);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-large);
+  box-shadow: var(--app-shadow);
+  overflow: hidden;
+}
+
 .file-tree-card :deep(.t-card__body) {
-  max-height: 13rem;
+  max-height: 12rem;
   overflow-y: auto;
+}
+
+.file-tree-card {
+  flex: 0 0 auto;
+  margin-bottom: var(--app-spacing-4);
 }
 
 .file-tree-card :deep(.t-tree__label) {
@@ -1316,8 +1340,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
   gap: 1rem;
   min-width: 0;
+  padding: var(--app-spacing-3);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
 }
 
 .file-library-navigation {
@@ -1346,6 +1375,15 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
+.file-library-list {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .file-view-toggle {
   padding: 0.125rem;
   background: var(--app-surface-muted);
@@ -1371,15 +1409,28 @@ onMounted(() => {
   gap: clamp(0.75rem, 1vw, 1.25rem);
   align-content: start;
   overflow-y: auto;
+  min-height: 0;
   padding-bottom: 1rem;
 }
 
 /* 文件卡片样式 */
 .file-card {
-  height: clamp(260px, 22vw, 320px);
+  height: auto;
+  min-height: 260px;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.file-card:hover,
+.file-card--selected {
+  border-color: var(--app-primary);
+  box-shadow: var(--app-shadow-raised);
 }
 
 .file-card__media {
@@ -1444,10 +1495,6 @@ onMounted(() => {
 
   .file-library-toolbar__actions > .t-button {
     flex: 1 1 auto;
-  }
-
-  .file-card {
-    height: 260px;
   }
 
   .file-card__media {
