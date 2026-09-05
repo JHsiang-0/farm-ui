@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { getNavigationItem } from '../src/config/navigation.js'
 import {
   createBatchPreviewRequest,
@@ -9,6 +10,12 @@ import {
 
 test('exposes the batch dispatch page through the application navigation', () => {
   assert.deepEqual(getNavigationItem('/batch-dispatch')?.key, 'tasks-batch')
+})
+
+test('v2 批量派发只展示 v3 预留标识，不包含自动派单动作', async () => {
+  const source = await readFile(new URL('../src/views/BatchDispatch.vue', import.meta.url), 'utf8')
+  assert.match(source, /v3 自动派单：规划中/)
+  assert.doesNotMatch(source, /autoAssign/)
 })
 
 test('builds a plan-level preview context and keeps action on each client item', () => {

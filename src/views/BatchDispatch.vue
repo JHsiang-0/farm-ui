@@ -5,6 +5,9 @@
         <h1>批量手动派发</h1>
         <p>先选择文件和打印机生成预览，确认后才会创建任务或启动打印。</p>
       </div>
+      <t-tag theme="default" variant="outline" title="v3 自动派单尚未开放，不会发送自动派单请求">
+        v3 自动派单：规划中
+      </t-tag>
       <t-button variant="outline" @click="loadResources" :loading="loadingResources">刷新资源</t-button>
     </div>
 
