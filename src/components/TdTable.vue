@@ -83,10 +83,32 @@ const tableAttrs = computed(() => {
 </script>
 
 <template>
-  <div class="td-table-adapter">
+  <div class="td-table-adapter" :class="attrs.class" :style="attrs.style">
     <!-- 先让 TdTableColumn 完成注册，再挂载 TDesign Table。 -->
     <Table v-if="columns.length" v-bind="tableAttrs" />
     <!-- 保留列组件插槽，确保 TdTableColumn 在 Table 首次挂载前完成列注册。 -->
     <span class="hidden" aria-hidden="true"><slot /></span>
   </div>
 </template>
+
+<style scoped>
+.td-table-adapter {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.td-table-adapter :deep(.t-table) {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.td-table-adapter :deep(.t-table__content) {
+  min-height: 0;
+}
+</style>
