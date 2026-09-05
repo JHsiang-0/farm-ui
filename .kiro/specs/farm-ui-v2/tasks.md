@@ -232,7 +232,7 @@
 - 风险：预览结果短期有效，UI 必须准确表示过期。
 - 完成状态：已完成（2026-09-04）。批量派发页已加入侧边导航入口，统一使用 TDesign 控件；预览请求构造 `items/action/requestId` 前端上下文，但发往后端的 DTO 严格保留 `fileIds/printerIds/strategy/action`。预览仅生成计划，不创建任务或占用打印机；选择、策略或动作变化会清理旧计划，过期计划禁止确认，刷新页面不会恢复确认状态。已展示建议、冲突、过期和不可分配原因；`AUTO_MATCH` 标记为“本次智能匹配”，未增加自动派单开关。`npm.cmd test`（47/47）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T103 批量确认与逐项结果
+### [x] T103 批量确认与逐项结果
 
 - 优先级：P1
 - 前置依赖：T012、T102
@@ -245,7 +245,7 @@
 - 风险：启动动作包含逐项安全确认，失败点多。
 - 完成状态：已完成（2026-09-04）。批量确认仅提交 `planId/version/itemIds/confirmationToken`，同一计划成功确认后重复请求只回放原结果，不重复创建任务；确认结果按项展示 `jobId/status/errorCode/message/retryable`，部分失败不覆盖成功项。成功创建的活动任务同步进入 Job Store。Mock 已覆盖预览无副作用、全成功、执行时打印机冲突部分失败、token 冲突和计划过期场景。`npm.cmd test`（50/50）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T104 批量失败项恢复
+### [x] T104 批量失败项恢复
 
 - 优先级：P1
 - 前置依赖：T001、T103
@@ -258,7 +258,7 @@
 - 风险：真实跨进程幂等、数据库迁移和设备链路仍需部署环境验证。
 - 完成状态：已完成（2026-09-05）。批量确认失败项仅对 `RETRYABLE && jobId IS NULL` 项调用专用恢复预览；已有任务项展示 `RECOVERY_REQUIRED/OPEN_EXISTING_JOB` 并可打开任务历史，不会重复创建 Job。Mock 覆盖恢复计划幂等、来源关联和二次确认；`npm.cmd test`（64/64）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T105 文件预览、缩略图、下载与关联任务
+### [x] T105 文件预览、缩略图、下载与关联任务
 
 - 优先级：P1
 - 前置依赖：T009、T010
@@ -271,7 +271,7 @@
 - 风险：对象存储 CORS 和浏览器文件预览支持差异。
 - 完成状态：已完成（2026-09-04）。新增文件预览元数据、缩略图空态、关联任务分页和嵌套文件树接口；详情抽屉分别处理预览、缩略图和任务加载状态，下载继续沿用一次过期重签策略。Mock 按当前会话过滤文件与关联任务，并清理 `fileUrl`、`safeName`、`rustfsKey` 等内部字段；`filamentLength` 按米返回和展示。新增预览、文件夹拒绝、缩略图空值、任务查询和文件树权限测试。`npm.cmd test`（54/54）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T106 打印机状态历史与统计
+### [x] T106 打印机状态历史与统计
 
 - 优先级：P1
 - 前置依赖：T007、T015
@@ -284,7 +284,7 @@
 - 风险：大时间范围可能导致渲染性能问题。
 - 完成状态：已完成（2026-09-04）。接入 `/api/v1/printers/{id}/history` 与 `/statistics`，统一规范化 Long ID、设备状态、进度和统计数值；打印机详情抽屉新增按时间范围查询的状态历史表、分页、实时更新提示和统计卡片，时长明确按秒展示。Mock 按任务创建时间计算统计、按记录时间分页历史，并覆盖权限、空结果和时间范围校验。新增 3 项历史/统计契约测试。`npm.cmd test`（57/57）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T107 用户管理
+### [x] T107 用户管理
 
 - 优先级：P1
 - 前置依赖：T001、T003、T004、T006
@@ -297,7 +297,7 @@
 - 风险：真实 Redis/多实例缓存失效和浏览器端完整联调仍需部署环境验证。
 - 完成状态：已完成（2026-09-05）。用户管理使用 `enabled` 渲染和启停，创建表单强制确认密码且固定操作员角色，保护当前管理员；Mock 覆盖 `/auth/me`、禁用旧会话、启用恢复、自禁用 409、不存在 404。`npm.cmd test`（64/64）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T108 任务历史、筛选与恢复操作
+### [x] T108 任务历史、筛选与恢复操作
 
 - 优先级：P1
 - 前置依赖：T011、T015
@@ -310,7 +310,7 @@
 - 风险：历史与活动列表边界需按状态统一定义。
 - 完成状态：已完成（2026-09-04）。任务历史已接入状态、打印机 ID、文件名/任务 ID 关键词、创建时间和分页筛选；结束时间统一显示 `completedAt`，详情打开后通过 Job Store 查询真实任务。失败任务仅显示重试入口，`ASSIGNED/READY` 仅显示重新排队，`QUEUED` 仅显示优先级调整，Mock 同步补齐时间/关键词过滤和参数校验。新增筛选、completedAt、恢复动作合法性和时间范围测试。`npm.cmd test`（60/60）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
-### T109 P1 Mock 与端到端回归
+### [x] T109 P1 Mock 与端到端回归
 
 - 优先级：P1
 - 前置依赖：T015、T101、T102、T103、T104、T105、T106、T107、T108
