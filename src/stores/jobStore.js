@@ -53,7 +53,6 @@ export const useJobStore = defineStore('job', () => {
       return queueJobs.value
     } catch (error) {
       queueError.value = error
-      queueJobs.value = []
       throw error
     } finally {
       queueLoading.value = false
@@ -83,7 +82,6 @@ export const useJobStore = defineStore('job', () => {
       return activeJobs.value
     } catch (error) {
       activeError.value = error
-      activeJobs.value = []
       throw error
     } finally {
       activeLoading.value = false

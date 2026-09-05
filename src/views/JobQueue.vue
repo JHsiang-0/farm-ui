@@ -17,17 +17,24 @@
       <t-tab-panel value="queue" label="待派发任务">
         <t-card class="job-panel-card app-page-card">
       <AsyncState
-        v-if="queueLoading || queueError || queueData.length === 0"
+        v-if="queueData.length === 0"
         :loading="queueLoading"
         :error="queueError"
-        :empty="queueData.length === 0"
+        :empty="!queueLoading && !queueError"
         empty-description="当前没有排队中的任务，机器都在闲着呢！"
         @retry="fetchQueue"
       />
+      <t-alert v-if="queueError && queueData.length" theme="error" :close-btn="false" class="mb-3">
+        <template #default>{{ queueError.message || queueError }}</template>
+        <template #operation>
+          <t-button size="small" variant="outline" @click="fetchQueue">重试</t-button>
+        </template>
+      </t-alert>
       <TdTable
-        v-else
+        v-if="queueData.length"
         :data="queueData"
-        :loading="loading"
+        :loading="queueLoading"
+        :height="queueTableHeight"
         style="width: 100%"
         class="job-table"
       >
@@ -122,17 +129,24 @@
       <t-tab-panel value="active" label="活动任务">
         <t-card class="job-panel-card app-page-card">
       <AsyncState
-        v-if="activeLoading || activeError || activePageData.length === 0"
+        v-if="activePageData.length === 0"
         :loading="activeLoading"
         :error="activeError"
-        :empty="activePageData.length === 0"
+        :empty="!activeLoading && !activeError"
         empty-description="当前没有活动任务"
         @retry="fetchActive"
       />
+      <t-alert v-if="activeError && activePageData.length" theme="error" :close-btn="false" class="mb-3">
+        <template #default>{{ activeError.message || activeError }}</template>
+        <template #operation>
+          <t-button size="small" variant="outline" @click="fetchActive">重试</t-button>
+        </template>
+      </t-alert>
       <TdTable
-        v-else
+        v-if="activePageData.length"
         :data="activePageData"
         :loading="activeLoading"
+        :height="activeTableHeight"
         style="width: 100%"
         class="job-table"
       >
@@ -405,6 +419,12 @@ const {
 } = storeToRefs(jobStore)
 const queueLoading = computed(() => jobStore.queueLoading)
 const loading = computed(() => jobStore.queueLoading || jobStore.activeLoading)
+const queueTableHeight = computed(() => queueData.value.length > 8
+  ? 'clamp(320px, calc(100vh - 270px), 720px)'
+  : undefined)
+const activeTableHeight = computed(() => activePageData.value.length > 8
+  ? 'clamp(320px, calc(100vh - 270px), 720px)'
+  : undefined)
 const detailErrorText = computed(() => detailError.value?.message || '')
 const fetchActive = () => jobStore.fetchActive()
 
@@ -709,6 +729,7 @@ const runJobAction = async (job, action, requestAction, successText) => {
   } catch (error) {
     console.error(`${successText}失败:`, error)
     message.error(error?.message || `${successText}失败`)
+    await fetchQueue()
   } finally {
     actionLoadingKey.value = ''
   }
@@ -740,7 +761,8 @@ const handleRequeue = async id => {
     message.success('任务已重新排队')
     fetchQueue()
   } catch {
-    // 错误在拦截器处理
+    // 错误在拦截器处理，重新读取服务端状态，覆盖可能已过期的列表数据。
+    await fetchQueue()
   }
 }
 
@@ -751,7 +773,7 @@ const handlePriority = async (job, value) => {
     job.priority = priority
     message.success('优先级已更新')
   } catch {
-    fetchQueue()
+    await fetchQueue()
   }
 }
 
@@ -781,7 +803,8 @@ const submitAssign = async () => {
     assignDialogVisible.value = false
     fetchQueue()
   } catch {
-    // 报错信息会被拦截器弹窗
+    // 报错信息会被拦截器弹窗，同时恢复服务端任务状态。
+    await fetchQueue()
   } finally {
     assigning.value = false
   }
@@ -798,7 +821,10 @@ const handleConfirmSafe = async job => {
     message.success('已确认安全，可以启动打印')
     await fetchQueue()
   } catch (error) {
-    if (error !== 'cancel') console.error('确认打印安全失败:', error)
+    if (error !== 'cancel') {
+      console.error('确认打印安全失败:', error)
+      await fetchQueue()
+    }
   }
 }
 
@@ -813,7 +839,10 @@ const handleStart = async job => {
     message.success('启动请求已发送，请观察设备状态')
     await fetchQueue()
   } catch (error) {
-    if (error !== 'cancel') console.error('启动打印失败:', error)
+    if (error !== 'cancel') {
+      console.error('启动打印失败:', error)
+      await fetchQueue()
+    }
   }
 }
 
@@ -824,49 +853,15 @@ onMounted(() => {
 
 <style scoped>
 .job-queue-tabs {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  flex-direction: column;
-}
-
-.job-queue-tabs :deep(.t-tabs__content) {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-}
-
-.job-queue-tabs :deep(.t-tab-panel) {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  flex-direction: column;
-}
-
-.job-panel-card {
-  flex: 1 1 0%;
-  min-height: 0;
+  min-width: 0;
 }
 
 .job-panel-card :deep(.t-card__body) {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
+  display: block;
 }
 
 .job-table {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.job-table :deep(.t-table) {
-  width: 100%;
-  height: 100%;
+  display: block;
   min-width: 0;
 }
 

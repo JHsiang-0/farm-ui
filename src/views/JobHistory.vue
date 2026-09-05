@@ -62,18 +62,25 @@
 
       <!-- 数据表格区 -->
       <AsyncState
-        v-if="loading || loadError || tableData.length === 0"
+        v-if="tableData.length === 0"
         :loading="loading"
         :error="loadError"
-        :empty="tableData.length === 0"
+        :empty="!loading && !loadError"
         empty-description="暂无打印历史记录"
         @retry="fetchData"
       />
+      <t-alert v-if="loadError && tableData.length" theme="error" :close-btn="false" class="mb-3">
+        <template #default>{{ loadError }}</template>
+        <template #operation>
+          <t-button size="small" variant="outline" @click="fetchData">重试</t-button>
+        </template>
+      </t-alert>
       <TdTable
-        v-else
+        v-if="tableData.length"
         :data="tableData"
         @row-click="openTaskDetail"
         :loading="loading"
+        :height="historyTableHeight"
         style="width: 100%"
         class="history-table"
       >
@@ -142,6 +149,7 @@
 
         <TdTableColumn label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
+            <t-button size="small" variant="text" @click.stop="openTaskDetail(scope.row)">详情</t-button>
             <t-button v-if="scope.row.status === 'FAILED'" size="small" theme="primary" variant="text"
               @click="handleRetry(scope.row.id)">重试</t-button>
             <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" theme="warning" variant="text"
@@ -221,6 +229,9 @@ const jobStore = useJobStore()
 const detailLoading = computed(() => jobStore.detailLoading)
 const detailErrorText = computed(() => jobStore.detailError?.message || '')
 const tableData = ref([])
+const historyTableHeight = computed(() => tableData.value.length > 8
+  ? 'clamp(320px, calc(100vh - 330px), 720px)'
+  : undefined)
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
 const JOB_HISTORY_DETAIL_CONTEXT_KEY = 'farm-ui:job-history-detail'
@@ -292,6 +303,7 @@ const handleCancel = async (id) => {
   } catch (error) {
     console.error('取消任务失败:', error)
     message.error('取消任务失败')
+    await fetchData()
   }
 }
 
@@ -302,6 +314,7 @@ const handleRetry = async id => {
     fetchData()
   } catch (error) {
     console.error('重试任务失败:', error)
+    await fetchData()
   }
 }
 
@@ -312,6 +325,7 @@ const handleRequeue = async id => {
     fetchData()
   } catch (error) {
     console.error('重新排队失败:', error)
+    await fetchData()
   }
 }
 
@@ -403,11 +417,7 @@ fetchData()
 
 <style scoped>
 .history-card :deep(.t-card__body) {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
+  display: block;
 }
 
 .history-filter-toolbar {
@@ -420,15 +430,7 @@ fetchData()
 }
 
 .history-table {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.history-table :deep(.t-table) {
-  width: 100%;
+  display: block;
   min-width: 0;
 }
 </style>
