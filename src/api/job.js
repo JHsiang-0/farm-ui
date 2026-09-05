@@ -145,6 +145,15 @@ export function confirmBatchDispatch(data) {
   })
 }
 
+/** 为批量确认失败项生成新的恢复预览，不复用旧计划。 */
+export function retryPreviewBatchDispatch(data) {
+  return request({
+    url: '/api/v1/print-jobs/batch/retry-preview',
+    method: 'post',
+    data
+  })
+}
+
 /**
  * 获取打印任务分页列表（支持高级检索）
  * @param {Object} params - 查询参数

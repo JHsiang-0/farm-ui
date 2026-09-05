@@ -10,6 +10,7 @@
     <t-card class="app-page-card shadow-sm">
       <div class="flex gap-3 mb-4">
         <t-input v-model="query.username" placeholder="按用户名搜索" clearable @enter="fetchUsers" />
+        <t-input v-model="query.email" placeholder="按邮箱搜索" clearable @enter="fetchUsers" />
         <t-select v-model="query.role" placeholder="角色" clearable style="width: 150px" @change="fetchUsers">
           <t-option label="管理员" value="ADMIN" /><t-option label="操作员" value="OPERATOR" />
         </t-select>
@@ -25,7 +26,7 @@
         </TdTableColumn>
         <TdTableColumn label="操作" width="120">
           <template #default="{ row }">
-            <t-button size="small" variant="text" :disabled="row.id === currentUserId" @click="toggleUser(row)">{{ row.enabled ? '停用' : '启用' }}</t-button>
+            <t-button size="small" variant="text" :disabled="String(row.id) === String(currentUserId)" @click="toggleUser(row)">{{ row.enabled ? '停用' : '启用' }}</t-button>
           </template>
         </TdTableColumn>
       </TdTable>
@@ -36,7 +37,7 @@
       <t-form :data="form" label-width="80px">
         <t-form-item label="用户名"><t-input v-model="form.username" /></t-form-item>
         <t-form-item label="密码"><t-input v-model="form.password" type="password" /></t-form-item>
-        <t-form-item label="角色"><t-select v-model="form.role"><t-option label="操作员" value="OPERATOR" /><t-option label="管理员" value="ADMIN" /></t-select></t-form-item>
+        <t-form-item label="确认密码"><t-input v-model="form.confirmPassword" type="password" /></t-form-item>
         <t-form-item label="邮箱"><t-input v-model="form.email" /></t-form-item>
       </t-form>
     </t-dialog>
@@ -58,9 +59,9 @@ const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const users = ref([])
-const query = reactive({ username: '', role: '' })
+const query = reactive({ username: '', email: '', role: '' })
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
-const form = reactive({ username: '', password: '', role: 'OPERATOR', email: '' })
+const form = reactive({ username: '', password: '', confirmPassword: '', email: '', phone: '' })
 
 const fetchUsers = async () => {
   loading.value = true
@@ -70,15 +71,26 @@ const fetchUsers = async () => {
     pagination.total = res.data?.total || 0
   } finally { loading.value = false }
 }
-const openCreate = () => { Object.assign(form, { username: '', password: '', role: 'OPERATOR', email: '' }); dialogVisible.value = true }
+const openCreate = () => { Object.assign(form, { username: '', password: '', confirmPassword: '', email: '', phone: '' }); dialogVisible.value = true }
 const submitCreate = async () => {
+  if (!form.username || !form.password || form.password !== form.confirmPassword) {
+    message.warning('请填写用户名、密码并确认两次密码一致')
+    return
+  }
   submitting.value = true
-  try { await createAdminUser(form); message.success('用户创建成功'); dialogVisible.value = false; fetchUsers() } finally { submitting.value = false }
+  try {
+    await createAdminUser({ ...form })
+    message.success('操作员创建成功')
+    dialogVisible.value = false
+    await fetchUsers()
+  } finally { submitting.value = false }
 }
 const toggleUser = async user => {
-  await setAdminUserEnabled(user.id, !user.enabled)
-  message.success(user.enabled ? '用户已停用' : '用户已启用')
-  fetchUsers()
+  if (String(user.id) === String(currentUserId)) return
+  const enabled = !user.enabled
+  await setAdminUserEnabled(user.id, enabled)
+  message.success(enabled ? '用户已启用' : '用户已停用')
+  await fetchUsers()
 }
 onMounted(fetchUsers)
 </script>

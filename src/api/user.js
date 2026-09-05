@@ -95,7 +95,7 @@ export function setAdminUserEnabled(userId, enabled) {
   return request({
     url: `/api/v1/auth/admin/users/${userId}/${enabled ? 'enable' : 'disable'}`,
     method: 'post'
-  })
+  }).then(response => mapResponseData(response, normalizeUser))
 }
 
 export function getProfile(userId) {

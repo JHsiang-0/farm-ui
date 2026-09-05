@@ -249,14 +249,14 @@
 
 - 优先级：P1
 - 前置依赖：T001、T103
-- 修改文件：批量结果组件、`src/api/job.js`、Mock 和测试
-- 实现内容：按冻结契约实现失败项重试；若无专用重试接口，则仅选择 retryable 项重新预览并确认，保留原结果审计信息。
-- 验收标准：不会重复成功项，不复用失效计划，用户可看到新旧两次执行关联。
+- 修改文件：`src/views/BatchDispatch.vue`、`src/api/job.js`、`src/utils/batchDispatch.js`、Mock 和测试
+- 实现内容：调用 `POST /api/v1/print-jobs/batch/retry-preview`，仅选择 `RETRYABLE && jobId IS NULL` 项重新预览并确认；已有 `jobId` 的项展示 `RECOVERY_REQUIRED/OPEN_EXISTING_JOB` 并打开既有任务，保留新旧计划/明细关联。
+- 验收标准：不会重复成功项，不复用旧计划；无任务失败项可生成幂等的新恢复计划，已有任务失败项不会再次创建 Job。
 - 测试方式：混合 retryable、不可重试和二次失败测试。
-- 需要后端配合：是，需确认重试语义。
+- 需要后端配合：是，后端已提供专用恢复预览接口及 `sourcePlanId/sourceItemId/recoveryAction` 字段。
 - 需要真实打印机：否。
-- 风险：交接文档目前没有独立批量重试接口。
-- 完成状态：已完成（2026-09-04）。批量确认仅提交 `planId/version/itemIds/confirmationToken`，同一计划成功确认后重复请求只回放原结果，不重复创建任务；确认结果按项展示 `jobId/status/errorCode/message/retryable`，部分失败不覆盖成功项。成功创建的活动任务同步进入 Job Store；`START_AFTER_CONFIRM` 只创建 `ASSIGNED` 任务，后续仍需逐项安全确认/启动。Mock 已覆盖预览无副作用、全成功、执行时打印机冲突部分失败、token 冲突和计划过期场景。`npm.cmd test`（50/50）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
+- 风险：真实跨进程幂等、数据库迁移和设备链路仍需部署环境验证。
+- 完成状态：已完成（2026-09-05）。批量确认失败项仅对 `RETRYABLE && jobId IS NULL` 项调用专用恢复预览；已有任务项展示 `RECOVERY_REQUIRED/OPEN_EXISTING_JOB` 并可打开任务历史，不会重复创建 Job。Mock 覆盖恢复计划幂等、来源关联和二次确认；`npm.cmd test`（64/64）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T105 文件预览、缩略图、下载与关联任务
 
@@ -289,13 +289,13 @@
 - 优先级：P1
 - 前置依赖：T001、T003、T004、T006
 - 修改文件：`src/api/user.js`、`src/views/UserManagement.vue`、用户组件、Mock 和测试
-- 实现内容：只创建 OPERATOR，补 confirmPassword；接入分页、受限编辑、启停；使用后端冻结的 enabled/disabled 字段；保护当前管理员。
-- 验收标准：真实创建不再 400，不能通过 UI 创建 ADMIN，状态显示与服务端一致。
+- 实现内容：只创建 OPERATOR，补 confirmPassword；接入 email/enabled 分页、受限编辑、启停；使用持久化 `enabled` 字段；保护当前管理员。
+- 验收标准：真实创建不再 400，不能通过 UI 创建 ADMIN，启停返回 `UserVO` 且状态显示与服务端一致；禁用自己返回 409，不存在用户返回 404。
 - 测试方式：ADMIN/OPERATOR 权限、表单、启停和 404/409 测试。
-- 需要后端配合：是，需先补齐用户状态 VO 契约。
+- 需要后端配合：是，后端已补齐 `UserVO.enabled`、`/auth/me`、分页过滤和启停错误语义。
 - 需要真实打印机：否。
-- 风险：当前 UserVO 无启停状态字段，无法可靠渲染。
-- 完成状态：待开始。
+- 风险：真实 Redis/多实例缓存失效和浏览器端完整联调仍需部署环境验证。
+- 完成状态：已完成（2026-09-05）。用户管理使用 `enabled` 渲染和启停，创建表单强制确认密码且固定操作员角色，保护当前管理员；Mock 覆盖 `/auth/me`、禁用旧会话、启用恢复、自禁用 409、不存在 404。`npm.cmd test`（64/64）、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock` 均通过。
 
 ### T108 任务历史、筛选与恢复操作
 

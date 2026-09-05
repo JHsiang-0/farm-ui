@@ -94,3 +94,50 @@ test('rejects a token mismatch and an expired plan without creating a job', asyn
   )
   assert.equal(mockState.jobs.length, 6)
 })
+
+test('creates an idempotent recovery preview for retryable confirmation failures', async () => {
+  setupSession()
+  const initialJobCount = mockState.jobs.length
+  const preview = await request('POST', '/api/v1/print-jobs/batch/preview', {
+    fileIds: [20, 22],
+    printerIds: [404],
+    strategy: 'ROUND_ROBIN',
+    action: 'QUEUE'
+  }, headers)
+  const confirmed = await request('POST', '/api/v1/print-jobs/batch/confirm', {
+    planId: preview.data.planId,
+    version: preview.data.version,
+    itemIds: preview.data.items.map(item => item.itemId),
+    confirmationToken: preview.data.confirmationToken
+  }, headers)
+  const failed = confirmed.data.items.find(item => item.retryable)
+  assert.ok(failed)
+  assert.equal(failed.jobId, null)
+
+  const printer = mockState.printers.find(item => item.id === 404)
+  printer.status = 'IDLE'
+  printer.currentJobId = null
+  const retryRequest = {
+    sourcePlanId: preview.data.planId,
+    sourceItemIds: [failed.itemId],
+    retryKey: `retry:${preview.data.planId}:${failed.itemId}`
+  }
+  const retryPreview = await request('POST', '/api/v1/print-jobs/batch/retry-preview', retryRequest, headers)
+  assert.notEqual(retryPreview.data.planId, preview.data.planId)
+  assert.equal(retryPreview.data.items[0].sourcePlanId, preview.data.planId)
+  assert.equal(retryPreview.data.items[0].sourceItemId, failed.itemId)
+  assert.equal(retryPreview.data.items[0].retryable, false)
+
+  const repeated = await request('POST', '/api/v1/print-jobs/batch/retry-preview', retryRequest, headers)
+  assert.equal(repeated.data.planId, retryPreview.data.planId)
+  assert.equal(repeated.data.confirmationToken, retryPreview.data.confirmationToken)
+
+  const retried = await request('POST', '/api/v1/print-jobs/batch/confirm', {
+    planId: retryPreview.data.planId,
+    version: retryPreview.data.version,
+    itemIds: retryPreview.data.items.filter(item => item.canExecute).map(item => item.itemId),
+    confirmationToken: retryPreview.data.confirmationToken
+  }, headers)
+  assert.equal(retried.data.items[0].success, true)
+  assert.equal(mockState.jobs.length, initialJobCount + 2)
+})

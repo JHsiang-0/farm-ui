@@ -75,7 +75,11 @@ export function normalizeBatchConfirmResult(data = {}) {
         message: item?.message || '',
         attemptCount: Number.isInteger(item?.attemptCount) ? item.attemptCount : 1,
         retryable: item?.retryable === true,
-        success: item?.success === true || (item?.success !== false && status !== 'FAILED'),
+        success: item?.success === true || (item?.success !== false
+          && ['ASSIGNED', 'UPLOADING', 'READY', 'SUCCEEDED', 'STARTED'].includes(status)),
+        sourcePlanId: item?.sourcePlanId ?? null,
+        sourceItemId: item?.sourceItemId ?? null,
+        recoveryAction: item?.recoveryAction ?? null,
         job: item?.job ? normalizePrintJob(item.job) : null
       }
     })

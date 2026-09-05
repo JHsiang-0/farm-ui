@@ -54,6 +54,10 @@ const requireSession = (config, roles = []) => {
   if (roles.length > 0 && !roles.includes(session.role)) {
     fail(403, 403, '没有权限执行此操作')
   }
+  const user = mockState.users.find(item => String(item.id) === String(session.userId))
+  if (!user || user.enabled === false) {
+    fail(403, 403, '用户已被禁用')
+  }
   return session
 }
 
@@ -167,7 +171,9 @@ const handleFirstAdminSetup = config => {
 const handleRegister = config => {
   requireSession(config, ['ADMIN'])
   const body = getBody(config)
-  if (!body.username || !body.password) fail(400, 400, '用户名和密码不能为空')
+  if (!body.username || !body.password || body.password !== body.confirmPassword) {
+    fail(400, 400, '用户名、密码和确认密码不能为空且必须一致')
+  }
   if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$/.test(body.password)) {
     fail(400, 400, '密码必须为 6-20 位且包含大小写字母和数字')
   }
@@ -202,9 +208,6 @@ const handleAdminUserPage = config => {
 
 const handleAdminUserCreate = config => {
   const id = handleRegister(config)
-  const user = mockState.users.find(item => item.id === id)
-  const role = getBody(config).role
-  if (user && ['ADMIN', 'OPERATOR'].includes(role)) user.role = role
   return id
 }
 
@@ -224,14 +227,24 @@ const handleAdminUserUpdate = config => {
 }
 
 const handleAdminUserToggle = config => {
-  requireSession(config, ['ADMIN'])
+  const session = requireSession(config, ['ADMIN'])
   const parts = getPath(config.url).split('/')
   const id = parts.at(-2)
   const user = mockState.users.find(item => String(item.id) === String(id))
   if (!user) fail(404, 404, '鐢ㄦ埛涓嶅瓨鍦?')
+  if (String(session.userId) === String(user.id) && parts.at(-1) === 'disable') {
+    fail(409, 409, '不能禁用当前登录账号')
+  }
   user.enabled = parts.at(-1) === 'enable'
   user.updatedAt = now()
-  return null
+  return publicUser(user)
+}
+
+const handleCurrentUser = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const user = mockState.users.find(item => String(item.id) === String(session.userId))
+  if (!user) fail(404, 404, '用户不存在')
+  return publicUser(user)
 }
 
 const handleProfile = config => {
@@ -391,6 +404,100 @@ const handlePrinterStatistics = config => {
     averagePrintSeconds: durations.length > 0 ? totalPrintSeconds / durations.length : 0
   }
 }
+
+const handleBatchRetryPreview = config => {
+  const session = requireSession(config, ['ADMIN', 'OPERATOR'])
+  const body = getBody(config)
+  const sourcePlan = mockState.batchPlans.find(item => item.planId === body.sourcePlanId)
+  if (!sourcePlan || !canReadResource(session, sourcePlan.userId)) {
+    fail(404, 404, '批量派发计划不存在')
+  }
+  const sourceItemIds = normalizeBatchIds(body.sourceItemIds)
+  if (!sourceItemIds.length || sourceItemIds.length > 100 || !body.retryKey) {
+    fail(400, 400, '来源计划、失败项和恢复幂等键不能为空')
+  }
+  const existing = mockState.batchPlans.find(item => (
+    item.userId === session.userId && item.retryKey === String(body.retryKey)
+  ))
+  if (existing) return batchPreviewResponse(existing)
+
+  const sourceById = new Map(sourcePlan.items.map(item => [String(item.itemId), item]))
+  if (sourceItemIds.some(itemId => !sourceById.has(itemId))) fail(404, 404, '批量计划明细不存在')
+  const items = sourceItemIds.map((sourceItemId, index) => {
+    const source = sourceById.get(sourceItemId)
+    if (source.status !== 'RETRYABLE' && !source.retryable) {
+      fail(422, 422, '只有可恢复失败项可以恢复')
+    }
+    const item = {
+      itemId: `batch-retry-${nextMockId('batchPlan')}-item-${index + 1}`,
+      fileId: source.fileId,
+      printerId: source.printerId,
+      canExecute: false,
+      reasonCode: null,
+      errorCode: null,
+      message: null,
+      retryable: false,
+      sourcePlanId: sourcePlan.planId,
+      sourceItemId,
+      recoveryAction: null,
+      status: 'PENDING',
+      jobId: source.jobId || null
+    }
+    if (source.jobId) {
+      source.status = 'RECOVERY_REQUIRED'
+      source.retryable = false
+      source.recoveryAction = 'OPEN_EXISTING_JOB'
+      item.status = 'RECOVERY_REQUIRED'
+      item.recoveryAction = 'OPEN_EXISTING_JOB'
+      item.message = '已有任务已创建，请打开既有任务进行恢复'
+      return item
+    }
+    const file = findFile(source.fileId)
+    const printer = findPrinter(source.printerId)
+    if (!file || file.folder || !canReadResource(session, file.userId)) {
+      item.reasonCode = 'FILE_NOT_AVAILABLE'
+      item.message = '文件不存在或无权使用'
+      return item
+    }
+    if (!isPrinterAvailable(printer)) {
+      item.reasonCode = 'PRINTER_UNAVAILABLE'
+      item.message = '打印机当前不可用'
+      return item
+    }
+    item.canExecute = true
+    item.message = '恢复预览可执行'
+    return item
+  })
+  const plan = {
+    planId: `batch-plan-${nextMockId('batchPlan')}`,
+    version: 1,
+    userId: session.userId,
+    strategy: sourcePlan.strategy,
+    action: sourcePlan.action,
+    items,
+    suggestions: [],
+    conflicts: items.filter(item => !item.canExecute),
+    confirmationToken: `mock-retry-confirm-${String(body.retryKey)}`,
+    expiresAt: new Date(Date.now() + BATCH_PLAN_TTL_MS).toISOString(),
+    status: 'PREVIEWED',
+    confirmResult: null,
+    retryKey: String(body.retryKey)
+  }
+  mockState.batchPlans.push(plan)
+  return batchPreviewResponse(plan)
+}
+
+const batchPreviewResponse = plan => ({
+  planId: plan.planId,
+  version: plan.version,
+  action: plan.action,
+  strategy: plan.strategy,
+  items: cloneMockData(plan.items),
+  suggestions: cloneMockData(plan.suggestions),
+  conflicts: cloneMockData(plan.conflicts),
+  confirmationToken: plan.confirmationToken,
+  expiresAt: plan.expiresAt
+})
 
 const handleAddPrinter = config => {
   requireSession(config, ['ADMIN'])
@@ -1070,6 +1177,12 @@ const createBatchJob = (session, item, action) => {
     return { success: false, errorCode: 'PRINTER_BUSY', message: '打印机在确认时已被占用', retryable: true }
   }
 
+  const idempotencyKey = `batch:${item.planId || 'legacy'}:${item.itemId}`
+  const existing = mockState.jobs.find(job => (
+    String(job.userId) === String(session.userId) && job.idempotencyKey === idempotencyKey
+  ))
+  if (existing) return { success: true, job: existing }
+
   const createdAt = now()
   const job = {
     id: nextMockId('job'),
@@ -1078,7 +1191,7 @@ const createBatchJob = (session, item, action) => {
     userId: session.userId,
     operatorId: null,
     priority: 0,
-    idempotencyKey: null,
+    idempotencyKey,
     status: 'QUEUED',
     progress: 0,
     startedAt: null,
@@ -1136,7 +1249,7 @@ const handleBatchConfirm = config => {
       items.push({ ...previewItem, jobId: null, status: 'FAILED', attemptCount: 1, success: false })
       return
     }
-    const result = createBatchJob(session, previewItem, plan.action)
+    const result = createBatchJob(session, { ...previewItem, planId: plan.planId }, plan.action)
     if (!result.success) {
       items.push({
         itemId: previewItem.itemId,
@@ -1150,6 +1263,8 @@ const handleBatchConfirm = config => {
         retryable: result.retryable,
         success: false
       })
+      previewItem.status = result.retryable ? 'RETRYABLE' : 'FAILED'
+      previewItem.retryable = result.retryable
       return
     }
     items.push({
@@ -1165,6 +1280,9 @@ const handleBatchConfirm = config => {
       success: true,
       job: toPublicJob(result.job)
     })
+    previewItem.status = result.job.status
+    previewItem.jobId = result.job.id
+    previewItem.retryable = false
   })
 
   const result = {
@@ -1270,6 +1388,7 @@ const route = async config => {
   if (key === 'GET /api/v1/auth/setup/status') return handleFirstAdminSetupStatus()
   if (key === 'POST /api/v1/auth/setup/admin') return handleFirstAdminSetup(config)
   if (key === 'POST /api/v1/auth/register') return handleRegister(config)
+  if (key === 'GET /api/v1/auth/me') return handleCurrentUser(config)
   if (key === 'GET /api/v1/auth/admin/users') return handleAdminUserPage(config)
   if (key === 'POST /api/v1/auth/admin/users') return handleAdminUserCreate(config)
   if (/^PUT \/api\/v1\/auth\/admin\/users\/[^/]+$/.test(key)) return handleAdminUserUpdate(config)
@@ -1298,6 +1417,7 @@ const route = async config => {
   if (key === 'GET /api/v1/print-jobs/queue') return handleJobQueue(config)
   if (key === 'POST /api/v1/print-jobs/page') return handleJobPage(config)
   if (key === 'POST /api/v1/print-jobs/batch/preview') return handleBatchPreview(config)
+  if (key === 'POST /api/v1/print-jobs/batch/retry-preview') return handleBatchRetryPreview(config)
   if (key === 'POST /api/v1/print-jobs/batch/confirm') return handleBatchConfirm(config)
   if (/^GET \/api\/v1\/print-jobs\/[^/]+$/.test(key)) return handleJobDetail(config)
   if (key === 'POST /api/v1/print-jobs/create' || key === 'POST /api/v1/print-jobs') return handleCreateJob(config)

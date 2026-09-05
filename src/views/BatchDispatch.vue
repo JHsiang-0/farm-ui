@@ -99,6 +99,14 @@
       <t-alert v-if="confirmData" class="mt-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '已处理'}`" :closable="false">
         成功 {{ confirmSuccessCount }} 项，失败 {{ confirmFailureCount }} 项
         <span v-if="confirmData.repeated">（重复确认已返回原结果）</span>
+        <t-space class="mt-2">
+          <t-button v-if="retryableConfirmItems.length" variant="outline" size="small" @click="retryFailedConfirmItems">
+            重新预览可恢复项（{{ retryableConfirmItems.length }}）
+          </t-button>
+          <t-button v-if="existingJobItems.length" variant="outline" size="small" @click="openExistingJob(existingJobItems[0])">
+            打开已有任务（{{ existingJobItems[0].jobId }}）
+          </t-button>
+        </t-space>
       </t-alert>
       <t-table v-if="confirmData?.items?.length" class="mt-3" :data="confirmData.items" :columns="confirmColumns"
         row-key="itemId" bordered size="small">
@@ -111,6 +119,9 @@
         <template #retryable="{ row }">
           {{ row.retryable ? '是' : '否' }}
         </template>
+        <template #source="{ row }">
+          {{ row.sourcePlanId ? `${row.sourcePlanId} / ${row.sourceItemId}` : '—' }}
+        </template>
       </t-table>
     </t-card>
   </div>
@@ -118,16 +129,17 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message, confirmMessage } from '@/utils/message'
 import { batchUploadFiles } from '@/api/printFile'
 import { getFileList } from '@/api/printFile'
 import { getPrinterList } from '@/api/printer'
-import { previewBatchDispatch, confirmBatchDispatch } from '@/api/job'
+import { previewBatchDispatch, confirmBatchDispatch, retryPreviewBatchDispatch } from '@/api/job'
 import { createBatchPreviewRequest, normalizeBatchConfirmResult } from '@/utils/batchDispatch'
 import { useJobStore } from '@/stores/jobStore'
 
 const route = useRoute()
+const router = useRouter()
 const jobStore = useJobStore()
 const files = ref([])
 const printers = ref([])
@@ -145,6 +157,7 @@ const previewing = ref(false)
 const confirming = ref(false)
 const previewExpired = ref(false)
 const previewExpiresAt = ref(null)
+const recoveryHistory = ref([])
 const strategy = ref('ONE_TO_ONE')
 const action = ref('QUEUE')
 let previewExpiryTimer = null
@@ -161,13 +174,18 @@ const retryableUploadFiles = computed(() => (uploadResult.value?.items || [])
 const previewSuggestions = computed(() => previewData.value?.suggestions || [])
 const confirmSuccessCount = computed(() => (confirmData.value?.items || []).filter(item => item.success).length)
 const confirmFailureCount = computed(() => (confirmData.value?.items || []).filter(item => !item.success).length)
+const retryableConfirmItems = computed(() => (confirmData.value?.items || [])
+  .filter(item => item.retryable && !item.jobId && !item.recoveryAction))
+const existingJobItems = computed(() => (confirmData.value?.items || [])
+  .filter(item => item.jobId && item.recoveryAction === 'OPEN_EXISTING_JOB'))
 const confirmColumns = [
   { colKey: 'fileId', title: '文件 ID', width: 120 },
   { colKey: 'printerId', title: '打印机 ID', width: 120 },
   { colKey: 'jobId', title: '任务 ID', width: 120 },
   { colKey: 'status', title: '状态', width: 120 },
   { colKey: 'message', title: '说明' },
-  { colKey: 'retryable', title: '可重试', width: 100 }
+  { colKey: 'retryable', title: '可重试', width: 100 },
+  { colKey: 'source', title: '恢复来源' }
 ]
 
 function resultTheme(item) {
@@ -329,6 +347,35 @@ async function confirm() {
   } finally {
     confirming.value = false
   }
+}
+
+async function retryFailedConfirmItems() {
+  const items = retryableConfirmItems.value
+  if (!items.length || !confirmData.value?.planId) return
+  const sourceItemIds = items.map(item => item.itemId).sort()
+  const retryKey = `batch-retry:${confirmData.value.planId}:${sourceItemIds.join(',')}`
+  try {
+    const response = await retryPreviewBatchDispatch({
+      sourcePlanId: confirmData.value.planId,
+      sourceItemIds,
+      retryKey
+    })
+    recoveryHistory.value.push({ planId: confirmData.value.planId, itemIds: sourceItemIds })
+    confirmData.value = null
+    previewData.value = response?.data || null
+    previewExpiresAt.value = previewData.value?.expiresAt || null
+    startPreviewExpiryTimer(previewExpiresAt.value)
+    message.success('已生成新的失败项恢复预览，请确认执行')
+  } catch (error) {
+    console.error('生成失败项恢复预览失败:', error)
+    message.error(error?.message || '生成恢复预览失败')
+  }
+}
+
+async function openExistingJob(item) {
+  if (!item?.jobId) return
+  sessionStorage.setItem('farm-ui:job-history-detail', String(item.jobId))
+  await router.push({ name: 'tasks-history' })
 }
 
 onMounted(async () => {
