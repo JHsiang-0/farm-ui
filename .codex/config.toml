@@ -1,6 +1,12 @@
 [features]
 multi_agent = true
 
+[mcp_servers.tdesign-mcp-server]
+command = "npx"
+args = ["-y", "tdesign-mcp-server@latest"]
+enabled = true
+startup_timeout_sec = 120
+
 [agents]
 enabled = true
 max_concurrent_threads_per_session = 4
