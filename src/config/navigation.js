@@ -4,7 +4,8 @@ import {
   FolderOpenIcon,
   ListNumberedIcon,
   PrintIcon,
-  UserIcon
+  UserIcon,
+  FileIcon as AuditLogIcon
 } from 'tdesign-icons-vue-next'
 
 export const navigationGroups = [
@@ -36,7 +37,8 @@ export const navigationGroups = [
     key: 'system',
     label: '系统管理',
     items: [
-      { key: 'users', title: '用户管理', to: '/users', icon: UserIcon, roles: ['ADMIN'] }
+      { key: 'users', title: '用户管理', to: '/users', icon: UserIcon, roles: ['ADMIN'] },
+      { key: 'audit-logs', title: '操作日志', to: '/audit-logs', icon: AuditLogIcon, roles: ['ADMIN'] }
     ]
   }
 ]

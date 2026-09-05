@@ -164,6 +164,12 @@ POST /api/v1/auth/login
 
 密码规则由后端强制校验：6-20 位，必须包含大写字母、小写字母和数字。`CUSTOMER` 不再使用。
 
+### 3.3 操作审计日志（T205）
+
+前端调用 `GET /api/v1/auth/admin/audit-logs` 查询管理员操作日志。Query 参数为 `pageNum`（默认 `1`）、`pageSize`（默认 `20`，范围 `1-100`）、`actorId`、`action`、`targetType`、`targetId`、`result`（`SUCCESS|FAILURE`）、`from` 和 `to`；服务端固定按 `occurredAt DESC, id DESC` 排序。
+
+返回 `Result<PageResult<AuditLogVO>>`，其中 `AuditLogVO` 固定字段为 `id,actorId,actorUsername,actorRole,action,targetType,targetId,targetLabel,result,errorCode,occurredAt,traceId`。页面仅展示用户、角色、动作、目标、时间和结果，并通过白名单适配器丢弃其他字段；接口和页面均仅对 `ADMIN` 可见。敏感凭据、请求/响应体、堆栈和预签名 URL 不在契约中。
+
 ## 4. 当前已有业务接口
 
 以下接口以当前 Controller 为准，均使用 `Result<T>` 包装。

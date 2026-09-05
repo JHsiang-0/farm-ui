@@ -54,6 +54,12 @@ const router = createRouter({
           meta: { title: '用户管理', roles: ['ADMIN'], hideBreadcrumb: true }
         },
         {
+          path: 'audit-logs',
+          name: 'audit-logs',
+          component: () => import('../views/AuditLog.vue'),
+          meta: { title: '操作日志', roles: ['ADMIN'], hideBreadcrumb: true }
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('../views/Profile.vue')

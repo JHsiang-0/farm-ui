@@ -382,6 +382,50 @@ const createSeedData = ({ initialized = true } = {}) => ({
       updatedAt: '2026-09-01T16:10:00'
     }
   ],
+  auditLogs: initialized ? [
+    {
+      id: 3,
+      actorId: 1,
+      actorUsername: 'admin',
+      actorRole: 'ADMIN',
+      action: 'JOB_CANCEL',
+      targetType: 'JOB',
+      targetId: '1006',
+      targetLabel: '打印任务 #1006',
+      result: 'SUCCESS',
+      errorCode: null,
+      occurredAt: '2026-09-02T18:20:00',
+      traceId: 'mock-trace-003'
+    },
+    {
+      id: 2,
+      actorId: 2,
+      actorUsername: 'operator',
+      actorRole: 'OPERATOR',
+      action: 'JOB_START',
+      targetType: 'JOB',
+      targetId: '1001',
+      targetLabel: '打印任务 #1001',
+      result: 'SUCCESS',
+      errorCode: null,
+      occurredAt: '2026-09-02T17:10:00',
+      traceId: 'mock-trace-002'
+    },
+    {
+      id: 1,
+      actorId: 1,
+      actorUsername: 'admin',
+      actorRole: 'ADMIN',
+      action: 'LOGIN',
+      targetType: 'USER',
+      targetId: '1',
+      targetLabel: 'admin',
+      result: 'SUCCESS',
+      errorCode: null,
+      occurredAt: '2026-09-01T09:00:00',
+      traceId: 'mock-trace-001'
+    }
+  ] : [],
   batchPlans: [],
   nextIds: {
     users: 3,
@@ -389,7 +433,8 @@ const createSeedData = ({ initialized = true } = {}) => ({
     folder: 3,
     job: 1007,
     printer: 409,
-    batchPlan: 1
+    batchPlan: 1,
+    auditLog: 4
   },
   sessions: {}
 })

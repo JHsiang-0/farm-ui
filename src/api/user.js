@@ -3,6 +3,7 @@ import {
   mapResponseData,
   normalizePageParams,
   normalizePageResponse,
+  normalizeAuditLog,
   normalizeUser
 } from '@/utils/dataAdapters'
 
@@ -96,6 +97,18 @@ export function setAdminUserEnabled(userId, enabled) {
     url: `/api/v1/auth/admin/users/${userId}/${enabled ? 'enable' : 'disable'}`,
     method: 'post'
   }).then(response => mapResponseData(response, normalizeUser))
+}
+
+/** 查询管理员操作日志；只由 ADMIN 页面调用，响应字段由适配层严格收敛。 */
+export function getAuditLogs(params = {}) {
+  return request({
+    url: '/api/v1/auth/admin/audit-logs',
+    method: 'get',
+    params: normalizePageParams({ pageSize: 20, ...params })
+  }).then(response => mapResponseData(
+    response,
+    data => normalizePageResponse(data, normalizeAuditLog)
+  ))
 }
 
 export function getProfile(userId) {

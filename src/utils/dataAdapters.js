@@ -247,3 +247,25 @@ export function normalizeUser(record) {
   if (record !== null && typeof record !== 'object') return normalizeId(record)
   return normalizeIdFields(record, ['id', 'userId'])
 }
+
+/**
+ * 规范化操作日志安全视图，只保留正式契约字段，避免误渲染后端内部扩展字段。
+ */
+export function normalizeAuditLog(record) {
+  if (!record || typeof record !== 'object') return null
+
+  return {
+    id: normalizeId(record.id),
+    actorId: normalizeId(record.actorId),
+    actorUsername: record.actorUsername ?? null,
+    actorRole: record.actorRole ?? null,
+    action: record.action ?? null,
+    targetType: record.targetType ?? null,
+    targetId: normalizeId(record.targetId),
+    targetLabel: record.targetLabel ?? null,
+    result: record.result ?? null,
+    errorCode: record.errorCode ?? null,
+    occurredAt: record.occurredAt ?? null,
+    traceId: record.traceId ?? null
+  }
+}

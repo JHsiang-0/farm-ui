@@ -206,6 +206,24 @@ const handleAdminUserPage = config => {
   return createMockPage(records.map(publicUser), params)
 }
 
+const handleAuditLogPage = config => {
+  requireSession(config, ['ADMIN'])
+  const params = getParams(config)
+  let records = [...mockState.auditLogs]
+  if (params.actorId) records = records.filter(item => String(item.actorId) === String(params.actorId))
+  if (params.action) records = records.filter(item => item.action === String(params.action))
+  if (params.targetType) records = records.filter(item => item.targetType === String(params.targetType))
+  if (params.targetId) records = records.filter(item => String(item.targetId) === String(params.targetId))
+  if (params.result) records = records.filter(item => item.result === String(params.result))
+  if (params.from) records = records.filter(item => item.occurredAt >= String(params.from))
+  if (params.to) records = records.filter(item => item.occurredAt <= String(params.to))
+  records.sort((left, right) => {
+    const timeDiff = String(right.occurredAt).localeCompare(String(left.occurredAt))
+    return timeDiff || Number(right.id) - Number(left.id)
+  })
+  return createMockPage(records, params)
+}
+
 const handleAdminUserCreate = config => {
   const id = handleRegister(config)
   return id
@@ -1390,6 +1408,7 @@ const route = async config => {
   if (key === 'POST /api/v1/auth/register') return handleRegister(config)
   if (key === 'GET /api/v1/auth/me') return handleCurrentUser(config)
   if (key === 'GET /api/v1/auth/admin/users') return handleAdminUserPage(config)
+  if (key === 'GET /api/v1/auth/admin/audit-logs') return handleAuditLogPage(config)
   if (key === 'POST /api/v1/auth/admin/users') return handleAdminUserCreate(config)
   if (/^PUT \/api\/v1\/auth\/admin\/users\/[^/]+$/.test(key)) return handleAdminUserUpdate(config)
   if (/^POST \/api\/v1\/auth\/admin\/users\/[^/]+\/(enable|disable)$/.test(key)) return handleAdminUserToggle(config)
