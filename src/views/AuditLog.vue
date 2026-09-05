@@ -39,7 +39,7 @@
         empty-description="暂无操作日志"
         @retry="fetchData"
       />
-      <TdTable v-else :data="logs" :loading="loading" class="flex-1 min-h-0">
+      <TdTable v-else :data="logs" :loading="loading" class="flex-1 min-h-0" @row-click="openDetail">
         <TdTableColumn prop="actorUsername" label="操作者" min-width="140">
           <template #default="{ row }">
             <span>{{ row.actorUsername || (row.actorId ? `用户 #${row.actorId}` : '未识别用户') }}</span>
@@ -69,6 +69,9 @@
             </t-tag>
           </template>
         </TdTableColumn>
+        <TdTableColumn label="详情" width="90">
+          <template #default="{ row }"><t-button variant="text" size="small" @click.stop="openDetail(row)">查看</t-button></template>
+        </TdTableColumn>
       </TdTable>
 
       <t-pagination
@@ -80,6 +83,23 @@
         @change="handlePaginationChange"
       />
     </t-card>
+
+    <t-drawer v-model:visible="detailVisible" header="审计日志详情" :footer="false" size="480px">
+      <t-alert class="mb-4" theme="info" :close-btn="false">仅展示后端审计安全视图中的白名单字段。</t-alert>
+      <t-descriptions v-if="selectedLog" bordered :column="1">
+        <t-descriptions-item label="日志 ID">{{ selectedLog.id || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="操作者">{{ selectedLog.actorUsername || '—' }}（{{ selectedLog.actorId || '—' }}）</t-descriptions-item>
+        <t-descriptions-item label="角色">{{ selectedLog.actorRole || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="动作">{{ selectedLog.action || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="目标类型">{{ selectedLog.targetType || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="目标 ID">{{ selectedLog.targetId || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="目标名称">{{ selectedLog.targetLabel || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="结果">{{ selectedLog.result || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="错误码">{{ selectedLog.errorCode || '—' }}</t-descriptions-item>
+        <t-descriptions-item label="发生时间">{{ formatDateTime(selectedLog.occurredAt) }}</t-descriptions-item>
+        <t-descriptions-item label="追踪 ID">{{ selectedLog.traceId || '—' }}</t-descriptions-item>
+      </t-descriptions>
+    </t-drawer>
   </div>
 </template>
 
@@ -99,6 +119,8 @@ defineOptions({ name: 'AuditLog' })
 const loading = ref(false)
 const loadError = ref('')
 const logs = ref([])
+const detailVisible = ref(false)
+const selectedLog = ref(null)
 const query = reactive({ actorId: '', action: '', targetType: '', targetId: '', result: '', dateRange: [] })
 const pagination = reactive({ pageNum: 1, pageSize: 20, total: 0 })
 
@@ -149,6 +171,11 @@ const handlePaginationChange = ({ current, pageSize }) => {
   pagination.pageNum = current
   pagination.pageSize = pageSize
   fetchData()
+}
+
+const openDetail = row => {
+  selectedLog.value = row
+  detailVisible.value = true
 }
 
 fetchData()

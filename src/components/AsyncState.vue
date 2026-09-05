@@ -4,7 +4,7 @@
     <div v-if="loading" class="flex min-h-24 items-center justify-center py-8 text-gray-600">
       <t-loading :text="loadingText" />
     </div>
-    <t-alert v-else-if="error" theme="error" :closable="false" class="my-2">
+    <t-alert v-else-if="error" theme="error" :close-btn="false" class="my-2">
       <template #default>{{ errorMessage }}</template>
       <template #operation>
         <t-button size="small" variant="outline" @click="$emit('retry')">{{ retryText }}</t-button>
