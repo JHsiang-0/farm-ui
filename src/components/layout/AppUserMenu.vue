@@ -1,11 +1,11 @@
 <template>
   <t-dropdown trigger="click" @click="handleCommand">
     <t-button variant="text" class="user-menu-trigger" aria-label="打开用户菜单">
-      <t-avatar :size="32" :image="userStore.userInfo.avatar || undefined">
+      <t-avatar size="32" :image="userStore.userInfo.avatar || undefined">
         {{ userStore.userInfo.username?.charAt(0).toUpperCase() || 'U' }}
       </t-avatar>
       <span class="user-menu-trigger__name">{{ userStore.userInfo.username || '管理员' }}</span>
-      <ChevronDownIcon :size="16" class="user-menu-trigger__arrow" />
+      <ChevronDownIcon size="16" class="user-menu-trigger__arrow" />
     </t-button>
 
     <template #dropdown>

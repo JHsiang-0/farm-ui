@@ -8,8 +8,8 @@
         :title="collapsed ? '展开菜单' : '收起菜单'"
         @click="$emit('toggle-sidebar')"
       >
-        <MenuUnfoldIcon v-if="collapsed" :size="20" />
-        <MenuFoldIcon v-else :size="20" />
+        <MenuUnfoldIcon v-if="collapsed" size="20" />
+        <MenuFoldIcon v-else size="20" />
       </t-button>
 
     </div>
@@ -22,16 +22,16 @@
         title="实时设备看板"
         @click="openFullscreenDashboard"
       >
-        <DesktopIcon :size="19" />
+        <DesktopIcon size="19" />
       </t-button>
       <t-button variant="text" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
-        <MailIcon :size="19" />
+        <MailIcon size="19" />
       </t-button>
       <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
-        <HelpCircleIcon :size="19" />
+        <HelpCircleIcon size="19" />
       </t-button>
       <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
-        <SettingIcon :size="19" />
+        <SettingIcon size="19" />
       </t-button>
       <AppUserMenu />
     </div>

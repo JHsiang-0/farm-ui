@@ -14,6 +14,7 @@ globalThis.window = {
 const {
   clearServerConfig,
   getApiBaseUrl,
+  getEnvironmentServerConfig,
   getServerConfig,
   getWebSocketBaseUrl,
   normalizeServerUrl,
@@ -44,4 +45,9 @@ test('prefers an explicitly saved WebSocket endpoint and clears only connection 
   assert.equal(getWebSocketBaseUrl(), 'wss://socket.example.com/ws/farm-status')
   clearServerConfig()
   assert.equal(getServerConfig().apiBaseUrl, '')
+})
+
+test('启动配置读取不受已保存地址影响', () => {
+  saveServerConfig({ apiBaseUrl: 'http://saved.example:8080' })
+  assert.deepEqual(getEnvironmentServerConfig(), { apiBaseUrl: '', wsUrl: '' })
 })

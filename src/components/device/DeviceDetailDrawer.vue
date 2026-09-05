@@ -17,11 +17,11 @@
             <t-loading text="正在加载打印机详情..." />
         </div>
 
-        <t-result v-else-if="detailError" theme="error" title="打印机详情加载失败" :description="detailError">
+        <t-empty v-else-if="detailError" type="fail" title="打印机详情加载失败" :description="detailError">
             <template #extra>
                 <t-button theme="primary" @click="emit('retry')">重试</t-button>
             </template>
-        </t-result>
+        </t-empty>
 
         <div v-else-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
             <!-- 实时状态概览卡片 -->

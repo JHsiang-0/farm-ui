@@ -56,7 +56,7 @@
         >
           <t-statistic :title="stat.title" :value="stat.value" :loading="stat.loading">
             <template #prefix>
-              <span class="stat-card__icon"><component :is="stat.icon" :size="20" /></span>
+              <span class="stat-card__icon"><component :is="stat.icon" size="20" /></span>
             </template>
             <template #extra>{{ stat.description }}</template>
           </t-statistic>
@@ -186,7 +186,7 @@
               @click="goTo(`/tasks/history?jobId=${job.id}`)"
             >
               <span class="job-row__main">
-                <FileIcon :size="18" />
+                <FileIcon size="18" />
                 <span class="job-row__content">
                   <strong>{{ job.fileName || `任务 #${job.id}` }}</strong>
                   <small>{{ formatJobTime(job.createdAt) }}</small>
@@ -220,13 +220,13 @@
               @click="goTo('/printers')"
             >
               <span class="alert-row__main">
-                <ErrorCircleIcon :size="18" />
+                <ErrorCircleIcon size="18" />
                 <span class="alert-row__content">
                   <strong>{{ printer.name || `打印机 #${printer.id}` }}</strong>
                   <small>{{ printerStatusLabel(printer.status) }}</small>
                 </span>
               </span>
-              <ChevronRightIcon :size="16" />
+              <ChevronRightIcon size="16" />
             </t-button>
           </div>
           <t-empty v-else description="暂无需要处理的设备" />

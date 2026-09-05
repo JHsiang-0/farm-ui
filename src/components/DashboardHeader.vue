@@ -12,7 +12,7 @@
     <div class="flex items-center shrink-0">
       <div class="flex items-center gap-3">
         <!-- 图标：移动端缩小 -->
-        <office-building :size="isMobile ? 24 : 28" class="text-primary" />
+        <office-building :size="isMobile ? '24' : '28'" class="text-primary" />
 
         <div class="flex flex-col gap-0.5">
           <!-- 标题：响应式字体 -->
@@ -20,7 +20,7 @@
 
           <!-- 车间信息：移动端隐藏详细地址 -->
           <span class="inline-flex items-center gap-1 text-fluid-xs text-gray-500 font-medium">
-            <location :size="12" class="text-red-500" />
+            <location size="12" class="text-red-500" />
             {{ workshopName }}
           </span>
         </div>
@@ -139,7 +139,7 @@
         class="hidden sm:flex items-center justify-center gap-1 text-fluid-xs text-gray-400 font-normal"
         v-if="lastUpdateTime"
       >
-        <clock :size="12" />
+        <clock size="12" />
         {{ labels.updatedAt }} {{ lastUpdateTime }}
       </span>
     </div>

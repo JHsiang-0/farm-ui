@@ -28,7 +28,7 @@
           @click="handleItemClick(item)"
         >
           <template #icon>
-            <component :is="item.icon" :size="18" />
+            <component :is="item.icon" size="18" />
           </template>
           {{ item.title }}
         </t-menu-item>

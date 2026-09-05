@@ -24,6 +24,8 @@ test('打印机中心覆盖未分配设备、详情分析和正式控制入口',
   assert.match(detailSource, /handleAction\('cancel'\)/)
   assert.match(detailSource, /emergency-stop/)
   assert.match(detailSource, /confirmSafe/)
+  assert.match(detailSource, /<t-empty v-else-if="detailError" type="fail"/)
+  assert.doesNotMatch(detailSource, /<t-result/)
 })
 
 test('打印机删除显示关联任务风险并保留逐项执行状态', () => {

@@ -60,7 +60,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getServerConfig, normalizeServerUrl, saveServerConfig } from '@/utils/serverConfig'
+import { getEnvironmentServerConfig, getServerConfig, normalizeServerUrl, saveServerConfig } from '@/utils/serverConfig'
 
 defineOptions({ name: 'ServerConnectionView' })
 
@@ -104,7 +104,7 @@ const handleSubmit = async ({ validateResult }) => {
 }
 
 const resetToEnvironment = () => {
-  const config = getServerConfig()
+  const config = getEnvironmentServerConfig()
   form.apiBaseUrl = config.apiBaseUrl
   form.wsUrl = config.wsUrl
   errorMessage.value = ''

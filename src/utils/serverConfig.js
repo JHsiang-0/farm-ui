@@ -43,6 +43,11 @@ export const getServerConfig = () => {
   }
 }
 
+export const getEnvironmentServerConfig = () => ({
+  apiBaseUrl: normalizeServerUrl(envApiBaseUrl),
+  wsUrl: envWsUrl
+})
+
 export const getApiBaseUrl = () => getServerConfig().apiBaseUrl
 
 export const getWebSocketBaseUrl = () => {
