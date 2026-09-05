@@ -192,6 +192,7 @@ import { getPrinterList } from '@/api/printer'
 import { getJobPage } from '@/api/job'
 import { renderIcon } from '@/utils/tdesign'
 import AsyncState from '@/components/AsyncState.vue'
+import { countBy } from '@/utils/realtimePerformance'
 
 defineOptions({ name: 'DashboardView' })
 
@@ -209,10 +210,11 @@ const statusConfig = [
   { status: 'OFFLINE', label: '离线', color: '#8f959e' }
 ]
 
+const printerStatusCounts = computed(() => countBy(printers.value, item => item.status))
 const totalPrinters = computed(() => printers.value.length)
-const printingPrinters = computed(() => printers.value.filter(item => item.status === 'PRINTING').length)
-const idlePrinters = computed(() => printers.value.filter(item => item.status === 'IDLE').length)
-const onlinePrinters = computed(() => printers.value.filter(item => item.status !== 'OFFLINE').length)
+const printingPrinters = computed(() => printerStatusCounts.value.PRINTING || 0)
+const idlePrinters = computed(() => printerStatusCounts.value.IDLE || 0)
+const onlinePrinters = computed(() => totalPrinters.value - (printerStatusCounts.value.OFFLINE || 0))
 const attentionStatuses = ['ERROR', 'OFFLINE', 'PAUSED', 'UNKNOWN', 'FAULT', 'SYS_ERROR', 'PRINT_ERROR']
 const isAttentionPrinter = printer => attentionStatuses.includes(String(printer.status || '').toUpperCase())
 const attentionPrinterCount = computed(() => printers.value.filter(isAttentionPrinter).length)
@@ -260,8 +262,8 @@ const statusSegments = computed(() => {
   const total = totalPrinters.value
   return statusConfig.map(item => ({
     ...item,
-    count: printers.value.filter(printer => printer.status === item.status).length,
-    percent: total ? (printers.value.filter(printer => printer.status === item.status).length / total) * 100 : 0
+    count: printerStatusCounts.value[item.status] || 0,
+    percent: total ? ((printerStatusCounts.value[item.status] || 0) / total) * 100 : 0
   }))
 })
 

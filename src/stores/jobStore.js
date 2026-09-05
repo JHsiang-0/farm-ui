@@ -3,6 +3,11 @@ import { defineStore } from 'pinia'
 import { getJobDetail, getJobPage, getJobQueue } from '@/api/job'
 import { ACTIVE_JOB_STATUSES, isActiveJob, selectActiveJobs } from '@/utils/jobSelectors'
 
+const scheduleMicrotask = typeof queueMicrotask === 'function'
+  ? queueMicrotask
+  : callback => Promise.resolve().then(callback)
+const MAX_JOB_DETAIL_CACHE_SIZE = 100
+
 const sortByUpdatedAt = (left, right) => (
   new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0)
 )
@@ -19,6 +24,19 @@ export const useJobStore = defineStore('job', () => {
   const detailError = ref(null)
   const activePage = ref(1)
   const activePageSize = ref(10)
+  const pendingRealtimeStatuses = new Map()
+  let realtimeFlushScheduled = false
+
+  function cacheJobDetail(id, detail) {
+    const key = String(id)
+    const nextDetails = new Map(jobDetails.value)
+    nextDetails.delete(key)
+    nextDetails.set(key, detail)
+    while (nextDetails.size > MAX_JOB_DETAIL_CACHE_SIZE) {
+      nextDetails.delete(nextDetails.keys().next().value)
+    }
+    jobDetails.value = nextDetails
+  }
 
   const activeTotal = computed(() => activeJobs.value.length)
   const activePageJobs = computed(() => {
@@ -78,7 +96,7 @@ export const useJobStore = defineStore('job', () => {
     try {
       const response = await getJobDetail(id)
       const detail = response.data
-      jobDetails.value = new Map(jobDetails.value).set(String(id), detail)
+      cacheJobDetail(id, detail)
       return detail
     } catch (error) {
       detailError.value = error
@@ -88,32 +106,75 @@ export const useJobStore = defineStore('job', () => {
     }
   }
 
-  function applyRealtimeJobStatus(message = {}) {
+  function normalizeRealtimeJobStatus(message = {}) {
     const data = message.data || {}
     const id = data.jobId ?? message.jobId
     const status = String(data.status || data.currentJobStatus || '').toUpperCase()
     if (id === undefined || id === null || !status) return null
+    return { data, id, status, key: String(id), message }
+  }
 
-    const key = String(id)
-    const existing = activeJobs.value.find(job => String(job.id) === key)
-      || jobDetails.value.get(key)
-      || {}
-    const updated = { ...existing, id, status }
-    if (data.progress !== undefined) updated.progress = data.progress
-    if (data.printerId !== undefined) updated.printerId = data.printerId
-    if (data.errorReason !== undefined) updated.errorReason = data.errorReason
-    if (data.completedAt !== undefined) updated.completedAt = data.completedAt
-    if (data.updatedAt !== undefined) updated.updatedAt = data.updatedAt
-    if (message.timestamp !== undefined && updated.updatedAt === undefined) updated.updatedAt = message.timestamp
+  function applyRealtimeJobStatuses(messages = []) {
+    const jobsById = new Map(activeJobs.value.map(job => [String(job.id), job]))
+    const details = new Map(jobDetails.value)
+    const updatedJobs = []
 
-    const remaining = activeJobs.value.filter(job => String(job.id) !== key)
-    activeJobs.value = isActiveJob(updated)
-      ? selectActiveJobs([...remaining, updated]).sort(sortByUpdatedAt)
-      : remaining
-    if (jobDetails.value.has(key)) {
-      jobDetails.value = new Map(jobDetails.value).set(key, updated)
+    messages.forEach(message => {
+      const normalized = normalizeRealtimeJobStatus(message)
+      if (!normalized) return
+
+      const { data, id, status, key } = normalized
+      const existing = jobsById.get(key) || details.get(key) || {}
+      const updated = { ...existing, id, status }
+      if (data.progress !== undefined) updated.progress = data.progress
+      if (data.printerId !== undefined) updated.printerId = data.printerId
+      if (data.errorReason !== undefined) updated.errorReason = data.errorReason
+      if (data.completedAt !== undefined) updated.completedAt = data.completedAt
+      if (data.updatedAt !== undefined) updated.updatedAt = data.updatedAt
+      if (message.timestamp !== undefined && updated.updatedAt === undefined) updated.updatedAt = message.timestamp
+
+      if (isActiveJob(updated)) jobsById.set(key, updated)
+      else jobsById.delete(key)
+      if (details.has(key)) details.set(key, updated)
+      updatedJobs.push(updated)
+    })
+
+    if (!updatedJobs.length) return []
+    activeJobs.value = selectActiveJobs([...jobsById.values()]).sort(sortByUpdatedAt)
+    if (updatedJobs.some(job => details.has(String(job.id)))) jobDetails.value = details
+    return updatedJobs
+  }
+
+  function applyRealtimeJobStatus(message = {}) {
+    return applyRealtimeJobStatuses([message])[0] || null
+  }
+
+  function flushRealtimeJobStatuses() {
+    if (!pendingRealtimeStatuses.size) return []
+    const messages = [...pendingRealtimeStatuses.values()]
+    pendingRealtimeStatuses.clear()
+    realtimeFlushScheduled = false
+    return applyRealtimeJobStatuses(messages)
+  }
+
+  function queueRealtimeJobStatus(message = {}) {
+    const normalized = normalizeRealtimeJobStatus(message)
+    if (!normalized) return false
+
+    const previous = pendingRealtimeStatuses.get(normalized.key)
+    pendingRealtimeStatuses.set(normalized.key, previous
+      ? { ...previous, ...message, data: { ...previous.data, ...message.data } }
+      : message)
+    if (!realtimeFlushScheduled) {
+      realtimeFlushScheduled = true
+      scheduleMicrotask(flushRealtimeJobStatuses)
     }
-    return updated
+    return true
+  }
+
+  function clearQueuedRealtimeStatuses() {
+    pendingRealtimeStatuses.clear()
+    realtimeFlushScheduled = false
   }
 
   function applyBatchConfirmResults(result = {}) {
@@ -156,6 +217,10 @@ export const useJobStore = defineStore('job', () => {
     fetchActive,
     fetchJobDetail,
     applyRealtimeJobStatus,
+    applyRealtimeJobStatuses,
+    queueRealtimeJobStatus,
+    flushRealtimeJobStatuses,
+    clearQueuedRealtimeStatuses,
     applyBatchConfirmResults,
     refresh
   }

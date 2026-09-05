@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import { getPrinterDetail, getPrinterList, batchUpdatePositions, updatePrinter } from '@/api/printer'
 import { GRID_CONFIG } from '@/utils/constants'
 
+const MAX_DETAIL_CACHE_SIZE = 100
+
 /**
  * 设备数据管理 Store
  * @description 负责打印机设备的基础数据管理（CRUD、位置更新）
@@ -26,6 +28,17 @@ export const useDeviceStore = defineStore('device', () => {
 
   /** 详情请求状态 */
   const detailLoading = ref(false)
+
+  function cacheDeviceDetail(detail) {
+    const key = String(detail.id)
+    const nextDetails = new Map(detailsById.value)
+    nextDetails.delete(key)
+    nextDetails.set(key, detail)
+    while (nextDetails.size > MAX_DETAIL_CACHE_SIZE) {
+      nextDetails.delete(nextDetails.keys().next().value)
+    }
+    detailsById.value = nextDetails
+  }
 
   // ============================================
   // Getters (Computed)
@@ -124,9 +137,7 @@ export const useDeviceStore = defineStore('device', () => {
       const response = await getPrinterDetail(deviceId)
       const detail = response?.data || null
       if (detail) {
-        const nextDetails = new Map(detailsById.value)
-        nextDetails.set(String(detail.id), detail)
-        detailsById.value = nextDetails
+        cacheDeviceDetail(detail)
       }
       return detail
     } finally {

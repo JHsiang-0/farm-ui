@@ -325,7 +325,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     }
 
     if (type === 'JOB_STATUS') {
-      jobStore.applyRealtimeJobStatus(message)
+      jobStore.queueRealtimeJobStatus(message)
       queueRealtimeUpdate(printerId, {
         currentJobId: data?.currentJobId ?? message.jobId,
         currentJobStatus: data?.status ?? data?.currentJobStatus,
@@ -475,6 +475,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     }
 
     // 清空实时状态数据
+    jobStore.clearQueuedRealtimeStatuses()
     statusMap.value = new Map()
     alerts.value = []
     lastSequence.value = null
