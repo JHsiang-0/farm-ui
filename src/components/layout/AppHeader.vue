@@ -1,8 +1,8 @@
 <template>
   <t-header class="app-header">
     <div class="app-header__left">
-      <button
-        type="button"
+      <t-button
+        variant="text"
         class="header-icon-button"
         :aria-label="collapsed ? '展开菜单' : '收起菜单'"
         :title="collapsed ? '展开菜单' : '收起菜单'"
@@ -10,29 +10,29 @@
       >
         <MenuUnfoldIcon v-if="collapsed" :size="20" />
         <MenuFoldIcon v-else :size="20" />
-      </button>
+      </t-button>
 
     </div>
 
     <div class="app-header__right">
-      <button
-        type="button"
+      <t-button
+        variant="text"
         class="header-icon-button"
         aria-label="实时设备看板"
         title="实时设备看板"
         @click="openFullscreenDashboard"
       >
         <DesktopIcon :size="19" />
-      </button>
-      <button type="button" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
+      </t-button>
+      <t-button variant="text" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
         <MailIcon :size="19" />
-      </button>
-      <button type="button" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
+      </t-button>
+      <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
         <HelpCircleIcon :size="19" />
-      </button>
-      <button type="button" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
+      </t-button>
+      <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
         <SettingIcon :size="19" />
-      </button>
+      </t-button>
       <AppUserMenu />
     </div>
   </t-header>

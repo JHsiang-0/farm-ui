@@ -132,7 +132,7 @@
               :disabled="!canCancel(scope.row.status)"
             >
               <template>
-                <t-button size="small" theme="danger" variant="outline" :disabled="!canCancel(scope.row.status)">
+                <t-button size="small" theme="danger" variant="outline" aria-label="取消任务" :disabled="!canCancel(scope.row.status)">
                   <span><circle-close /></span>
                 </t-button>
               </template>

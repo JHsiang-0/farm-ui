@@ -8,17 +8,27 @@
     </div>
 
     <t-card class="app-page-card shadow-sm">
-      <div class="flex flex-wrap gap-3 mb-4">
-        <t-input v-model="query.username" placeholder="按用户名搜索" clearable @enter="fetchUsers" />
-        <t-input v-model="query.email" placeholder="按邮箱搜索" clearable @enter="fetchUsers" />
-        <t-select v-model="query.role" placeholder="角色" clearable style="width: 150px" @change="fetchUsers">
-          <t-option label="管理员" value="ADMIN" /><t-option label="操作员" value="OPERATOR" />
-        </t-select>
-        <t-select v-model="query.enabled" placeholder="启用状态" clearable style="width: 150px" @change="fetchUsers">
-          <t-option label="启用" :value="true" /><t-option label="停用" :value="false" />
-        </t-select>
-        <t-button theme="primary" @click="fetchUsers" :loading="loading">查询</t-button>
-      </div>
+      <t-form :data="query" layout="inline" label-align="top" class="flex flex-wrap gap-3 mb-4">
+        <t-form-item label="用户名">
+          <t-input v-model="query.username" placeholder="按用户名搜索" clearable @enter="fetchUsers" />
+        </t-form-item>
+        <t-form-item label="邮箱">
+          <t-input v-model="query.email" placeholder="按邮箱搜索" clearable @enter="fetchUsers" />
+        </t-form-item>
+        <t-form-item label="角色">
+          <t-select v-model="query.role" placeholder="全部角色" clearable style="width: 150px" @change="fetchUsers">
+            <t-option label="管理员" value="ADMIN" /><t-option label="操作员" value="OPERATOR" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="启用状态">
+          <t-select v-model="query.enabled" placeholder="全部状态" clearable style="width: 150px" @change="fetchUsers">
+            <t-option label="启用" :value="true" /><t-option label="停用" :value="false" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="查询">
+          <t-button theme="primary" @click="fetchUsers" :loading="loading">查询</t-button>
+        </t-form-item>
+      </t-form>
       <AsyncState
         v-if="loading || loadError || users.length === 0"
         :loading="loading"

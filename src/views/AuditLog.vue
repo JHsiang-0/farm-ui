@@ -8,28 +8,42 @@
     </div>
 
     <t-card class="app-page-card shadow-sm">
-      <div class="flex flex-wrap items-center gap-3 mb-4">
-        <t-input v-model="query.actorId" placeholder="操作者 ID" clearable style="width: 130px" @enter="handleQuery" />
-        <t-input v-model="query.action" placeholder="动作，如 JOB_CREATE" clearable style="width: 180px" @enter="handleQuery" />
-        <t-input v-model="query.targetType" placeholder="目标类型" clearable style="width: 140px" @enter="handleQuery" />
-        <t-input v-model="query.targetId" placeholder="目标 ID" clearable style="width: 140px" @enter="handleQuery" />
-        <t-select v-model="query.result" placeholder="结果" clearable style="width: 120px" @change="handleQuery">
-          <t-option label="成功" value="SUCCESS" />
-          <t-option label="失败" value="FAILURE" />
-        </t-select>
-        <t-date-range-picker
-          v-model="query.dateRange"
-          value-type="YYYY-MM-DD HH:mm:ss"
-          :default-time="['00:00:00', '23:59:59']"
-          :placeholder="['开始时间', '结束时间']"
-          separator="至"
-          style="width: 280px"
-        />
-        <div class="flex gap-2 ml-auto">
-          <t-button theme="primary" :loading="loading" @click="handleQuery">查询</t-button>
-          <t-button @click="handleReset">重置</t-button>
-        </div>
-      </div>
+      <t-form :data="query" layout="inline" label-align="top" class="flex flex-wrap items-end gap-3 mb-4">
+        <t-form-item label="操作者 ID">
+          <t-input v-model="query.actorId" placeholder="操作者 ID" clearable style="width: 130px" @enter="handleQuery" />
+        </t-form-item>
+        <t-form-item label="动作">
+          <t-input v-model="query.action" placeholder="如 JOB_CREATE" clearable style="width: 180px" @enter="handleQuery" />
+        </t-form-item>
+        <t-form-item label="目标类型">
+          <t-input v-model="query.targetType" placeholder="目标类型" clearable style="width: 140px" @enter="handleQuery" />
+        </t-form-item>
+        <t-form-item label="目标 ID">
+          <t-input v-model="query.targetId" placeholder="目标 ID" clearable style="width: 140px" @enter="handleQuery" />
+        </t-form-item>
+        <t-form-item label="结果">
+          <t-select v-model="query.result" placeholder="全部结果" clearable style="width: 120px" @change="handleQuery">
+            <t-option label="成功" value="SUCCESS" />
+            <t-option label="失败" value="FAILURE" />
+          </t-select>
+        </t-form-item>
+        <t-form-item label="时间范围">
+          <t-date-range-picker
+            v-model="query.dateRange"
+            value-type="YYYY-MM-DD HH:mm:ss"
+            :default-time="['00:00:00', '23:59:59']"
+            :placeholder="['开始时间', '结束时间']"
+            separator="至"
+            style="width: 280px"
+          />
+        </t-form-item>
+        <t-form-item label="操作">
+          <div class="flex gap-2">
+            <t-button theme="primary" :loading="loading" @click="handleQuery">查询</t-button>
+            <t-button @click="handleReset">重置</t-button>
+          </div>
+        </t-form-item>
+      </t-form>
 
       <AsyncState
         v-if="loading || loadError || logs.length === 0"

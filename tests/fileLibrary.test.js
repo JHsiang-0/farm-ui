@@ -21,7 +21,7 @@ test('文件中心不伪造材料和统计值，并覆盖上传删除结果态',
   assert.doesNotMatch(source, /printCount \|\| 0/)
   assert.match(source, /formatMetric/)
   assert.match(source, /retryableFiles/)
-  assert.match(source, /items.length !== selectedIds.value.length/)
+  assert.match(source, /items.length !== ids.length/)
   assert.match(source, /error\?\.response\?\.status === 422/)
 })
 

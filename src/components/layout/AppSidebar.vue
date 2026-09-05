@@ -8,8 +8,8 @@
     }"
     :width="props.isMobile ? 'var(--app-sidebar-mobile-width)' : (props.collapsed ? 'var(--app-sidebar-collapsed-width)' : 'var(--app-sidebar-width)')"
   >
-    <button
-      type="button"
+    <t-button
+      variant="text"
       class="app-brand"
       aria-label="FabMatrix"
       :title="props.collapsed && !props.isMobile ? 'FabMatrix' : ''"
@@ -17,7 +17,7 @@
     >
       <img src="/icon.png" alt="" aria-hidden="true" class="app-brand__logo">
       <span v-if="!props.collapsed || props.isMobile" class="app-brand__name">FabMatrix</span>
-    </button>
+    </t-button>
 
     <t-menu :value="activePath" :collapsed="props.collapsed && !props.isMobile" theme="light" class="app-menu">
       <t-menu-group v-for="group in visibleGroups" :key="group.key" :title="props.collapsed && !props.isMobile ? '' : group.label">

@@ -18,10 +18,11 @@
         <t-button theme="primary" size="medium" :icon="renderIcon(Upload)" @click="handleUpload">
           上传 G-Code 文件
         </t-button>
-        <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
+        <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)"
+          :loading="batchDeleting" :disabled="batchDeleting || deletingIds.length > 0" @click="handleBatchDelete">
           批量删除 ({{ selectedIds.length }})
         </t-button>
-        <t-button :icon="renderIcon(Refresh)" :loading="loading || treeLoading" @click="refreshLibrary" size="medium">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading || treeLoading" :disabled="batchDeleting || deletingIds.length > 0" @click="refreshLibrary" size="medium">
           刷新
         </t-button>
       </div>
@@ -141,7 +142,8 @@
                 class="flex-1 text-xs px-1 py-1">
                 打开
               </t-button>
-              <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
+              <t-button theme="danger" size="small" :icon="renderIcon(Delete)" :loading="deletingIds.includes(file.id)"
+                :disabled="batchDeleting || deletingIds.length > 0" @click.stop="handleDelete(file.id)"
                 class="flex-1 text-xs px-1 py-1">
                 删除
               </t-button>
@@ -314,7 +316,8 @@
                 <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
                   打印
                 </t-button>
-                <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click="handleDelete(row.id)">
+                <t-button theme="danger" size="small" :icon="renderIcon(Delete)" :loading="deletingIds.includes(row.id)"
+                  :disabled="batchDeleting || deletingIds.length > 0" @click="handleDelete(row.id)">
                   删除
                 </t-button>
               </div>
@@ -577,6 +580,8 @@ const creatingFolder = ref(false)
 const pendingUploadFiles = ref([])
 const batchUploadResults = ref([])
 const batchUploading = ref(false)
+const batchDeleting = ref(false)
+const deletingIds = ref([])
 const uploadProgress = ref(0)
 const uploadError = ref('')
 const UPLOAD_BATCH_SIZE = 5
@@ -796,7 +801,7 @@ const handleCreateFolder = async () => {
     })
     message.success('文件夹创建成功')
     createFolderDialogVisible.value = false
-    refreshLibrary()
+    await refreshLibrary()
   } catch (error) {
     console.error('创建文件夹失败:', error)
     message.error('创建文件夹失败')
@@ -974,6 +979,7 @@ const cancelUpload = () => {
  * 删除单个文件
  */
 const handleDelete = async (id) => {
+  if (batchDeleting.value || deletingIds.value.length > 0) return
   const file = fileList.value.find(item => String(item.id) === String(id))
   if (!file) {
     message.warning('文件信息不存在')
@@ -987,6 +993,7 @@ const handleDelete = async (id) => {
       type: 'warning'
     })
 
+    deletingIds.value.push(id)
     await deleteFile(id)
     message.success('删除成功')
 
@@ -1006,6 +1013,8 @@ const handleDelete = async (id) => {
         message.error(error?.message || '删除失败')
       }
     }
+  } finally {
+    deletingIds.value = deletingIds.value.filter(item => String(item) !== String(id))
   }
 }
 
@@ -1013,11 +1022,12 @@ const handleDelete = async (id) => {
  * 批量删除
  */
 const handleBatchDelete = async () => {
-  if (selectedIds.value.length === 0) return
+  if (selectedIds.value.length === 0 || batchDeleting.value || deletingIds.value.length > 0) return
+  const ids = selectedIds.value.slice()
 
   try {
     await confirmMessage(
-      `确定要删除选中的 ${selectedIds.value.length} 个项目吗？`,
+      `确定要删除选中的 ${ids.length} 个项目吗？`,
       '提示',
       {
         confirmButtonText: '确定',
@@ -1026,9 +1036,10 @@ const handleBatchDelete = async () => {
       }
     )
 
-    const response = await deleteBatchFiles(selectedIds.value)
+    batchDeleting.value = true
+    const response = await deleteBatchFiles(ids)
     const items = Array.isArray(response.data?.items) ? response.data.items : []
-    if (items.length !== selectedIds.value.length) {
+    if (items.length !== ids.length) {
       message.warning('批量删除结果不完整，请刷新后重试未确认的项目')
       await refreshLibrary()
       return
@@ -1042,12 +1053,14 @@ const handleBatchDelete = async () => {
     } else {
       message.success(`批量删除成功，共 ${successItems.length} 项`)
     }
-    refreshLibrary()
+    await refreshLibrary()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('批量删除失败:', error)
       message.error(error?.message || '批量删除失败')
     }
+  } finally {
+    batchDeleting.value = false
   }
 }
 

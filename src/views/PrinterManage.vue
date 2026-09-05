@@ -199,7 +199,7 @@
                 @confirm="handleDelete(scope.row.id)"
               >
                 <template>
-                  <t-button size="small" theme="danger" variant="outline" :loading="deletingIds.includes(scope.row.id)">
+                  <t-button size="small" theme="danger" variant="outline" aria-label="删除打印机" :loading="deletingIds.includes(scope.row.id)">
                     <span><delete /></span>
                   </t-button>
                 </template>
@@ -358,7 +358,7 @@
         <div class="mb-4">
           <t-alert
             :title="scanStatsText" theme="info"
-            :closable="false"
+            :close-btn="false"
 
           />
         </div>

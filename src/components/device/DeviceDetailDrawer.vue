@@ -224,7 +224,7 @@
                             <span class="text-xs text-gray-500">时长单位：秒</span>
                         </div>
                     </template>
-                    <t-alert v-if="statisticsError" theme="error" :title="statisticsError" :closable="false" />
+                    <t-alert v-if="statisticsError" theme="error" :title="statisticsError" :close-btn="false" />
                     <t-skeleton v-else-if="statisticsLoading" :loading="true" theme="paragraph" />
                     <div v-else-if="statistics" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <div v-for="item in statisticCards" :key="item.key" class="rounded-lg bg-gray-100 p-3">
@@ -257,7 +257,7 @@
                             </div>
                         </div>
                     </template>
-                    <t-alert v-if="historyError" theme="error" :title="historyError" :closable="false" />
+                    <t-alert v-if="historyError" theme="error" :title="historyError" :close-btn="false" />
                     <t-skeleton v-else-if="historyLoading" :loading="true" theme="paragraph" />
                     <t-table
                         v-else-if="statusHistory.length > 0"

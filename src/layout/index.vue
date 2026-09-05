@@ -5,9 +5,9 @@
       :is-mobile="isMobile"
       :mobile-open="mobileSidebarOpen"
     />
-    <button
+    <t-button
       v-if="isMobile && mobileSidebarOpen"
-      type="button"
+      variant="text"
       class="app-sidebar-overlay"
       aria-label="关闭导航菜单"
       @click="closeMobileSidebar"

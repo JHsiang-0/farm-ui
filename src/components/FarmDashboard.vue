@@ -19,7 +19,7 @@
         class="mt-2"
         theme="warning"
         :title="store.isRecovering ? '正在恢复实时状态' : (store.isRealtimeStale ? '实时状态可能已陈旧' : '实时连接未建立，当前看板数据可能不是最新')"
-        :closable="false"
+        :close-btn="false"
       />
       <div v-if="store.alerts.length" class="mt-2 space-y-2" aria-live="polite">
         <t-alert
@@ -28,7 +28,7 @@
           :theme="alert.theme"
           :title="alert.title"
           :message="alert.message"
-          closable
+          :close-btn="true"
           @close="store.dismissAlert(alert.id)"
         />
       </div>
