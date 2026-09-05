@@ -34,6 +34,15 @@
       </div>
     </div>
 
+    <dashboard-details-panel
+      :status-counts="store.statusCounts"
+      :active-jobs="activeJobs"
+      :history-jobs="historyJobs"
+      :history-loading="historyLoading"
+      :history-error="historyError"
+      @retry-history="fetchHistory"
+    />
+
     <!-- 独立车间看板容器 - 响应式布局，与状态栏对齐 -->
     <div class="relative w-full flex-1 px-4 pb-4 bg-gray-100 overflow-auto"
       style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent; min-height: 0;">
@@ -67,8 +76,11 @@ import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
 import { LockOnIcon as Lock, LockOffIcon as Unlock } from 'tdesign-icons-vue-next'
 import { usePrinterStore } from '@/stores/printer'
+import { useJobStore } from '@/stores/jobStore'
 import { emergencyStopPrinter, pausePrinter, resumePrinter, cancelPrinter } from '@/api/printer'
+import { getJobPage } from '@/api/job'
 import DashboardHeader from './DashboardHeader.vue'
+import DashboardDetailsPanel from './DashboardDetailsPanel.vue'
 import GridMap from './grid/GridMap.vue'
 import BindDeviceDialog from './BindDeviceDialog.vue'
 import DeviceDetailDrawer from './device/DeviceDetailDrawer.vue'
@@ -81,7 +93,12 @@ defineOptions({ name: 'FarmDashboard' })
 
 const store = usePrinterStore()
 const userStore = useUserStore()
+const jobStore = useJobStore()
 const controlLoading = ref(false)
+const activeJobs = computed(() => jobStore.activeJobs)
+const historyJobs = ref([])
+const historyLoading = ref(false)
+const historyError = ref('')
 
 // ============================================
 // Reactive State
@@ -146,6 +163,25 @@ const activeRealTimeData = computed(() => {
   if (!activeDevice.value) return null
   return store.realTimeStatus[String(activeDevice.value.id)]
 })
+
+async function fetchHistory() {
+  historyLoading.value = true
+  historyError.value = ''
+  try {
+    const [completedResult, failedResult] = await Promise.all([
+      getJobPage({ pageNum: 1, pageSize: 100, status: 'COMPLETED' }),
+      getJobPage({ pageNum: 1, pageSize: 100, status: 'FAILED' })
+    ])
+    historyJobs.value = [
+      ...(completedResult.data?.records || []),
+      ...(failedResult.data?.records || [])
+    ]
+  } catch (error) {
+    historyError.value = error?.message || '历史任务加载失败，请重试'
+  } finally {
+    historyLoading.value = false
+  }
+}
 
 // ============================================
 // Event Handlers - Drag & Drop
@@ -515,7 +551,7 @@ async function handleRefresh() {
   message.info('正在重新连接打印机...')
 
     // 重新获取设备数据并建立 WebSocket 连接
-    await store.fetchDeviceData()
+    await Promise.all([store.fetchDeviceData(), fetchHistory()])
     store.connectWs()
 
     updateLastUpdateTime()
@@ -534,6 +570,7 @@ onMounted(() => {
   // 获取设备数据并建立 WebSocket 连接
   store.fetchDeviceData()
   store.connectWs()
+  fetchHistory()
 })
 
 onUnmounted(() => {
