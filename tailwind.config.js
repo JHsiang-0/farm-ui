@@ -8,25 +8,25 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#262626', /* 主色：商务黑 */
-          'light-1': '#3b3b3b',
-          'light-2': '#525252',
-          'light-3': '#6b6b6b', /* 悬停色 */
-          'light-4': '#858585',
-          'light-5': '#9e9e9e', /* 禁用/次要色 */
-          'light-6': '#b8b8b8',
-          'light-7': '#d1d1d1',
-          'light-8': '#ebebeb',
-          'light-9': '#f5f5f5', /* 极浅背景色 */
-          'dark-2': '#141414', /* 按下/激活色 */
+          DEFAULT: 'var(--td-brand-color)',
+          'light-1': 'var(--td-brand-color-hover)',
+          'light-2': 'var(--td-brand-color-active)',
+          'light-3': 'var(--td-brand-color-focus)',
+          'light-4': 'var(--td-brand-color-light)',
+          'light-5': 'var(--td-text-color-disabled)',
+          'light-6': 'var(--td-border-level-1-color)',
+          'light-7': 'var(--td-border-level-2-color)',
+          'light-8': 'var(--td-bg-color-secondarycontainer)',
+          'light-9': 'var(--td-bg-color-page)',
+          'dark-2': 'var(--td-brand-color-active)',
         },
-        success: '#059669',
-        warning: '#d97706',
-        danger: '#dc2626',
-        info: '#6b7280',
+        success: 'var(--td-success-color)',
+        warning: 'var(--td-warning-color)',
+        danger: 'var(--td-error-color)',
+        info: 'var(--td-text-color-secondary)',
       },
       fontFamily: {
-        sans: ['Nunito', 'Quicksand', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['var(--app-font-family)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       // ============================================
       // 响应式字体大小（使用 rem 单位）

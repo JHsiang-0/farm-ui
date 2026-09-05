@@ -5,7 +5,6 @@ import TDesign from 'tdesign-vue-next'
 
 // Tailwind 仅提供布局工具；应用主题层在 TDesign 样式之后映射语义 Token。
 import '@/styles/index.css'
-import '@/styles/responsive.css'
 import 'tdesign-vue-next/es/style/index.css'
 import '@/styles/theme.css'
 
