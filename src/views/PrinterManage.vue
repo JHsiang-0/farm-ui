@@ -72,19 +72,26 @@
 
     <!-- 数据表格 -->
     <t-card class="printer-manage-card app-page-card">
-      <div class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+      <div class="printer-manage-card__table">
         <AsyncState
-          v-if="loading || loadError || tableData.length === 0"
+          v-if="tableData.length === 0"
           :loading="loading"
           :error="loadError"
-          :empty="tableData.length === 0"
+          :empty="!loading && !loadError"
           empty-description="暂无打印机"
           @retry="fetchData"
         />
+        <t-alert v-if="loadError && tableData.length" theme="error" :close-btn="false" class="mb-3">
+          <template #default>{{ loadError }}</template>
+          <template #operation>
+            <t-button size="small" variant="outline" @click="fetchData">重试</t-button>
+          </template>
+        </t-alert>
         <TdTable
-          v-else
+          v-if="tableData.length"
           :data="displayTableData"
           :loading="loading"
+          height="clamp(320px, calc(100vh - 320px), 720px)"
           style="width: 100%"
           class="printer-table"
           @row-click="handleRowClick"
@@ -127,33 +134,6 @@
           <template #default="scope">{{ scope.row.firmwareType || '-' }}</template>
         </TdTableColumn>
 
-        <!-- 安全状态列 -->
-        <TdTableColumn label="热床安全" width="120" align="center">
-          <template #default="scope">
-            <div class="flex items-center justify-center gap-1">
-              <circle-check v-if="scope.row.isSafeToPrint" :size="14" stroke-color="#059669" />
-              <circle-close v-else :size="14" stroke-color="#dc2626" />
-              <t-tag :theme="scope.row.isSafeToPrint ? 'success' : 'danger'" variant="light" size="small">
-                {{ scope.row.isSafeToPrint ? '已清理' : '待清理' }}
-              </t-tag>
-            </div>
-          </template>
-        </TdTableColumn>
-
-        <TdTableColumn prop="currentMaterial" label="装载耗材" width="120" align="center">
-          <template #default="scope">
-            <t-tag size="small" theme="warning" variant="light">
-              {{ scope.row.currentMaterial || '-' }}
-            </t-tag>
-          </template>
-        </TdTableColumn>
-
-        <TdTableColumn prop="nozzleSize" label="喷嘴(mm)" width="100" align="center">
-          <template #default="scope">
-            <span class="font-medium text-gray-900">{{ scope.row.nozzleSize }}</span>
-          </template>
-        </TdTableColumn>
-
         <TdTableColumn label="当前任务" width="180" align="center">
           <template #default="scope">
             <div class="text-center">
@@ -168,6 +148,9 @@
         <TdTableColumn label="操作" width="280" align="center" fixed="right">
           <template #default="scope">
             <div class="flex items-center justify-center gap-1">
+              <t-button size="small" variant="text" @click.stop="handleRowClick(scope.row)">
+                详情
+              </t-button>
               <!-- 确认热床已清理按钮 -->
               <t-button
                 v-if="shouldShowSafeButton(scope.row)"
@@ -476,9 +459,7 @@ import {
   DeleteIcon as Delete,
   CheckIcon as Check,
   SearchIcon as Search,
-  FolderAddIcon as FolderAdd,
-  CheckCircleIcon as CircleCheck,
-  CloseCircleIcon as CircleClose
+  FolderAddIcon as FolderAdd
 } from 'tdesign-icons-vue-next'
 import {
   getPrinterList,
@@ -768,28 +749,33 @@ const loadPrinterAnalytics = async deviceId => {
     params.from = historyRange.value[0]
     params.to = historyRange.value[1]
   }
-  const [historyResult, statisticsResult] = await Promise.allSettled([
-    getPrinterStatusHistory(deviceId, params),
-    getPrinterStatistics(deviceId, {
-      ...(params.from ? { from: params.from } : {}),
-      ...(params.to ? { to: params.to } : {})
-    })
-  ])
-  if (String(selectedDevice.value?.id) !== String(deviceId)) return
+  try {
+    const [historyResult, statisticsResult] = await Promise.allSettled([
+      getPrinterStatusHistory(deviceId, params),
+      getPrinterStatistics(deviceId, {
+        ...(params.from ? { from: params.from } : {}),
+        ...(params.to ? { to: params.to } : {})
+      })
+    ])
+    if (String(selectedDevice.value?.id) !== String(deviceId)) return
 
-  if (historyResult.status === 'fulfilled') {
-    printerHistory.value = historyResult.value.data?.records || []
-    historyTotal.value = historyResult.value.data?.total || 0
-  } else {
-    historyError.value = historyResult.reason?.message || '状态历史加载失败，请重试'
+    if (historyResult.status === 'fulfilled') {
+      printerHistory.value = historyResult.value.data?.records || []
+      historyTotal.value = historyResult.value.data?.total || 0
+    } else {
+      historyError.value = historyResult.reason?.message || '状态历史加载失败，请重试'
+    }
+    if (statisticsResult.status === 'fulfilled') {
+      printerStatistics.value = statisticsResult.value.data || null
+    } else {
+      statisticsError.value = statisticsResult.reason?.message || '打印机统计加载失败，请重试'
+    }
+  } finally {
+    if (String(selectedDevice.value?.id) === String(deviceId)) {
+      historyLoading.value = false
+      statisticsLoading.value = false
+    }
   }
-  if (statisticsResult.status === 'fulfilled') {
-    printerStatistics.value = statisticsResult.value.data || null
-  } else {
-    statisticsError.value = statisticsResult.reason?.message || '打印机统计加载失败，请重试'
-  }
-  historyLoading.value = false
-  statisticsLoading.value = false
 }
 
 const handleHistoryQuery = range => {
@@ -1054,48 +1040,12 @@ const handleBatchAdd = async () => {
 .printer-filter-bar .t-input { width: min(320px, 100%); }
 .printer-filter-bar .t-select { width: 180px; }
 
-.printer-manage-card {
-  flex: 1 1 0%;
-  height: auto;
-  min-height: 0;
-}
-
-.printer-manage-card :deep(.t-card__body) {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-}
-
 .printer-manage-card :deep(.t-card__footer) {
-  flex: 0 0 auto;
   border-top: 1px solid var(--app-border);
 }
 
 .printer-manage-card__table {
-  position: absolute;
-  inset: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.printer-table {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
   min-width: 0;
-  overflow: hidden;
-}
-
-.printer-table :deep(.t-table) {
-  width: 100%;
-  min-width: 0;
-}
-
-.printer-table :deep(.t-table__content) {
-  min-height: 0;
 }
 
 .printer-table-row :deep(td) {

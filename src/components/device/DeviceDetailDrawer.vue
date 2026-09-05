@@ -23,7 +23,7 @@
             </template>
         </t-empty>
 
-        <div v-else-if="device" class="p-fluid-md flex flex-col gap-fluid-lg">
+        <div v-else-if="device" class="printer-detail-drawer__content p-fluid-md flex flex-col gap-fluid-lg">
             <!-- 实时状态概览卡片 -->
             <div class="p-fluid-md rounded-lg bg-gray-100 border" :class="[
                 currentStateClass === 'error' ? 'bg-red-50 border-red-300' : '',
@@ -592,9 +592,9 @@ watch(() => props.modelValue, (newVal) => {
 
 /** 抽屉标题 */
 const drawerTitle = computed(() => {
-    if (!props.device) return '设备详细信息'
-    const deviceName = props.device.machineNumber || props.device.name || `打印机 #${props.device.id || '-'}`
-    return `${deviceName} - 详细信息`
+    if (!props.device) return '打印机详情'
+    const deviceName = props.device.name || props.device.machineNumber
+    return deviceName ? `${deviceName} - 详细信息` : '打印机详情'
 })
 
 /** 当前状态 */
@@ -739,6 +739,14 @@ async function handleStartPrint(action) {
 /* ============================================
    抽屉整体样式 - 响应式优化
    ============================================ */
+.printer-detail-drawer :deep(.t-drawer__body) {
+    overflow-y: auto;
+}
+
+.printer-detail-drawer__content {
+    min-width: 0;
+}
+
 /* ============================================
    移动端适配
    ============================================ */

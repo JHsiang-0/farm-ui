@@ -35,6 +35,21 @@ test('打印机删除显示关联任务风险并保留逐项执行状态', () =>
   assert.match(source, /删除可能被服务端拒绝/)
 })
 
+test('打印机列表使用局部滚动和显式详情入口，不再以绝对定位裁剪内容', () => {
+  assert.match(source, /height="clamp\(320px, calc\(100vh - 320px\), 720px\)"/)
+  assert.match(source, /@click\.stop="handleRowClick\(scope\.row\)"/)
+  assert.doesNotMatch(source, /printer-manage-card__table[\s\S]*position: absolute/)
+  assert.doesNotMatch(source, /printer-manage-card__table[\s\S]*overflow: hidden/)
+  assert.match(source, /<t-alert v-if="loadError && tableData\.length"/)
+})
+
+test('打印机详情抽屉标题有稳定回退且详情内容由 Drawer Body 滚动', () => {
+  assert.match(detailSource, /return deviceName \? `\$\{deviceName\} - 详细信息` : '打印机详情'/)
+  assert.match(detailSource, /class="printer-detail-drawer__content/)
+  assert.match(detailSource, /\.printer-detail-drawer :deep\(\.t-drawer__body\)[\s\S]*overflow-y: auto/)
+  assert.doesNotMatch(detailSource, /undefined - 详细信息/)
+})
+
 test('表格适配层保持自然高度并把横向滚动交给 TDesign Table 内容区', () => {
   assert.match(tableAdapterSource, /class="td-table-adapter" :class="attrs\.class" :style="attrs\.style"/)
   assert.match(tableAdapterSource, /\.td-table-adapter[\s\S]*display: block/)
