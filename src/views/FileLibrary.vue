@@ -21,13 +21,43 @@
         <t-button v-if="isBatchMode && selectedIds.length > 0" theme="danger" size="medium" :icon="renderIcon(Delete)" @click="handleBatchDelete">
           批量删除 ({{ selectedIds.length }})
         </t-button>
-        <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
+        <t-button :icon="renderIcon(Refresh)" :loading="loading || treeLoading" @click="refreshLibrary" size="medium">
           刷新
         </t-button>
       </div>
     </Teleport>
 
     <div class="file-library-content-card app-page-card p-4 bg-white rounded-xl shadow-sm">
+      <t-card class="file-tree-card mb-4" bordered>
+        <template #header>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-base font-semibold text-gray-900">目录树</div>
+              <div class="text-xs text-gray-500 mt-1">来自当前账号可见的文件与文件夹</div>
+            </div>
+            <t-button variant="text" size="small" :loading="treeLoading" @click="loadFileTree">
+              刷新目录
+            </t-button>
+          </div>
+        </template>
+        <AsyncState
+          v-if="treeLoading || treeError || fileTree.length === 0"
+          :loading="treeLoading"
+          :error="treeError"
+          :empty="fileTree.length === 0"
+          empty-description="暂无可见文件或文件夹"
+          @retry="loadFileTree"
+        />
+        <t-tree
+          v-else
+          :data="fileTree"
+          activable
+          hover
+          :expand-level="1"
+          @click="handleTreeClick"
+        />
+      </t-card>
+
       <!-- 搜索与筛选 -->
       <div class="file-library-filter-row mb-4">
         <t-breadcrumb separator="/" class="file-library-navigation">
@@ -51,14 +81,9 @@
               <Search />
             </template>
           </t-input>
-          <t-select v-model="materialFilter" placeholder="材质筛选" clearable class="w-full sm:w-40" size="medium"
-            @change="handleSearch">
-            <t-option label="PLA" value="PLA" />
-            <t-option label="ABS" value="ABS" />
-            <t-option label="PETG" value="PETG" />
-            <t-option label="TPU" value="TPU" />
-            <t-option label="尼龙" value="尼龙" />
-          </t-select>
+          <t-input v-model="materialFilter" placeholder="材质筛选" clearable class="w-full sm:w-40" size="medium"
+            @change="handleSearch" @keyup.enter="handleSearch">
+          </t-input>
         </div>
       </div>
 
@@ -116,7 +141,7 @@
                 class="flex-1 text-xs px-1 py-1">
                 打开
               </t-button>
-              <t-button v-if="!file.folder" theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
+              <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
                 class="flex-1 text-xs px-1 py-1">
                 删除
               </t-button>
@@ -154,7 +179,7 @@
             </div>
             <!-- 材质标签 -->
             <t-tag :theme="getMaterialTagType(file.materialType)" class="absolute top-2 right-2 z-5" size="small">
-              {{ file.materialType || 'PLA' }}
+              {{ file.materialType || '未指定' }}
             </t-tag>
           </div>
 
@@ -173,11 +198,11 @@
               </div>
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <ScaleToOriginal :size="14" class="text-gray-600" />
-                <span>{{ file.filamentWeight || 0 }}g</span>
+                <span>{{ formatMetric(file.filamentWeight, 'g') }}</span>
               </div>
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <FullScreen :size="14" class="text-gray-600" />
-                <span>{{ file.filamentLength || 0 }}m</span>
+                <span>{{ formatMetric(file.filamentLength, 'm') }}</span>
               </div>
               <div class="flex items-center gap-1 text-xs text-gray-600">
                 <span>{{ formatFileSize(file.fileSize) }}</span>
@@ -188,13 +213,13 @@
             <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
               <div class="flex flex-col gap-0.5">
                 <span class="text-xs text-gray-600 uppercase">打印</span>
-                <span class="text-sm font-semibold text-gray-900">{{ file.printCount || 0 }}次</span>
+                <span class="text-sm font-semibold text-gray-900">{{ formatMetric(file.printCount, '次') }}</span>
               </div>
               <div class="flex items-center gap-2 flex-1 ml-2">
                 <span class="text-xs text-gray-600 w-8">成功率</span>
-                <t-progress :percentage="file.successRate || 0" :stroke-width="4" :label="false"
+                <t-progress v-if="hasValue(file.successRate)" :percentage="file.successRate" :stroke-width="4" :label="false"
                   :class="getSuccessRateClass(file.successRate)" class="flex-1" />
-                <span class="text-sm font-semibold text-gray-900 w-10 text-right">{{ file.successRate || 0 }}%</span>
+                <span class="text-sm font-semibold text-gray-900 w-10 text-right">{{ formatMetric(file.successRate, '%') }}</span>
               </div>
             </div>
 
@@ -239,7 +264,7 @@
                   文件夹
                 </t-tag>
                 <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
-                  {{ row.materialType || 'PLA' }}
+                  {{ row.materialType || '未指定' }}
                 </t-tag>
               </div>
             </template>
@@ -255,24 +280,26 @@
 
           <TdTableColumn prop="filamentWeight" label="耗材重量" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.folder ? '-' : (row.filamentWeight || 0) + 'g'
+              row.folder ? '-' : formatMetric(row.filamentWeight, 'g')
               }}</template>
           </TdTableColumn>
 
           <TdTableColumn prop="filamentLength" label="所需线长" width="85" v-if="currentParentId">
             <template #default="{ row }">{{
-              row.folder ? '-' : (row.filamentLength || 0) + 'm'
+              row.folder ? '-' : formatMetric(row.filamentLength, 'm')
               }}</template>
           </TdTableColumn>
 
-          <TdTableColumn prop="printCount" label="打印次数" width="80" v-if="currentParentId" />
+          <TdTableColumn prop="printCount" label="打印次数" width="80" v-if="currentParentId">
+            <template #default="{ row }">{{ row.folder ? '-' : formatMetric(row.printCount, '次') }}</template>
+          </TdTableColumn>
 
           <TdTableColumn prop="successRate" label="成功率" width="100" v-if="currentParentId">
             <template #default="{ row }">
-              <div class="flex items-center gap-2" v-if="!row.folder">
-                <t-progress :percentage="row.successRate || 0" :stroke-width="6" :label="false"
+              <div class="flex items-center gap-2" v-if="!row.folder && hasValue(row.successRate)">
+                <t-progress :percentage="row.successRate" :stroke-width="6" :label="false"
                   :class="getSuccessRateClass(row.successRate)" class="w-16" />
-                <span class="text-sm">{{ row.successRate || 0 }}%</span>
+                <span class="text-sm">{{ formatMetric(row.successRate, '%') }}</span>
               </div>
               <span v-else>-</span>
             </template>
@@ -287,7 +314,7 @@
                 <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
                   打印
                 </t-button>
-                <t-button v-if="!row.folder" theme="danger" size="small" :icon="renderIcon(Delete)" @click="handleDelete(row.id)">
+                <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click="handleDelete(row.id)">
                   删除
                 </t-button>
               </div>
@@ -339,7 +366,7 @@
         <t-alert
           :theme="batchUploadResults.every(isBatchUploadSuccess) ? 'success' : 'warning'"
           :title="batchUploadResults.every(isBatchUploadSuccess) ? '全部文件上传成功' : '部分文件未上传成功'"
-          :closable="false"
+          :close-btn="false"
         />
         <div v-for="result in batchUploadResults" :key="`${result.index}-${result.fileName}`"
           class="flex items-center justify-between gap-3 text-sm">
@@ -353,7 +380,7 @@
         </t-button>
       </div>
       <div v-if="uploadError" class="px-4 pb-4">
-        <t-alert theme="error" :title="uploadError" :closable="false" />
+        <t-alert theme="error" :title="uploadError" :close-btn="false" />
       </div>
     </t-dialog>
 
@@ -512,6 +539,7 @@ import {
   getFilePreview,
   getThumbnailUrl,
   getFileJobs,
+  getFileTree,
   batchUploadFiles
 } from '@/api/printFile'
 import { createPrintJob } from '@/api/job'
@@ -535,6 +563,9 @@ defineOptions({ name: 'FileLibrary' })
 const loading = ref(false)
 const loadError = ref('')
 const fileList = ref([])
+const treeLoading = ref(false)
+const treeError = ref('')
+const fileTree = ref([])
 const selectedIds = ref([])
 const searchKeyword = ref('')
 const materialFilter = ref('')
@@ -608,6 +639,33 @@ const fileItemsList = computed(() => {
   return fileList.value.filter(file => !file.folder)
 })
 
+const hasValue = value => value !== undefined && value !== null && value !== ''
+
+const formatMetric = (value, suffix = '') => hasValue(value) ? `${value}${suffix}` : '-'
+
+const normalizeTreeNode = node => ({
+  value: String(node.id),
+  label: node.name,
+  name: node.name,
+  folder: node.folder === true,
+  id: node.id,
+  parentId: node.parentId ?? null,
+  fileSize: node.fileSize,
+  materialType: node.materialType,
+  createdAt: node.createdAt,
+  children: Array.isArray(node.children) ? node.children.map(normalizeTreeNode) : []
+})
+
+const treeNodeToFile = node => ({
+  id: node.id,
+  parentId: node.parentId ?? null,
+  folder: node.folder === true,
+  originalName: node.name,
+  fileSize: node.fileSize,
+  materialType: node.materialType,
+  createdAt: node.createdAt
+})
+
 const restoreFileDetailContext = () => {
   const fileId = sessionStorage.getItem(FILE_DETAIL_CONTEXT_KEY)
   if (!fileId || selectedFile.value) return
@@ -648,6 +706,23 @@ const fetchData = async () => {
   }
 }
 
+const loadFileTree = async () => {
+  treeLoading.value = true
+  treeError.value = ''
+  try {
+    const response = await getFileTree()
+    fileTree.value = (Array.isArray(response.data) ? response.data : []).map(normalizeTreeNode)
+  } catch (error) {
+    console.error('获取文件目录树失败:', error)
+    treeError.value = error?.message || '目录树加载失败，请重试'
+    message.error('获取文件目录树失败')
+  } finally {
+    treeLoading.value = false
+  }
+}
+
+const refreshLibrary = () => Promise.all([fetchData(), loadFileTree()])
+
 /**
  * 导航到根目录
  */
@@ -681,6 +756,24 @@ const navigateTo = (index) => {
   fetchData()
 }
 
+const handleTreeClick = ({ node }) => {
+  if (!node?.data) return
+  if (node.data.folder) {
+    const path = typeof node.getPath === 'function' ? node.getPath() : []
+    breadcrumbs.value = path
+      .filter(pathNode => pathNode.data?.folder)
+      .map(pathNode => ({
+        id: pathNode.data.id,
+        name: pathNode.data.label || pathNode.data.name
+      }))
+    currentParentId.value = node.data.id
+    pagination.pageNum = 1
+    fetchData()
+    return
+  }
+  openFileDetail(treeNodeToFile(node.data))
+}
+
 /**
  * 打开新建文件夹对话框
  */
@@ -703,7 +796,7 @@ const handleCreateFolder = async () => {
     })
     message.success('文件夹创建成功')
     createFolderDialogVisible.value = false
-    fetchData()
+    refreshLibrary()
   } catch (error) {
     console.error('创建文件夹失败:', error)
     message.error('创建文件夹失败')
@@ -848,7 +941,7 @@ const submitBatchUpload = async () => {
       .filter(Boolean)
     pendingUploadFiles.value = retryableFiles
 
-    if (successfulItems.length > 0) await fetchData()
+    if (successfulItems.length > 0) await refreshLibrary()
     if (retryableFiles.length === 0 && successfulItems.length === files.length) {
       message.success(`已上传 ${successfulItems.length} 个文件`)
       uploadDialogVisible.value = false
@@ -882,13 +975,13 @@ const cancelUpload = () => {
  */
 const handleDelete = async (id) => {
   const file = fileList.value.find(item => String(item.id) === String(id))
-  if (!file || file.folder) {
-    message.warning('文件夹不能删除')
+  if (!file) {
+    message.warning('文件信息不存在')
     return
   }
 
   try {
-    await confirmMessage('确定要删除吗？', '提示', {
+    await confirmMessage(file.folder ? '确定要删除这个文件夹吗？空文件夹才允许删除。' : '确定要删除吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
@@ -903,11 +996,15 @@ const handleDelete = async (id) => {
       selectedIds.value.splice(index, 1)
     }
 
-    fetchData()
+    refreshLibrary()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
-      message.error(error?.message || '删除失败')
+      if (error?.response?.status === 422) {
+        message.warning('文件夹删除失败，请先处理文件夹中的内容')
+      } else {
+        message.error(error?.message || '删除失败')
+      }
     }
   }
 }
@@ -930,7 +1027,12 @@ const handleBatchDelete = async () => {
     )
 
     const response = await deleteBatchFiles(selectedIds.value)
-    const items = response.data?.items || []
+    const items = Array.isArray(response.data?.items) ? response.data.items : []
+    if (items.length !== selectedIds.value.length) {
+      message.warning('批量删除结果不完整，请刷新后重试未确认的项目')
+      await refreshLibrary()
+      return
+    }
     const failedItems = items.filter(item => !item.success)
     const successItems = items.filter(item => item.success)
     selectedIds.value = failedItems.map(item => item.id)
@@ -940,7 +1042,7 @@ const handleBatchDelete = async () => {
     } else {
       message.success(`批量删除成功，共 ${successItems.length} 项`)
     }
-    fetchData()
+    refreshLibrary()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('批量删除失败:', error)
@@ -1066,7 +1168,7 @@ const getSuccessRateClass = (successRate) => {
  */
 const openFileDetail = (file, event) => {
   if (event) event.stopPropagation()
-  selectedFile.value = { ...file, thumbnailUrl: null }
+  selectedFile.value = { ...file, thumbnailUrl: null, thumbnailError: false }
   detailLoading.value = true
   detailError.value = ''
   detailJobs.value = []
@@ -1077,7 +1179,7 @@ const openFileDetail = (file, event) => {
 
   Promise.allSettled([
     getFilePreview(file.id),
-    getThumbnailUrl(file.id).catch(() => ({ data: null }))
+    getThumbnailUrl(file.id)
   ]).then(([previewResult, thumbnailResult]) => {
     if (selectedFile.value && String(selectedFile.value.id) === String(file.id)) {
       if (previewResult.status === 'fulfilled') {
@@ -1090,6 +1192,9 @@ const openFileDetail = (file, event) => {
       }
       if (thumbnailResult.status === 'fulfilled') {
         selectedFile.value.thumbnailUrl = thumbnailResult.value.data || null
+        selectedFile.value.thumbnailError = false
+      } else {
+        selectedFile.value.thumbnailError = true
       }
     }
   }).finally(() => {
@@ -1178,11 +1283,22 @@ const handleTableRowClick = (row) => {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  fetchData()
+  refreshLibrary()
 })
 </script>
 
 <style scoped>
+.file-tree-card :deep(.t-card__body) {
+  max-height: 13rem;
+  overflow-y: auto;
+}
+
+.file-tree-card :deep(.t-tree__label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-library-filter-row {
   display: flex;
   align-items: center;

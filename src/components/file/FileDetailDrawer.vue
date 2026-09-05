@@ -11,7 +11,14 @@
     </div>
 
     <div v-else-if="file" class="p-4">
-      <t-alert v-if="error" theme="error" :title="error" :closable="false" class="mb-4" />
+      <t-alert v-if="error" theme="error" :title="error" :close-btn="false" class="mb-4" />
+      <t-alert
+        v-if="file.thumbnailError"
+        theme="warning"
+        title="缩略图暂不可用，文件元数据仍可查看"
+        :close-btn="false"
+        class="mb-4"
+      />
       <!-- 顶部区域 -->
       <div class="flex items-start gap-4 mb-6">
         <!-- 缩略图 -->
@@ -28,8 +35,9 @@
               </div>
             </template>
           </t-image>
-          <div v-else class="w-full h-full flex items-center justify-center text-gray-500">
+          <div v-else class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-500">
             <IconCube />
+            <span class="text-xs">暂无缩略图</span>
           </div>
         </div>
 
@@ -39,7 +47,7 @@
             {{ file.originalName }}
           </h2>
           <t-tag :theme="getMaterialTagType(file.materialType)" class="mr-2">
-            {{ file.materialType || 'PLA' }}
+            {{ file.materialType || '未指定' }}
           </t-tag>
         </div>
 
@@ -138,9 +146,6 @@
             <t-descriptions-item label="上传时间">
               {{ formatDateTime(file.createdAt) }}
             </t-descriptions-item>
-            <t-descriptions-item label="上传用户ID">
-              {{ file.userId || '-' }}
-            </t-descriptions-item>
           </t-descriptions>
         </t-card>
 
@@ -152,7 +157,7 @@
               <span class="text-sm font-semibold text-gray-900">关联任务</span>
             </div>
           </template>
-          <t-alert v-if="jobsError" theme="error" :title="jobsError" :closable="false" />
+          <t-alert v-if="jobsError" theme="error" :title="jobsError" :close-btn="false" />
           <t-skeleton v-else-if="jobsLoading" :loading="true" theme="paragraph" />
           <t-table
             v-else-if="jobs.length > 0"
