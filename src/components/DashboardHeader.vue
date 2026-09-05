@@ -188,7 +188,7 @@ onUnmounted(() => {
 // ============================================
 
 const labels = {
-  title: '嘉东三维打印控制系统',
+  title: '嘉东 FabMatrix 3D 打印控制系统',
   total: '设备总数',
   printing: '打印中',
   standby: '待机',

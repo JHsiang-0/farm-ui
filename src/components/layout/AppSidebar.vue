@@ -7,12 +7,12 @@
     <button
       type="button"
       class="app-brand"
-      aria-label="嘉东三维打印农场"
-      :title="props.collapsed ? '嘉东三维打印农场' : ''"
+      aria-label="嘉东 FabMatrix"
+      :title="props.collapsed ? '嘉东 FabMatrix' : ''"
       @click="goDashboard"
     >
       <img src="/icon.png" alt="" aria-hidden="true" class="app-brand__logo">
-      <span v-if="!props.collapsed" class="app-brand__name">嘉东三维打印农场</span>
+      <span v-if="!props.collapsed" class="app-brand__name">嘉东 FabMatrix</span>
     </button>
 
     <t-menu :value="activePath" :collapsed="props.collapsed" theme="light" class="app-menu">
@@ -32,7 +32,7 @@
     </t-menu>
 
     <div v-if="!props.collapsed" class="app-sidebar__footer">
-      <span>3D 打印农场管理系统</span>
+      <span>FabMatrix 3D 打印生产管理平台</span>
       <span>v1.0.0</span>
     </div>
   </t-aside>

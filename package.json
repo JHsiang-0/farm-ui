@@ -1,5 +1,5 @@
 {
-  "name": "farm-ui",
+  "name": "fabmatrix-client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -59,7 +59,7 @@
   "main": "electron/main.cjs",
   "build": {
     "appId": "com.example.farmui",
-    "productName": "Farm UI",
+    "productName": "FabMatrix Desktop",
     "directories": {
       "output": "release"
     },
