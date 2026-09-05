@@ -40,46 +40,28 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 100%;
+  overflow: visible;
 }
 
 .app-page-card {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
+  display: block;
+  flex: 0 0 auto;
   width: 100%;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .app-page-card > .t-loading__parent,
 .app-page-card > .t-card__body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.app-page-card > .t-loading__parent > .t-card__body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
+  overflow: visible;
 }
 
 .management-card .t-card__body {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
+  display: block;
 }
 
 .app-query-toolbar {
@@ -96,11 +78,9 @@ body {
 }
 
 .management-table {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
+  display: block;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .app-page-toolbar {

@@ -89,26 +89,20 @@ const tableAttrs = computed(() => {
 
 <style scoped>
 .td-table-adapter {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
+  display: block;
   width: 100%;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .td-table-adapter :deep(.t-table) {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
+  display: block;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .td-table-adapter :deep(.t-table__content) {
-  flex: 1 1 0%;
-  min-height: 0;
+  min-width: 0;
+  overflow-x: auto;
 }
 </style>

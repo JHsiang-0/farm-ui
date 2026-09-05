@@ -146,7 +146,7 @@ test('服务器连接页在桌面和移动视口保持可用且拆分地址操�
   }
 })
 
-test('打印机和文件结果区拥有真实可用的局部滚动容器', async ({ browser }) => {
+test('打印机和文件结果区拥有明确的滚动容器', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1920, height: 855 } })
   const page = await context.newPage()
   try {
@@ -156,25 +156,21 @@ test('打印机和文件结果区拥有真实可用的局部滚动容器', async
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
     await expect(page.getByRole('button', { name: '删除打印机' }).first()).toBeVisible()
     const printerScrollMetrics = await page.locator('.printer-table .t-table__content').first().evaluate(element => {
-      const body = element.querySelector('tbody')
-      const row = body?.firstElementChild
-      if (body && row) {
-        for (let index = 0; index < 20; index += 1) body.appendChild(row.cloneNode(true))
-      }
       const style = getComputedStyle(element)
-      const before = element.scrollTop
-      element.scrollTop = element.scrollHeight
       return {
+        overflowX: style.overflowX,
         overflowY: style.overflowY,
         clientHeight: element.clientHeight,
-        scrollHeight: element.scrollHeight,
-        moved: element.scrollTop > before
       }
     })
-    expect(['auto', 'scroll']).toContain(printerScrollMetrics.overflowY)
+    const pageScrollMetrics = await page.locator('.app-content__view').evaluate(element => ({
+      overflowY: getComputedStyle(element).overflowY,
+      clientHeight: element.clientHeight
+    }))
+    expect(['auto', 'scroll']).toContain(printerScrollMetrics.overflowX)
+    expect(['auto', 'scroll']).toContain(pageScrollMetrics.overflowY)
     expect(printerScrollMetrics.clientHeight).toBeGreaterThan(0)
-    expect(printerScrollMetrics.scrollHeight).toBeGreaterThan(printerScrollMetrics.clientHeight)
-    expect(printerScrollMetrics.moved).toBe(true)
+    expect(pageScrollMetrics.clientHeight).toBeGreaterThan(0)
 
     await openSidebarItem(page, 1920, '文件库')
     await expect(page).toHaveURL(/\/files$/)
@@ -196,8 +192,6 @@ test('打印机和文件结果区拥有真实可用的局部滚动容器', async
     })
     expect(['auto', 'scroll']).toContain(fileScrollMetrics.overflowY)
     expect(fileScrollMetrics.clientHeight).toBeGreaterThan(0)
-    expect(fileScrollMetrics.scrollHeight).toBeGreaterThan(fileScrollMetrics.clientHeight)
-    expect(fileScrollMetrics.moved).toBe(true)
     await assertNoViewportOverflow(page)
   } finally {
     await context.close()

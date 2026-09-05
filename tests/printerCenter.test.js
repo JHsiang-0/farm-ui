@@ -35,8 +35,9 @@ test('打印机删除显示关联任务风险并保留逐项执行状态', () =>
   assert.match(source, /删除可能被服务端拒绝/)
 })
 
-test('表格适配层参与页面高度链并把滚动交给 TDesign Table', () => {
+test('表格适配层保持自然高度并把横向滚动交给 TDesign Table 内容区', () => {
   assert.match(tableAdapterSource, /class="td-table-adapter" :class="attrs\.class" :style="attrs\.style"/)
-  assert.match(tableAdapterSource, /\.td-table-adapter[\s\S]*min-height: 0/)
-  assert.match(tableAdapterSource, /\.td-table-adapter :deep\(\.t-table\)[\s\S]*flex: 1 1 0%/)
+  assert.match(tableAdapterSource, /\.td-table-adapter[\s\S]*display: block/)
+  assert.match(tableAdapterSource, /\.td-table-adapter[\s\S]*overflow: visible/)
+  assert.match(tableAdapterSource, /\.td-table-adapter :deep\(\.t-table__content\)[\s\S]*overflow-x: auto/)
 })
