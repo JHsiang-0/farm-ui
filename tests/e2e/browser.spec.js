@@ -109,3 +109,56 @@ test('批量派发页面完成真实预览确认流程', async ({ browser }) => 
     await context.close()
   }
 })
+
+test('服务器连接页在桌面和移动视口保持可用且拆分地址操作', async ({ browser }) => {
+  test.setTimeout(60000)
+  for (const viewport of [
+    { width: 1920, height: 855 },
+    { width: 375, height: 812 }
+  ]) {
+    const context = await browser.newContext({ viewport })
+    const page = await context.newPage()
+    try {
+      await page.goto('/server-connection')
+      await expect(page.getByRole('heading', { name: '连接生产服务器' })).toBeVisible()
+      await expect(page.locator('.connection-endpoint-grid__host input')).toBeVisible()
+      await expect(page.locator('.connection-endpoint-grid input[placeholder="8080"]')).toBeVisible()
+      await expect(page.getByRole('button', { name: '测试', exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: '保存并连接', exact: true })).toBeVisible()
+      await expect(page.getByText('测试并保存', { exact: true })).toHaveCount(0)
+      await assertNoViewportOverflow(page)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('打印机和文件结果区拥有真实可用的局部滚动容器', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1920, height: 855 } })
+  const page = await context.newPage()
+  try {
+    await login(page)
+    await openSidebarItem(page, 1920, '打印机管理')
+    await expect(page).toHaveURL(/\/printers$/)
+    await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
+    const printerScrollMetrics = await page.locator('.printer-table .t-table__content').first().evaluate(element => {
+      const style = getComputedStyle(element)
+      return { overflowY: style.overflowY, clientHeight: element.clientHeight }
+    })
+    expect(['auto', 'scroll']).toContain(printerScrollMetrics.overflowY)
+    expect(printerScrollMetrics.clientHeight).toBeGreaterThan(0)
+
+    await openSidebarItem(page, 1920, '文件库')
+    await expect(page).toHaveURL(/\/files$/)
+    await expect(page.getByRole('heading', { name: '文件库' })).toBeVisible()
+    const fileScrollMetrics = await page.locator('.file-grid-view').evaluate(element => {
+      const style = getComputedStyle(element)
+      return { overflowY: style.overflowY, clientHeight: element.clientHeight }
+    })
+    expect(['auto', 'scroll']).toContain(fileScrollMetrics.overflowY)
+    expect(fileScrollMetrics.clientHeight).toBeGreaterThan(0)
+    await assertNoViewportOverflow(page)
+  } finally {
+    await context.close()
+  }
+})
