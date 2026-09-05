@@ -87,7 +87,7 @@ const router = createRouter({
           path: 'files',
           name: 'files',
           component: () => import('../views/FileLibrary.vue'),
-          meta: { title: '文件库' }
+          meta: { title: '文件库', hideBreadcrumb: true }
         },
         {
           path: 'tasks',
@@ -112,7 +112,8 @@ const router = createRouter({
         {
           path: 'batch-dispatch',
           name: 'batch-dispatch',
-          component: () => import('../views/BatchDispatch.vue')
+          component: () => import('../views/BatchDispatch.vue'),
+          meta: { title: '批量手动派发', hideBreadcrumb: true }
         }
       ]
     },

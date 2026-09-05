@@ -1,7 +1,10 @@
 <template>
-  <div class="app-page-shell app-page-background">
+  <div class="app-page-shell app-page-background file-library-page">
     <div class="app-page-toolbar file-library-page-toolbar">
-      <h1 class="app-page-toolbar__title app-route-title">文件库</h1>
+      <div class="file-library-page-toolbar__heading">
+        <h1 class="app-page-toolbar__title app-route-title">文件库</h1>
+        <p>管理可见的切片文件与目录，选择文件后可直接创建打印任务。</p>
+      </div>
       <div class="file-library-toolbar__actions">
         <t-space class="file-view-toggle">
           <t-button variant="text" size="small" @click="viewMode = 'grid'"
@@ -29,83 +32,95 @@
       </div>
     </div>
 
-    <div class="file-library-content-card">
-      <t-card class="file-tree-card mb-4" bordered>
-        <template #header>
-          <div class="flex items-center justify-between gap-3">
+    <t-card class="file-library-card" bordered>
+      <div class="file-library-layout">
+        <aside class="file-library-sidebar" aria-label="文件目录">
+          <div class="file-library-panel-heading">
             <div>
-              <div class="text-base font-semibold text-gray-900">目录树</div>
-              <div class="text-xs text-gray-500 mt-1">来自当前账号可见的文件与文件夹</div>
+              <h2>目录</h2>
+              <p>当前账号可见的文件与文件夹</p>
             </div>
             <t-button variant="text" size="small" :loading="treeLoading" @click="loadFileTree">
-              刷新目录
+              刷新
             </t-button>
           </div>
-        </template>
-        <AsyncState
-          v-if="treeLoading || treeError || fileTree.length === 0"
-          :loading="treeLoading"
-          :error="treeError"
-          :empty="fileTree.length === 0"
-          empty-description="暂无可见文件或文件夹"
-          @retry="loadFileTree"
-        />
-        <t-tree
-          v-else
-          :data="fileTree"
-          activable
-          hover
-          :expand-level="1"
-          @click="handleTreeClick"
-        />
-      </t-card>
+          <div class="file-library-tree">
+            <AsyncState
+              v-if="treeLoading || treeError || fileTree.length === 0"
+              :loading="treeLoading"
+              :error="treeError"
+              :empty="fileTree.length === 0"
+              empty-description="暂无可见文件或文件夹"
+              @retry="loadFileTree"
+            />
+            <t-tree
+              v-else
+              :data="fileTree"
+              activable
+              hover
+              :expand-level="1"
+              @click="handleTreeClick"
+            />
+          </div>
+        </aside>
 
-      <!-- 搜索与筛选 -->
-      <div class="file-library-filter-row mb-4">
-        <t-breadcrumb separator="/" class="file-library-navigation">
-          <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
-            <span><folder-opened /></span>
-            <span>根目录</span>
-          </t-breadcrumb-item>
-          <t-breadcrumb-item
-            v-for="(breadcrumb, index) in breadcrumbs"
-            :key="breadcrumb.id"
-            @click.prevent="navigateTo(index)"
-          >
-            {{ breadcrumb.name }}
-          </t-breadcrumb-item>
-        </t-breadcrumb>
-        <div class="file-library-toolbar__filters">
-          <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
-          <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable class="w-full sm:w-52" size="medium"
-            @keyup.enter="handleSearch">
-            <template #prefixIcon>
-              <Search />
-            </template>
-          </t-input>
-          <t-input v-model="materialFilter" placeholder="材质筛选" clearable class="w-full sm:w-40" size="medium"
-            @change="handleSearch" @keyup.enter="handleSearch">
-          </t-input>
-        </div>
-      </div>
+        <section class="file-library-main" aria-labelledby="file-library-results-title">
+          <div class="file-library-filter-row">
+            <div class="file-library-navigation">
+              <span class="file-library-section-label">当前位置</span>
+              <t-breadcrumb separator="/">
+                <t-breadcrumb-item :to="{ path: '' }" @click.prevent="navigateToRoot">
+                  <span><folder-opened /></span>
+                  <span>根目录</span>
+                </t-breadcrumb-item>
+                <t-breadcrumb-item
+                  v-for="(breadcrumb, index) in breadcrumbs"
+                  :key="breadcrumb.id"
+                  @click.prevent="navigateTo(index)"
+                >
+                  {{ breadcrumb.name }}
+                </t-breadcrumb-item>
+              </t-breadcrumb>
+            </div>
+            <div class="file-library-toolbar__filters">
+              <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
+              <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable size="medium"
+                @keyup.enter="handleSearch">
+                <template #prefixIcon>
+                  <Search />
+                </template>
+              </t-input>
+              <t-input v-model="materialFilter" placeholder="材质筛选" clearable size="medium"
+                @change="handleSearch" @keyup.enter="handleSearch">
+              </t-input>
+            </div>
+          </div>
 
-      <!-- 文件列表区 -->
-      <AsyncState
-        v-if="loading || loadError || fileList.length === 0"
-        :loading="loading"
-        :error="loadError"
-        :empty="fileList.length === 0"
-        empty-description="暂无文件，请上传 G-Code 文件"
-        @retry="fetchData"
-      />
-      <div v-else class="file-library-list">
+          <div class="file-library-results">
+            <div class="file-library-results-heading">
+              <div>
+                <h2 id="file-library-results-title">{{ currentParentId ? '目录内容' : '根目录文件' }}</h2>
+                <span>{{ fileList.length }} 项结果</span>
+              </div>
+              <t-tag v-if="isBatchMode" theme="primary" variant="light">批量选择模式</t-tag>
+            </div>
+
+            <AsyncState
+              v-if="loading || loadError || fileList.length === 0"
+              :loading="loading"
+              :error="loadError"
+              :empty="fileList.length === 0"
+              empty-description="暂无文件，请上传 G-Code 文件"
+              @retry="fetchData"
+            />
+            <div v-else class="file-library-list">
       <!-- 网格视图 -->
-      <div v-if="viewMode === 'grid'" class="file-grid-view flex-1 overflow-y-auto pb-4">
+      <div v-if="viewMode === 'grid'" class="file-grid-view">
         <!-- 文件夹 -->
         <div
           v-for="file in folderList"
           :key="file.id"
-          class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
+          class="file-card"
           :class="{ 'file-card--selected': isBatchMode && selectedIds.includes(file.id) }"
           @dblclick="navigateToFolder(file)"
           @click="handleFileClick(file)"
@@ -118,34 +133,34 @@
           </div>
 
           <!-- 文件夹图标 -->
-          <div class="file-card__media relative h-24 overflow-hidden bg-blue-50 flex items-center justify-center">
+          <div class="file-card__media file-card__media--folder">
             <IconFolder :size="64" class="text-blue-500" />
           </div>
 
           <!-- 卡片内容 -->
-          <div class="file-card__body p-2">
-            <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
+          <div class="file-card__body">
+            <h3 class="file-card__name"
               :title="file.originalName">
               {{ file.originalName }}
             </h3>
 
             <!-- 文件夹统计 -->
-            <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
+            <div class="file-card__stats">
               <div class="flex flex-col gap-0.5">
-                <span class="text-xs text-gray-600 uppercase">类型</span>
-                <span class="text-sm font-semibold text-gray-900">文件夹</span>
+                <span class="file-card__stat-label">类型</span>
+                <span class="file-card__stat-value">文件夹</span>
               </div>
             </div>
 
             <!-- 悬浮操作按钮 -->
-            <div class="file-card__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
+            <div class="file-card__actions">
               <t-button theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click.stop="navigateToFolder(file)"
-                class="flex-1 text-xs px-1 py-1">
+                class="file-card__action">
                 打开
               </t-button>
               <t-button theme="danger" size="small" :icon="renderIcon(Delete)" :loading="deletingIds.includes(file.id)"
                 :disabled="batchDeleting || deletingIds.length > 0" @click.stop="handleDelete(file.id)"
-                class="flex-1 text-xs px-1 py-1">
+                class="file-card__action">
                 删除
               </t-button>
             </div>
@@ -156,7 +171,7 @@
         <div
           v-for="file in fileItemsList"
           :key="file.id"
-          class="file-card group bg-white border border-gray-300 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer relative hover:shadow-md"
+          class="file-card"
           :class="{ 'file-card--selected': isBatchMode && selectedIds.includes(file.id) }"
           @click="handleFileClick(file)">
           <!-- 卡片选中状态 -->
@@ -166,17 +181,17 @@
           </div>
 
           <!-- 缩略图区域 -->
-          <div class="file-card__media relative h-24 overflow-hidden bg-gray-100">
+          <div class="file-card__media">
             <t-image v-if="file.thumbnailUrl" :src="file.thumbnailUrl" :alt="file.originalName" fit="cover"
               class="w-full h-full">
               <template #error>
-                <div class="w-full h-full flex flex-col items-center justify-center text-gray-600 gap-1">
+                <div class="file-card__media-placeholder">
                   <Picture :size="36" />
                   <span class="text-sm">加载失败</span>
                 </div>
               </template>
             </t-image>
-            <div v-else class="w-full h-full flex flex-col items-center justify-center text-gray-600 gap-1">
+            <div v-else class="file-card__media-placeholder">
               <Document :size="36" />
               <span class="text-sm">NO IMAGE</span>
             </div>
@@ -187,53 +202,53 @@
           </div>
 
           <!-- 卡片内容 -->
-          <div class="file-card__body p-2">
-            <h3 class="text-sm font-semibold text-gray-900 mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
+          <div class="file-card__body">
+            <h3 class="file-card__name"
               :title="file.originalName">
               {{ file.originalName }}
             </h3>
 
             <!-- 核心数据指标 -->
-            <div class="file-card__metrics flex gap-2 mb-2">
-              <div class="flex items-center gap-1 text-xs text-gray-600">
+            <div class="file-card__metrics">
+              <div>
                 <Clock :size="14" class="text-gray-600" />
                 <span>{{ formatDuration(file.estTime) }}</span>
               </div>
-              <div class="flex items-center gap-1 text-xs text-gray-600">
+              <div>
                 <ScaleToOriginal :size="14" class="text-gray-600" />
                 <span>{{ formatMetric(file.filamentWeight, 'g') }}</span>
               </div>
-              <div class="flex items-center gap-1 text-xs text-gray-600">
+              <div>
                 <FullScreen :size="14" class="text-gray-600" />
                 <span>{{ formatMetric(file.filamentLength, 'm') }}</span>
               </div>
-              <div class="flex items-center gap-1 text-xs text-gray-600">
+              <div>
                 <span>{{ formatFileSize(file.fileSize) }}</span>
               </div>
             </div>
 
             <!-- 统计信息 -->
-            <div class="file-card__stats flex items-center justify-between p-2 bg-gray-100 rounded text-sm mb-3">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs text-gray-600 uppercase">打印</span>
-                <span class="text-sm font-semibold text-gray-900">{{ formatMetric(file.printCount, '次') }}</span>
+            <div class="file-card__stats">
+              <div>
+                <span class="file-card__stat-label">打印</span>
+                <span class="file-card__stat-value">{{ formatMetric(file.printCount, '次') }}</span>
               </div>
-              <div class="flex items-center gap-2 flex-1 ml-2">
-                <span class="text-xs text-gray-600 w-8">成功率</span>
+              <div class="file-card__success-rate">
+                <span class="file-card__stat-label">成功率</span>
                 <t-progress v-if="hasValue(file.successRate)" :percentage="file.successRate" :stroke-width="4" :label="false"
                   :class="getSuccessRateClass(file.successRate)" class="flex-1" />
-                <span class="text-sm font-semibold text-gray-900 w-10 text-right">{{ formatMetric(file.successRate, '%') }}</span>
+                <span class="file-card__stat-value">{{ formatMetric(file.successRate, '%') }}</span>
               </div>
             </div>
 
             <!-- 悬浮操作按钮 -->
-            <div class="file-card__actions flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:opacity-100">
+            <div class="file-card__actions">
               <t-button theme="primary" size="small" :icon="renderIcon(Printer)" @click.stop="handlePrint(file)"
-                class="flex-1 text-xs px-1 py-1">
+                class="file-card__action">
                 打印
               </t-button>
               <t-button theme="danger" size="small" :icon="renderIcon(Delete)" @click.stop="handleDelete(file.id)"
-                class="flex-1 text-xs px-1 py-1">
+                class="file-card__action">
                 删除
               </t-button>
             </div>
@@ -242,7 +257,7 @@
       </div>
 
       <!-- 列表视图 -->
-      <div v-else class="file-library-list">
+      <div v-else class="file-table-view">
         <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
           @row-click="handleTableRowClick" border stripe style="width: 100%" height="100%">
           <TdTableColumn type="selection" width="50" align="center" />
@@ -325,16 +340,18 @@
             </template>
           </TdTableColumn>
         </TdTable>
-      </div>
-    </div>
+            </div>
+          </div>
 
-      <!-- 分页 -->
-      <div v-if="fileList.length > 0" class="flex justify-center pt-2 shrink-0">
-      <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize"
-        :total="pagination.total" :show-page-size="false"
-        @change="handlePageChange" class="p-4" />
+          <div v-if="fileList.length > 0" class="file-library-pagination">
+            <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize"
+              :total="pagination.total" :show-page-size="false"
+              @change="handlePageChange" />
+          </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </t-card>
 
     <!-- 文件上传对话框 -->
     <t-dialog v-model:visible="uploadDialogVisible" header="批量上传切片文件" width="600px" :footer="false">
@@ -1499,6 +1516,416 @@ onMounted(() => {
 
   .file-card__media {
     height: 88px;
+  }
+}
+
+/* T208 visual reset: the file workspace owns one layout and one scroll region. */
+.file-library-page {
+  gap: var(--app-spacing-4);
+}
+
+.file-library-page-toolbar {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.file-library-page-toolbar__heading {
+  min-width: 0;
+}
+
+.file-library-page-toolbar__heading p {
+  margin: 6px 0 0;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.file-library-card {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-library-card :deep(.t-card__body) {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  padding: 0;
+}
+
+.file-library-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.file-library-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--app-spacing-5);
+  background: var(--app-surface-muted);
+  border-right: 1px solid var(--app-border);
+}
+
+.file-library-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-spacing-3);
+  flex: 0 0 auto;
+  padding-bottom: var(--app-spacing-4);
+}
+
+.file-library-panel-heading h2,
+.file-library-results-heading h2 {
+  margin: 0;
+  color: var(--app-text-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.file-library-panel-heading p,
+.file-library-results-heading span {
+  margin: 4px 0 0;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.file-library-tree {
+  flex: 1 1 0%;
+  min-height: 0;
+  padding: var(--app-spacing-2);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  overflow-y: auto;
+}
+
+.file-library-tree :deep(.t-tree) {
+  min-width: 0;
+}
+
+.file-library-tree :deep(.t-tree__label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-library-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--app-spacing-5);
+  background: var(--app-surface);
+}
+
+.file-library-filter-row {
+  align-items: center;
+  gap: var(--app-spacing-4);
+  margin-bottom: var(--app-spacing-4);
+  padding: 0 0 var(--app-spacing-4);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.file-library-navigation {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.file-library-section-label {
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.file-library-navigation :deep(.t-breadcrumb) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.file-library-toolbar__filters {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--app-spacing-3);
+}
+
+.file-library-toolbar__filters .t-input:first-of-type {
+  width: min(240px, 24vw);
+}
+
+.file-library-toolbar__filters .t-input:last-of-type {
+  width: 132px;
+}
+
+.file-library-results {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.file-library-results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-spacing-3);
+  flex: 0 0 auto;
+  margin-bottom: var(--app-spacing-3);
+}
+
+.file-library-list,
+.file-table-view {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-view-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+}
+
+.file-view-toggle :deep(.t-button) {
+  min-width: 32px;
+  color: var(--app-text-secondary);
+}
+
+.file-view-toggle :deep(.file-view-toggle__active) {
+  color: var(--app-primary);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.file-grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--app-spacing-4);
+  align-content: start;
+  min-height: 0;
+  padding: 2px 2px var(--app-spacing-3);
+  overflow-y: auto;
+}
+
+.file-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 280px;
+  flex-direction: column;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.file-card:hover,
+.file-card--selected {
+  border-color: var(--app-primary);
+  box-shadow: var(--app-shadow-raised);
+}
+
+.file-card__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 128px;
+  flex-shrink: 0;
+  background: var(--app-surface-muted);
+  border-bottom: 1px solid var(--app-border);
+  overflow: hidden;
+}
+
+.file-card__media--folder {
+  color: var(--app-primary);
+  background: var(--app-primary-light);
+}
+
+.file-card__media-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.file-card__body {
+  display: flex;
+  min-height: 150px;
+  flex: 1;
+  flex-direction: column;
+  padding: var(--app-spacing-4);
+}
+
+.file-card__name {
+  margin: 0 0 var(--app-spacing-3);
+  overflow: hidden;
+  color: var(--app-text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: var(--app-spacing-3);
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.file-card__metrics > div {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-card__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-spacing-3);
+  margin-bottom: var(--app-spacing-3);
+  padding: 10px;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
+  border-radius: var(--app-radius-small);
+}
+
+.file-card__stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.file-card__stat-label {
+  color: var(--app-text-secondary);
+  font-size: 11px;
+}
+
+.file-card__stat-value {
+  color: var(--app-text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.file-card__success-rate {
+  display: flex !important;
+  flex: 1 1 auto;
+  align-items: center;
+  flex-direction: row !important;
+  gap: 8px !important;
+}
+
+.file-card__success-rate .t-progress {
+  min-width: 40px;
+  flex: 1 1 auto;
+}
+
+.file-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.file-card__action {
+  flex: 1 1 0;
+}
+
+.file-library-pagination {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  padding-top: var(--app-spacing-4);
+}
+
+@media (max-width: 900px) {
+  .file-library-filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .file-library-navigation,
+  .file-library-toolbar__filters {
+    width: 100%;
+  }
+
+  .file-library-toolbar__filters {
+    justify-content: flex-start;
+  }
+
+  .file-library-toolbar__filters .t-input:first-of-type,
+  .file-library-toolbar__filters .t-input:last-of-type {
+    flex: 1 1 180px;
+    width: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .file-library-page-toolbar {
+    align-items: stretch;
+  }
+
+  .file-library-toolbar__actions {
+    justify-content: flex-start;
+  }
+
+  .file-library-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .file-library-sidebar {
+    flex: 0 0 190px;
+    max-height: 190px;
+    padding: var(--app-spacing-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .file-library-main {
+    padding: var(--app-spacing-3);
+  }
+
+  .file-library-pagination {
+    justify-content: center;
   }
 }
 

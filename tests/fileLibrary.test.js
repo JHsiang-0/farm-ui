@@ -12,6 +12,10 @@ test('文件中心使用真实文件树契约并提供统一目录导航', () =>
   assert.match(source, /getFileTree\(\)/)
   assert.match(source, /parentId: node.parentId \?\? null/)
   assert.equal(source.includes('children: Array.isArray(node.children)'), true)
+  assert.match(source, /class="file-library-layout"/)
+  assert.match(source, /class="file-library-results"/)
+  assert.match(source, /class="file-library-sidebar"/)
+  assert.doesNotMatch(source, /class="file-library-content-card"/)
 })
 
 test('文件中心不伪造材料和统计值，并覆盖上传删除结果态', () => {
