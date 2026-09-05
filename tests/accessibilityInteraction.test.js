@@ -27,7 +27,7 @@ test('异步状态和批量文件操作提供 TDesign 状态语义与操作中�
   assert.match(fileSource, /batchDeleting/)
   assert.match(fileSource, /deletingIds/)
   assert.match(fileSource, /const ids = selectedIds\.value\.slice\(\)/)
-  assert.match(queueSource, /aria-label="取消任务"/)
+  assert.match(queueSource, /value: 'cancel'/)
   assert.match(userSource, /<t-form[\s\S]*label="用户名"/)
   assert.match(auditSource, /<t-form[\s\S]*label="时间范围"/)
 })

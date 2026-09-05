@@ -12,9 +12,11 @@
       </div>
     </div>
 
-    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+    <t-tabs v-model:value="activeTab" class="job-queue-tabs">
+      <t-tab-panel value="queue" label="待派发任务">
+        <t-card class="job-panel-card app-page-card">
       <AsyncState
-        v-show="queueLoading || queueError || queueData.length === 0"
+        v-if="queueLoading || queueError || queueData.length === 0"
         :loading="queueLoading"
         :error="queueError"
         :empty="queueData.length === 0"
@@ -22,12 +24,12 @@
         @retry="fetchQueue"
       />
       <TdTable
-        v-show="!(queueLoading || queueError || queueData.length === 0)"
+        v-else
         :data="queueData"
         :loading="loading"
         style="width: 100%"
-        class="rounded-lg overflow-hidden flex-1"
-        :header-cell-style="{ background: '#f9fafb' }"
+        class="job-table"
+        :header-cell-style="{ background: 'var(--app-surface-muted)' }"
         height="100%"
       >
         <TdTableColumn prop="id" label="任务单号" width="100" align="center">
@@ -101,52 +103,36 @@
 
         <TdTableColumn label="调度操作" width="300" align="center" fixed="right">
           <template #default="scope">
-            <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
-            <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" variant="text"
-              @click="handleRequeue(scope.row.id)">重新排队</t-button>
-            <t-button
-              size="small" theme="primary"
-              @click="openAssignDialog(scope.row)"
-              :disabled="scope.row.status !== 'QUEUED'"
-            >
-              <span><promotion /></span>
-              分配机器
-            </t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
-              size="small" theme="warning" variant="outline"
-              @click="handleConfirmSafe(scope.row)"
-            >
-              确认安全
-            </t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId"
-              size="small" theme="success"
-              @click="handleStart(scope.row)"
-            >
-              启动打印
-            </t-button>
-            <t-popconfirm content="确定要取消这个任务吗？"
-              theme="danger"
-              @confirm="handleCancel(scope.row)"
-              :disabled="!canCancel(scope.row.status)"
-            >
-              <template>
-                <t-button size="small" theme="danger" variant="outline" aria-label="取消任务" :disabled="!canCancel(scope.row.status)">
-                  <span><circle-close /></span>
-                </t-button>
-              </template>
-            </t-popconfirm>
+            <t-space size="small">
+              <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+              <t-button
+                size="small"
+                theme="primary"
+                :disabled="scope.row.status !== 'QUEUED'"
+                @click="openAssignDialog(scope.row)"
+              >
+                <span><promotion /></span>
+                分配机器
+              </t-button>
+              <t-dropdown
+                trigger="click"
+                :options="getQueueActionOptions(scope.row)"
+                @click="item => handleQueueAction(scope.row, item)"
+              >
+                <t-button size="small" variant="text">更多</t-button>
+              </t-dropdown>
+            </t-space>
           </template>
         </TdTableColumn>
       </TdTable>
 
-    </t-card>
+        </t-card>
+      </t-tab-panel>
 
-    <t-card class="app-page-card mt-4 shadow-sm rounded-xl">
-      <template #title>活动任务</template>
+      <t-tab-panel value="active" label="活动任务">
+        <t-card class="job-panel-card app-page-card">
       <AsyncState
-        v-show="activeLoading || activeError || activePageData.length === 0"
+        v-if="activeLoading || activeError || activePageData.length === 0"
         :loading="activeLoading"
         :error="activeError"
         :empty="activePageData.length === 0"
@@ -154,11 +140,12 @@
         @retry="fetchActive"
       />
       <TdTable
-        v-show="!(activeLoading || activeError || activePageData.length === 0)"
+        v-else
         :data="activePageData"
         :loading="activeLoading"
         style="width: 100%"
-        :header-cell-style="{ background: '#f9fafb' }"
+        class="job-table"
+        :header-cell-style="{ background: 'var(--app-surface-muted)' }"
       >
         <TdTableColumn prop="id" label="任务单号" width="110" align="center">
           <template #default="scope">
@@ -187,62 +174,16 @@
         </TdTableColumn>
         <TdTableColumn label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
-            <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status)"
-              size="small"
-              theme="warning"
-              variant="text"
-              @click="handleRequeue(scope.row.id)">
-              重新排队
-            </t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status)"
-              size="small"
-              theme="warning"
-              variant="text"
-              @click="handleConfirmSafe(scope.row)">
-              确认安全
-            </t-button>
-            <t-button
-              v-if="['ASSIGNED', 'READY'].includes(scope.row.status)"
-              size="small"
-              theme="success"
-              variant="text"
-              @click="handleStart(scope.row)">
-              启动打印
-            </t-button>
-            <t-button
-              v-if="scope.row.status === 'PRINTING' && scope.row.printerId"
-              size="small"
-              theme="warning"
-              variant="text"
-              :loading="isActionLoading('pause', scope.row)"
-              @click="handlePause(scope.row)">
-              暂停
-            </t-button>
-            <t-button
-              v-if="scope.row.status === 'PAUSED' && scope.row.printerId"
-              size="small"
-              theme="success"
-              variant="text"
-              :loading="isActionLoading('resume', scope.row)"
-              @click="handleResume(scope.row)">
-              恢复
-            </t-button>
-            <t-popconfirm
-              v-if="canCancel(scope.row.status)"
-              content="确定要取消这个任务吗？"
-              theme="danger"
-              @confirm="handleCancel(scope.row)">
-              <t-button
-                size="small"
-                theme="danger"
-                variant="outline"
-                :loading="isActionLoading('cancel', scope.row)"
-                aria-label="取消任务"
-              >取消</t-button>
-            </t-popconfirm>
+            <t-space size="small">
+              <t-button size="small" variant="text" @click="openTaskDetail(scope.row)">详情</t-button>
+              <t-dropdown
+                trigger="click"
+                :options="getActiveActionOptions(scope.row)"
+                @click="item => handleActiveAction(scope.row, item)"
+              >
+                <t-button size="small" variant="text">更多</t-button>
+              </t-dropdown>
+            </t-space>
           </template>
         </TdTableColumn>
       </TdTable>
@@ -255,7 +196,9 @@
           @change="handleActivePageChange"
         />
       </div>
-    </t-card>
+        </t-card>
+      </t-tab-panel>
+    </t-tabs>
 
     <!-- 指派打印机弹窗 -->
     <t-dialog v-model:visible="assignDialogVisible" header="指派打印机"
@@ -445,7 +388,6 @@ import {
   PrintIcon as Printer,
   TimeIcon as Clock,
   SendIcon as Promotion,
-  CloseCircleIcon as CircleClose,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
 import { cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob, createPrintJob } from '@/api/job'
@@ -499,6 +441,7 @@ const taskFiles = ref([])
 const taskPrinters = ref([])
 const taskFilesLoading = ref(false)
 const taskPrintersLoading = ref(false)
+const activeTab = ref('queue')
 const createTaskResults = ref([])
 const createTaskBatchKey = ref('')
 const actionLoadingKey = ref('')
@@ -553,8 +496,6 @@ const hasValue = value => value !== undefined && value !== null && value !== ''
 const formatOptional = value => hasValue(value) ? value : '-'
 
 const formatOptionalUnit = (value, unit) => hasValue(value) ? `${value}${unit}` : '-'
-
-const isActionLoading = (action, job) => actionLoadingKey.value === `${action}:${job.id}`
 
 const flattenTaskFiles = (nodes, result = []) => {
   nodes.forEach(node => {
@@ -710,6 +651,65 @@ const canCancel = (status) => {
   return cancelableStatuses.includes(status)
 }
 
+const getQueueActionOptions = job => {
+  const options = []
+  if (['ASSIGNED', 'READY'].includes(job.status)) options.push({ content: '重新排队', value: 'requeue' })
+  if (['ASSIGNED', 'READY'].includes(job.status) && job.printerId) {
+    options.push({ content: '确认安全', value: 'confirm-safe', theme: 'warning' })
+    options.push({ content: '启动打印', value: 'start', theme: 'success' })
+  }
+  if (canCancel(job.status)) options.push({ content: '取消任务', value: 'cancel', theme: 'error' })
+  return options.length ? options : [{ content: '暂无可用操作', value: 'none', disabled: true }]
+}
+
+const getActiveActionOptions = job => {
+  const options = []
+  if (['ASSIGNED', 'READY'].includes(job.status)) options.push({ content: '重新排队', value: 'requeue' })
+  if (['ASSIGNED', 'READY'].includes(job.status) && job.printerId) {
+    options.push({ content: '确认安全', value: 'confirm-safe', theme: 'warning' })
+    options.push({ content: '启动打印', value: 'start', theme: 'success' })
+  }
+  if (job.status === 'PRINTING' && job.printerId) options.push({ content: '暂停打印', value: 'pause', theme: 'warning' })
+  if (job.status === 'PAUSED' && job.printerId) options.push({ content: '恢复打印', value: 'resume', theme: 'success' })
+  if (canCancel(job.status)) options.push({ content: '取消任务', value: 'cancel', theme: 'error' })
+  return options.length ? options : [{ content: '暂无可用操作', value: 'none', disabled: true }]
+}
+
+const confirmCancel = async job => {
+  try {
+    await confirmMessage(
+      `确定取消任务 #${job.id}？取消后将无法继续当前任务。`,
+      '取消任务确认',
+      { confirmButtonText: '确认取消', cancelButtonText: '返回', type: 'danger' }
+    )
+    await handleCancel(job)
+  } catch (error) {
+    if (error !== 'cancel') console.error('取消任务失败:', error)
+  }
+}
+
+const handleQueueAction = async (job, item) => {
+  switch (item.value) {
+    case 'requeue': return handleRequeue(job.id)
+    case 'confirm-safe': return handleConfirmSafe(job)
+    case 'start': return handleStart(job)
+    case 'cancel': return confirmCancel(job)
+    default: return undefined
+  }
+}
+
+const handleActiveAction = async (job, item) => {
+  switch (item.value) {
+    case 'requeue': return handleRequeue(job.id)
+    case 'confirm-safe': return handleConfirmSafe(job)
+    case 'start': return handleStart(job)
+    case 'pause': return handlePause(job)
+    case 'resume': return handleResume(job)
+    case 'cancel': return confirmCancel(job)
+    default: return undefined
+  }
+}
+
 const fetchQueue = async () => {
   try {
     await jobStore.refresh()
@@ -848,6 +848,53 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.job-queue-tabs {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.job-queue-tabs :deep(.t-tabs__content) {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.job-queue-tabs :deep(.t-tab-panel) {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.job-panel-card {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.job-panel-card :deep(.t-card__body) {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.job-table {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.job-table :deep(.t-table) {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
