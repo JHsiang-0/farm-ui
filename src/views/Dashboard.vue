@@ -2,7 +2,7 @@
   <div class="dashboard-page">
     <header class="dashboard-heading">
       <div>
-        <h1 class="app-route-title">概览仪表盘</h1>
+        <h1 class="app-route-title">总览</h1>
       </div>
       <div class="dashboard-heading__actions">
         <t-button :icon="renderIcon(RefreshIcon)" :loading="loading" @click="fetchOverview" size="medium">
