@@ -15,6 +15,17 @@ test('批量派发使用 TDesign Steps 展示资源、预览、确认和结果�
   assert.match(source, /需打开已有任务/)
 })
 
+test('批量派发一次只展示当前步骤，并提供可回退的步骤操作', () => {
+  assert.match(source, /const activeStep = ref\(0\)/)
+  assert.match(source, /currentStep === 0/)
+  assert.match(source, /currentStep === 1/)
+  assert.match(source, /currentStep === 2 \|\| currentStep === 3/)
+  assert.match(source, /v-else class="panel" title="逐项结果"/)
+  assert.match(source, /下一步：配置策略/)
+  assert.match(source, /@click="goToSelection"/)
+  assert.match(source, /@click="goToStrategy"/)
+})
+
 test('批量派发资源来自完整真实文件树并复用上传契约校验', () => {
   assert.match(source, /getFileTree\(\)/)
   assert.match(source, /flattenFiles/)

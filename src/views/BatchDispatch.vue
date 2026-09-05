@@ -1,15 +1,13 @@
 <template>
   <div class="batch-dispatch-page app-page-background">
-    <div class="page-header app-page-toolbar">
-      <div>
-        <h1 class="app-page-toolbar__title app-route-title">批量手动派发</h1>
-        <p class="page-header__description">先选择文件和打印机生成预览，确认后才会创建任务或启动打印。</p>
-      </div>
-      <t-tag theme="default" variant="outline" title="v3 自动派单尚未开放，不会发送自动派单请求">
-        v3 自动派单：规划中
-      </t-tag>
-      <t-button variant="outline" :loading="loadingResources" @click="loadResources">刷新资源</t-button>
-    </div>
+    <PageHeader title="批量手动派发" description="先选择文件和打印机生成预览，确认后才会创建任务或启动打印。">
+      <template #actions>
+        <t-tag theme="default" variant="outline" title="v3 自动派单尚未开放，不会发送自动派单请求">
+          v3 自动派单：规划中
+        </t-tag>
+        <t-button variant="outline" :loading="loadingResources" @click="loadResources">刷新资源</t-button>
+      </template>
+    </PageHeader>
 
     <t-steps :current="currentStep" readonly class="mb-4">
       <t-step-item title="选择资源" content="选择可见文件和打印机" />
@@ -19,53 +17,63 @@
       <t-step-item title="逐项结果" content="查看成功与恢复项" />
     </t-steps>
 
-    <t-card class="panel" title="批量上传">
-      <h2>批量上传</h2>
-      <p class="hint">支持多个 .gcode、.g、.3mf、.stl 文件；上传结果按文件分别返回。</p>
-      <t-upload theme="file" multiple :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
-        :files="uploadFiles" @select-change="handleFileChange" />
-      <t-progress v-if="uploading" class="mt-3" :percentage="uploadProgress" />
-      <t-space class="mt-3">
-        <t-button theme="primary" :loading="uploading" :disabled="!uploadFiles.length" @click="uploadSelected">
-          {{ uploading ? '上传中…' : '批量上传' }}
-        </t-button>
-        <t-button v-if="uploading" variant="outline" @click="cancelUpload">取消上传</t-button>
-      </t-space>
-      <t-alert v-if="uploadResult" class="mt-3" :theme="uploadFailureCount ? 'warning' : 'success'"
-        :title="`上传完成：成功 ${uploadSuccessCount} 个，失败 ${uploadFailureCount} 个`"
-        :close-btn="false">
-        <template #operation>
-          <t-button v-if="retryableUploadFiles.length" variant="text" size="small" @click="retryFailedUploads">
-            重试失败项（{{ retryableUploadFiles.length }}）
+    <template v-if="currentStep === 0">
+      <t-card class="panel" title="批量上传">
+        <p class="hint">支持多个 .gcode、.g、.3mf、.stl 文件；上传结果按文件分别返回。</p>
+        <t-upload theme="file" multiple :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
+          :files="uploadFiles" @select-change="handleFileChange" />
+        <t-progress v-if="uploading" class="mt-3" :percentage="uploadProgress" />
+        <t-space class="mt-3">
+          <t-button theme="primary" :loading="uploading" :disabled="!uploadFiles.length" @click="uploadSelected">
+            {{ uploading ? '上传中…' : '批量上传' }}
           </t-button>
-        </template>
+          <t-button v-if="uploading" variant="outline" @click="cancelUpload">取消上传</t-button>
+        </t-space>
+        <t-alert v-if="uploadResult" class="mt-3" :theme="uploadFailureCount ? 'warning' : 'success'"
+          :title="`上传完成：成功 ${uploadSuccessCount} 个，失败 ${uploadFailureCount} 个`"
+          :close-btn="false">
+          <template #operation>
+            <t-button v-if="retryableUploadFiles.length" variant="text" size="small" @click="retryFailedUploads">
+              重试失败项（{{ retryableUploadFiles.length }}）
+            </t-button>
+          </template>
+        </t-alert>
+      </t-card>
+
+      <div class="selection-grid">
+        <t-card class="panel" :title="`选择文件（${selectedFileIds.length}）`">
+          <t-checkbox-group v-model="selectedFileIds" class="selection-group">
+            <t-checkbox v-for="file in files" :key="file.id" :value="file.id" class="selection-row">
+              <span>{{ file.originalName || `文件 #${file.id}` }}</span>
+              <small>{{ file.id }}</small>
+            </t-checkbox>
+          </t-checkbox-group>
+          <t-empty v-if="!files.length" description="暂无文件，请先批量上传或刷新。" />
+        </t-card>
+
+        <t-card class="panel" :title="`选择打印机（${selectedPrinterIds.length}）`">
+          <t-checkbox-group v-model="selectedPrinterIds" class="selection-group">
+            <t-checkbox v-for="printer in printers" :key="printer.id" :value="printer.id" class="selection-row">
+              <span>{{ printer.name }}</span>
+              <small>{{ printer.ipAddress }} · {{ printer.status }}</small>
+            </t-checkbox>
+          </t-checkbox-group>
+          <t-empty v-if="!printers.length" description="暂无打印机，请先添加设备。" />
+        </t-card>
+      </div>
+
+      <div class="step-actions">
+        <t-button theme="primary" :disabled="!selectedFileIds.length || !selectedPrinterIds.length" @click="goToStrategy">
+          下一步：配置策略
+        </t-button>
+      </div>
+    </template>
+
+    <t-card v-else-if="currentStep === 1" class="panel step-panel" title="配置策略">
+      <t-alert theme="info" :close-btn="false" class="mb-4">
+        已选择 {{ selectedFileIds.length }} 个文件和 {{ selectedPrinterIds.length }} 台打印机，请选择分配策略和确认后的动作。
       </t-alert>
-    </t-card>
-
-    <div class="selection-grid">
-      <t-card class="panel" :title="`选择文件（${selectedFileIds.length}）`">
-        <t-checkbox-group v-model="selectedFileIds" class="selection-group">
-          <t-checkbox v-for="file in files" :key="file.id" :value="file.id" class="selection-row">
-            <span>{{ file.originalName || `文件 #${file.id}` }}</span>
-            <small>{{ file.id }}</small>
-          </t-checkbox>
-        </t-checkbox-group>
-        <t-empty v-if="!files.length" description="暂无文件，请先批量上传或刷新。" />
-      </t-card>
-
-      <t-card class="panel" :title="`选择打印机（${selectedPrinterIds.length}）`">
-        <t-checkbox-group v-model="selectedPrinterIds" class="selection-group">
-          <t-checkbox v-for="printer in printers" :key="printer.id" :value="printer.id" class="selection-row">
-            <span>{{ printer.name }}</span>
-            <small>{{ printer.ipAddress }} · {{ printer.status }}</small>
-          </t-checkbox>
-        </t-checkbox-group>
-        <t-empty v-if="!printers.length" description="暂无打印机，请先添加设备。" />
-      </t-card>
-    </div>
-
-    <t-card class="panel options-panel">
-      <t-form layout="inline">
+      <t-form layout="vertical" class="options-form">
         <t-form-item label="分配策略">
           <t-select v-model="strategy" class="option-select">
             <t-option value="ONE_TO_ONE" label="一文件一打印机" />
@@ -81,12 +89,15 @@
           </t-select>
         </t-form-item>
       </t-form>
-      <t-button class="mt-4" theme="primary" :loading="previewing" @click="preview">
-        {{ previewing ? '生成中…' : '生成派发预览' }}
-      </t-button>
+      <div class="step-actions">
+        <t-button variant="outline" @click="goToSelection">上一步</t-button>
+        <t-button theme="primary" :loading="previewing" @click="preview">
+          {{ previewing ? '生成中…' : '生成派发预览' }}
+        </t-button>
+      </div>
     </t-card>
 
-    <t-card v-if="previewData" class="panel" title="预览结果">
+    <t-card v-else-if="currentStep === 2 || currentStep === 3" class="panel" title="无副作用预览">
       <p class="hint">计划 {{ previewData.planId }} · 版本 {{ previewData.version }} · 动作 {{ previewData.action || action }}。</p>
       <t-alert v-if="previewExpired" class="mb-3" theme="warning" title="预览已过期，请重新生成" :close-btn="false" />
       <t-alert v-if="previewData.conflicts?.length" class="mb-3" theme="warning" title="存在不可分配冲突" :close-btn="false">
@@ -103,13 +114,16 @@
       <t-alert v-if="executableItemIds.length" class="mb-3" theme="warning" title="确认前请检查影响范围" :close-btn="false">
         本次将按“{{ previewData.action || action }}”处理 {{ executableItemIds.length }} 项可执行明细；确认后由后端按计划版本和令牌幂等执行。
       </t-alert>
-      <t-button theme="primary" :disabled="previewExpired || confirming || confirmData || !executableItemIds.length" :loading="confirming" @click="confirm">
+      <div class="step-actions">
+        <t-button variant="outline" :disabled="confirming" @click="goToStrategy">返回配置</t-button>
+        <t-button theme="primary" :disabled="previewExpired || confirming || confirmData || !executableItemIds.length" :loading="confirming" @click="confirm">
         {{ confirming ? '执行中…' : `确认执行（${executableItemIds.length}项）` }}
-      </t-button>
-      <t-button v-if="confirmData && !previewExpired" class="ml-2" variant="outline" :loading="confirming" @click="replayConfirm">
-        再次获取执行结果
-      </t-button>
-      <t-alert v-if="confirmData" class="mt-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '—'}`" :close-btn="false">
+        </t-button>
+      </div>
+    </t-card>
+
+    <t-card v-else class="panel" title="逐项结果">
+      <t-alert class="mb-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '—'}`" :close-btn="false">
         成功 {{ confirmSuccessCount }} 项，失败 {{ confirmFailureCount }} 项
         <span v-if="confirmData.repeated">（重复确认已返回原结果）</span>
         <t-space class="mt-2">
@@ -147,6 +161,12 @@
           <span v-else>—</span>
         </template>
       </t-table>
+      <div class="step-actions">
+        <t-button variant="outline" @click="goToSelection">重新选择资源</t-button>
+        <t-button v-if="confirmData && !previewExpired" variant="outline" :loading="confirming" @click="replayConfirm">
+          再次获取执行结果
+        </t-button>
+      </div>
     </t-card>
   </div>
 </template>
@@ -161,6 +181,7 @@ import { previewBatchDispatch, confirmBatchDispatch, retryPreviewBatchDispatch }
 import { createBatchPreviewRequest, normalizeBatchConfirmResult } from '@/utils/batchDispatch'
 import { isBatchUploadSuccess, normalizeBatchUploadResult, validateBatchUploadSelection } from '@/utils/batchUpload'
 import { useJobStore } from '@/stores/jobStore'
+import PageHeader from '@/components/layout/PageHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -186,13 +207,14 @@ const recoveryHistory = ref([])
 const resultTab = ref('all')
 const strategy = ref('ONE_TO_ONE')
 const action = ref('QUEUE')
+const activeStep = ref(0)
 let previewExpiryTimer = null
 
 const currentStep = computed(() => {
   if (confirmData.value) return 4
+  if (confirming.value) return 3
   if (previewData.value) return 2
-  if (selectedFileIds.value.length || selectedPrinterIds.value.length) return 1
-  return 0
+  return activeStep.value
 })
 
 const executableItemIds = computed(() => (previewData.value?.items || [])
@@ -277,6 +299,20 @@ function invalidatePreview() {
   previewExpiresAt.value = null
   previewExpired.value = false
   stopPreviewExpiryTimer()
+}
+
+function goToStrategy() {
+  if (!selectedFileIds.value.length || !selectedPrinterIds.value.length) {
+    message.warning('请至少选择一个文件和一台打印机')
+    return
+  }
+  activeStep.value = 1
+}
+
+function goToSelection() {
+  if (confirming.value) return
+  invalidatePreview()
+  activeStep.value = 0
 }
 
 function queryIds(value) {
@@ -460,20 +496,29 @@ onMounted(async () => {
   selectedFileIds.value = queryIds(route.query.fileIds)
 })
 
-watch([selectedFileIds, selectedPrinterIds, strategy, action], invalidatePreview, { deep: true })
+watch([selectedFileIds, selectedPrinterIds, strategy, action], () => {
+  invalidatePreview()
+  if (activeStep.value > 1) activeStep.value = 1
+}, { deep: true })
 onUnmounted(stopPreviewExpiryTimer)
 </script>
 
 <style scoped>
 .batch-dispatch-page { display: flex; flex-direction: column; min-height: 100%; overflow: visible; color: var(--app-text-primary); }
-.page-header { flex: 0 0 auto; margin-bottom: 16px; }
-.page-header__description, .hint { color: var(--app-text-secondary); margin: 6px 0 12px; }
+.hint { color: var(--app-text-secondary); margin: 6px 0 12px; }
 .panel { margin-bottom: 16px; }
 .panel :deep(.t-card__body) { min-width: 0; }
 .selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--app-border-subtle); }
 .selection-row span { flex: 1; }
 small { color: var(--app-text-placeholder); }
-.options-panel { display: flex; gap: 18px; align-items: end; flex-wrap: wrap; }
-@media (max-width: 800px) { .selection-grid { grid-template-columns: 1fr; } .page-header { gap: 12px; flex-direction: column; } }
+.options-form { max-width: 560px; }
+.option-select { width: 280px; }
+.step-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+@media (max-width: 800px) {
+  .selection-grid { grid-template-columns: 1fr; }
+  .option-select { width: 100%; }
+  .step-actions { justify-content: stretch; }
+  .step-actions :deep(.t-button) { flex: 1 1 auto; }
+}
 </style>
