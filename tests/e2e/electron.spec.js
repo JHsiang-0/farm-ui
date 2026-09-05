@@ -1,11 +1,19 @@
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { _electron as electron } from 'playwright'
 import { expect, test } from '@playwright/test'
 
 test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fabmatrix-electron-e2e-'))
   const electronApp = await electron.launch({
     args: [path.resolve('.')],
-    env: { ...process.env, ELECTRON_ENABLE_LOGGING: '1' }
+    env: {
+      ...process.env,
+      ELECTRON_ENABLE_LOGGING: '1',
+      FARM_ELECTRON_E2E: '1',
+      FARM_ELECTRON_E2E_USER_DATA: userDataDir
+    }
   })
 
   try {
@@ -46,5 +54,6 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await expect(page.locator('.file-library-layout')).toBeVisible()
   } finally {
     await electronApp.close()
+    fs.rmSync(userDataDir, { recursive: true, force: true })
   }
 })

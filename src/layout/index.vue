@@ -92,7 +92,7 @@ onUnmounted(() => {
 .app-sidebar-overlay {
   position: fixed;
   inset: 0;
-  z-index: 19;
+  z-index: 1000;
   width: 100%;
   height: 100%;
   padding: 0;

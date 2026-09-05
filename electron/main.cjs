@@ -15,6 +15,12 @@ const WINDOW_SIZE = {
 
 app.setAppUserModelId(APP_ID)
 
+// Playwright Electron smoke runs use an isolated profile so a developer's
+// running FabMatrix window cannot steal the single-instance lock.
+if (process.env.FARM_ELECTRON_E2E_USER_DATA) {
+  app.setPath('userData', process.env.FARM_ELECTRON_E2E_USER_DATA)
+}
+
 let mainWindow = null
 
 const loadRenderer = async () => {
@@ -61,7 +67,9 @@ const getWindowSize = () => {
   }
 }
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock()
+const hasSingleInstanceLock = process.env.FARM_ELECTRON_E2E === '1'
+  ? true
+  : app.requestSingleInstanceLock()
 
 if (!hasSingleInstanceLock) {
   app.quit()

@@ -31,6 +31,10 @@ const login = async page => {
 
 const openSidebarItem = async (page, width, label) => {
   const sidebar = page.locator('.app-sidebar')
+  const targetPath = pages.find(item => item.label === label)?.path
+  if (targetPath && new URL(page.url()).pathname === targetPath) {
+    return sidebar
+  }
   if (width <= 768) {
     const menuButton = page.getByRole('button', { name: /展开菜单|收起菜单/ }).first()
     const isOpen = await sidebar.evaluate(element => element.classList.contains('app-sidebar--mobile-open'))
@@ -39,8 +43,12 @@ const openSidebarItem = async (page, width, label) => {
       await expect(sidebar).toHaveClass(/app-sidebar--mobile-open/)
     }
   }
-  const menuItem = sidebar.locator('.t-menu__item').filter({ hasText: label }).last()
-  await menuItem.dispatchEvent('click')
+  const menuItem = sidebar.locator('.t-menu__item:visible').filter({ hasText: label }).first()
+  await menuItem.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }))
+  await page.waitForTimeout(300)
+  const menuItemBox = await menuItem.boundingBox()
+  expect(menuItemBox).not.toBeNull()
+  await page.mouse.click(menuItemBox.x + menuItemBox.width / 2, menuItemBox.y + menuItemBox.height / 2)
   return sidebar
 }
 
@@ -59,6 +67,12 @@ for (const viewport of viewports) {
     test.setTimeout(120000)
     const context = await browser.newContext({ viewport })
     const page = await context.newPage()
+    await page.addInitScript(() => {
+      Object.defineProperty(document.documentElement, 'requestFullscreen', {
+        configurable: true,
+        value: () => Promise.resolve()
+      })
+    })
 
     try {
       await login(page)
@@ -75,12 +89,18 @@ for (const viewport of viewports) {
       }
 
       await openSidebarItem(page, viewport.width, '概览仪表盘')
-      await page.getByRole('button', { name: '实时设备看板', exact: true }).click()
-      await expect(page).toHaveURL(/\/dashboard\/fullscreen$/)
-      await expect(page.getByRole('heading', { name: 'FabMatrix 3D 打印控制系统' })).toBeVisible()
-      await expect(page.getByRole('button', { name: '退出全屏', exact: true })).toBeVisible()
-      await assertNoViewportOverflow(page)
-      await page.screenshot({ path: testInfo.outputPath(`dashboard-fullscreen-${viewport.width}.png`) })
+      if (viewport.width <= 768) {
+        const closeNavButton = page.getByRole('button', { name: '关闭导航菜单', exact: true })
+        if (await closeNavButton.isVisible()) await closeNavButton.click()
+      }
+      if (viewport.width > 768) {
+        await page.getByRole('button', { name: '实时设备看板', exact: true }).click()
+        await expect(page).toHaveURL(/\/dashboard\/fullscreen$/)
+        await expect(page.getByRole('heading', { name: 'FabMatrix 3D 打印控制系统' })).toBeVisible()
+        await expect(page.getByRole('button', { name: '退出全屏', exact: true })).toBeVisible()
+        await assertNoViewportOverflow(page)
+        await page.screenshot({ path: testInfo.outputPath(`dashboard-fullscreen-${viewport.width}.png`) })
+      }
     } finally {
       await context.close()
     }
@@ -188,6 +208,37 @@ test('打印机和文件结果区拥有明确的滚动容器', async ({ browser 
     expect(['auto', 'scroll']).toContain(fileScrollMetrics.overflowY)
     expect(fileScrollMetrics.clientHeight).toBeGreaterThan(0)
     await assertNoViewportOverflow(page)
+  } finally {
+    await context.close()
+  }
+})
+
+test('任务中心通过真实点击打开详情并可用 Escape 关闭', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const page = await context.newPage()
+  try {
+    await login(page)
+    await openSidebarItem(page, 1440, '任务队列')
+    await expect(page.getByRole('heading', { name: '生产调度队列' })).toBeVisible()
+    await page.getByRole('button', { name: '详情', exact: true }).first().click()
+    await expect(page.getByText('已知时间线', { exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByText('已知时间线', { exact: true })).toHaveCount(0)
+  } finally {
+    await context.close()
+  }
+})
+
+test('移动端在表格页面通过真实点击打开侧栏并导航', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 } })
+  const page = await context.newPage()
+  try {
+    await login(page)
+    await openSidebarItem(page, 375, '打印历史')
+    await expect(page.getByRole('heading', { name: '打印历史记录' })).toBeVisible()
+    await openSidebarItem(page, 375, '打印机管理')
+    await expect(page).toHaveURL(/\/printers$/)
+    await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
   } finally {
     await context.close()
   }

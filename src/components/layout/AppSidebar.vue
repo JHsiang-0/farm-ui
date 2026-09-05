@@ -176,7 +176,7 @@ const handleItemClick = item => {
     top: 0;
     bottom: 0;
     left: 0;
-    z-index: 20;
+    z-index: 1001;
     width: var(--app-sidebar-mobile-width) !important;
     transform: translateX(0);
   }

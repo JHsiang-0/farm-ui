@@ -223,7 +223,7 @@
 
 完成记录：收口 Tailwind 自定义颜色为 TDesign 语义 token，统一 sans 字体来源；删除无调用方且与 Tailwind 插件重复的 `src/styles/responsive.css` 及入口引用，保留登录页视觉和仍在使用的布局辅助类。已通过样式治理专项测试、全量测试、Playwright 浏览器回归、Oxlint、ESLint 和生产构建。
 
-### [ ] UI-001.10 真实浏览器和 Electron 视觉验收
+### [x] UI-001.10 真实浏览器和 Electron 视觉验收
 
 范围：
 
@@ -240,7 +240,29 @@
 - 登录、文件、创建任务、派发和详情主流程可完成。
 - 记录未能验证的真实后端、设备或 CORS 条件。
 
-提交建议：test: 完成独立 UI 整改的浏览器与 Electron 验收
+完成记录：使用 Playwright 浏览器项目覆盖 375/768/1440/1920 四个视口，完成登录、逐页导航、文件库、任务创建/派发预览确认、连接地址拆分操作、打印机和文件滚动、任务详情 Drawer 与 Escape 关闭；新增移动端表格固定列遮挡回归，修复侧栏层级。Electron 使用隔离临时用户目录完成启动、登录、窗口尺寸/横向溢出、打印机、服务器连接、文件库和全屏看板冒烟。测试坚持真实点击/输入/键盘/滚动，未复制 DOM 制造滚动，截图在稳定状态后生成。真实后端、实体打印机、生产 CORS 与真实局域网发现未在 Mock/desktop-mock 环境中验证，不能据此宣称通过。
+
+修改文件：`electron/main.cjs`、`src/components/layout/AppSidebar.vue`、`src/layout/index.vue`、`tests/e2e/browser.spec.js`、`tests/e2e/electron.spec.js`、本任务记录。
+
+用户流程影响：移动端侧栏在表格固定列页面可被真实点击，桌面端保留全屏看板入口；Electron E2E 使用隔离临时用户目录，不影响开发环境单实例和用户数据。
+
+API/OpenAPI 核对：本子任务未新增接口或字段，继续使用项目正式 Mock/desktop-mock 数据与既有页面调用链。
+
+Loading/Empty/Error：沿用前序页面状态整改，并在浏览器流程中覆盖登录、数据加载后的成功视图和既有重试/空态；真实 403/409/503 与断线恢复的生产联调仍需后端环境。
+
+响应式视口：浏览器 375/768/1440/1920 全部通过；Electron 桌面窗口通过尺寸和横向溢出检查。
+
+测试：`npm test`、`npx playwright test --project=browser --reporter=line`（9/9）、`npx playwright test --project=electron --reporter=line`（1/1）。
+
+lint：`npx oxlint .`、`npx eslint . --no-cache`。
+
+build：`npm run build`、`npm run build:mock`、`npm run build:desktop`、`npm run build:desktop:mock` 均通过；保留既有 chunk 体积和 realtimeStore 动静态导入提示。
+
+git status --short：提交前确认仅包含本子任务文件和用户既有的 `AGENTS.md` 修改，后者不暂存。
+
+git diff --check：通过。
+
+提交：完成最终验证后创建独立本地提交 `test: 完成独立 UI 整改的浏览器与 Electron 验收`，不执行 push。
 
 ## 2. 执行顺序
 
