@@ -19,6 +19,7 @@ import {
   toRealtimeAlert,
   toRealtimeSnapshotEntries
 } from '@/utils/realtimeAlerts'
+import { getWebSocketBaseUrl } from '@/utils/serverConfig'
 
 const MAX_SEEN_EVENT_IDS = 1000
 
@@ -72,26 +73,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
   // 获取 WebSocket 地址：优先使用环境变量，否则使用当前页面 host
   const getWsUrl = () => {
-    const envWsUrl = import.meta.env.VITE_WS_URL
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
-    const baseUrl = envWsUrl || (() => {
-      if (apiBaseUrl) {
-        try {
-          const apiUrl = new URL(apiBaseUrl)
-          const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-          return `${protocol}//${apiUrl.host}/ws/farm-status`
-        } catch {
-          console.warn('[RealtimeStore] VITE_API_BASE_URL 不是有效地址')
-        }
-      }
-
-      if (window.location.host && ['http:', 'https:'].includes(window.location.protocol)) {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        return `${protocol}//${window.location.host}/ws/farm-status`
-      }
-
-      return ''
-    })()
+    const baseUrl = getWebSocketBaseUrl()
     if (userStore.token) {
       const separator = baseUrl.includes('?') ? '&' : '?'
       return `${baseUrl}${separator}token=${encodeURIComponent(userStore.token)}`

@@ -148,6 +148,9 @@
         </button>
 
         <p class="login-tip">Mock 调试账号请使用系统中已有的用户名和密码</p>
+        <button class="text-link connection-link" type="button" @click="goServerConnection">
+          配置服务器地址
+        </button>
       </div>
     </section>
 
@@ -229,6 +232,8 @@ const validateForm = () => {
 const showForgotMessage = () => {
   message.info('请联系管理员重置密码')
 }
+
+const goServerConnection = () => router.push({ name: 'server-connection' })
 
 const loadSetupStatus = async () => {
   setupStatusLoading.value = true

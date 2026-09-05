@@ -19,6 +19,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/server-connection',
+      name: 'server-connection',
+      component: () => import('../views/ServerConnection.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/403',
       name: 'forbidden',
       component: () => import('../views/RouteResult.vue'),

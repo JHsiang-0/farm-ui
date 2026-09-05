@@ -4,6 +4,7 @@ import { useUserStore } from '@/stores/user'
 import router from '@/router'
 import { REQUEST_TIMEOUT } from './constants'
 import { isMockEnabled, mockRequest } from '@/mock'
+import { getApiBaseUrl } from './serverConfig'
 import {
   getErrorContext,
   getErrorMessage,
@@ -197,6 +198,7 @@ const validateAxiosResponse = response => {
 service.interceptors.request.use(
   config => {
     const userStore = useUserStore()
+    config.baseURL = getApiBaseUrl()
     config.headers = { ...config.headers }
     if (userStore.token) config.headers.Authorization = `Bearer ${userStore.token}`
     return config
