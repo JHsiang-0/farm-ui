@@ -527,14 +527,16 @@
 - [x] 页面可通过键盘访问，输入控件有可见 label/错误，图标按钮有 aria-label，文本和状态不能仅依赖颜色表达。
 - [x] 支持 375、768、1024、1280、1440、1920 宽度；小屏筛选区可折叠，表格不截断关键操作，Drawer/Dialog 不超出视口。
 
+- 完成状态：已完成（2026-09-05）。统一应用壳、业务 Alert 属性和请求错误码映射，应用壳交互控件改用 TDesign 并补齐图标按钮 aria-label；异步区域复用加载/错误/空数据/重试状态，文件批量及单项删除加入快照、部分结果和操作中锁定，用户/审计筛选增加可见表单标签。保留登录页既有视觉结构；默认 TDesign Dialog/Drawer 提供 ESC/焦点行为，危险操作继续使用确认和 danger 语义。`npm.cmd test`（109/109）、`npm.cmd run lint`、`npm.cmd run build` 均通过。
+
 #### T208-10 测试、视觉验收与交付
 
-- [ ] 为主题 Token、路由权限、状态动作矩阵、筛选参数、表单校验、危险确认、部分成功和异常恢复补充自动化测试。
-- [ ] 使用 Mock 对 ADMIN/OPERATOR、空数据、400/401/403/404/409/422/503、WebSocket 断线/断序/恢复和批量部分成功逐页验收。
+- [x] 为主题 Token、路由权限、状态动作矩阵、筛选参数、表单校验、危险确认、部分成功和异常恢复补充自动化测试。
+- [x] 使用 Mock 对 ADMIN/OPERATOR、空数据、400/401/403/404/409/422/503、WebSocket 断线/断序/恢复和批量部分成功逐页验收。
 - [ ] 使用真实浏览器逐页检查登录、工作台、全屏看板、打印机、文件、任务、批量派发、用户、审计和个人中心；至少覆盖 375、768、1440、1920 四种视口并保留脱敏验收记录。
-- [ ] 验证普通浏览器、Mock、Electron 四条构建链路；不得把仅通过静态构建当作视觉验收通过。
-- [ ] 实施完成后必须执行 `npm.cmd test`、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock`、`npm.cmd run build:desktop`、`npm.cmd run build:desktop:mock`，并执行 `git diff --check`。
-- [ ] 逐页核对所有可见文案、单位、时间、状态颜色、按钮权限和 API 字段；不得遗留“Farm UI”、旧接口、旧状态、占位假数据或未说明的“开发中”入口。
+- [x] 验证普通浏览器、Mock、Electron 四条构建链路；不得把仅通过静态构建当作视觉验收通过。
+- [x] 实施完成后必须执行 `npm.cmd test`、`npm.cmd run lint`、`npm.cmd run build`、`npm.cmd run build:mock`、`npm.cmd run build:desktop`、`npm.cmd run build:desktop:mock`，并执行 `git diff --check`。
+- [x] 逐页核对所有可见文案、单位、时间、状态颜色、按钮权限和 API 字段；不得遗留“Farm UI”、旧接口、旧状态、占位假数据或未说明的“开发中”入口。
 
 - 主要修改范围：`src/layout/*`、`src/components/layout/*`、`src/components/*`、`src/views/*`、`src/styles/*`、`src/config/navigation.js`、`src/router/index.js`、必要的 Store/API/Mock/测试；登录样式相关文件只允许兼容性和品牌修正，不得整体重写视觉。
 - 建议使用的 TDesign 组件：`Layout`、`Aside`、`Header`、`Content`、`Menu`、`Breadcrumb`、`Card`、`Row`、`Col`、`Space`、`Statistic`、`Table`、`Pagination`、`Form`、`Input`、`Select`、`DateRangePicker`、`Dialog`、`Drawer`、`Upload`、`Steps`、`Tabs`、`Descriptions`、`Tag`、`Badge`、`Progress`、`Alert`、`Loading`、`Empty`、`Result`、`Tooltip`、`Dropdown`、`Popup`、`Skeleton`；编码前必须按实际使用逐项核对 Vue Next 文档，不得凭记忆猜测 API。
@@ -543,7 +545,7 @@
 - 需要真实打印机：否。真实物理链路继续由 `A001` 验收，本任务只完成界面、Mock 与安全交互。
 - 风险：任务横跨全部页面，必须按 T208-1 至 T208-10 顺序冻结修改范围和逐段复核；不得借视觉统一重写已稳定的 API、状态机、Mock 契约或登录样式。
 - Git 交付：全部子项和验证完成后，严格按仓库规则仅暂存 T208 实际修改文件，创建一次本地提交，推荐信息为 `feat: 完成 T208 全业务界面 TDesign 标准化`；不执行 `git push`。
-- 完成状态：已完成（2026-09-05）。统一应用壳、业务 Alert 属性和请求错误码映射，应用壳交互控件改用 TDesign 并补齐图标按钮 aria-label；异步区域复用加载/错误/空数据/重试状态，文件批量及单项删除加入快照、部分结果和操作中锁定，用户/审计筛选增加可见表单标签。保留登录页既有视觉结构；默认 TDesign Dialog/Drawer 提供 ESC/焦点行为，危险操作继续使用确认和 danger 语义。`npm.cmd test`（109/109）、`npm.cmd run lint`、`npm.cmd run build` 均通过。
+- 完成状态：部分完成（2026-09-05）。已补充主题/权限/状态动作/错误矩阵/空数据/Mock 角色与 WebSocket 断序恢复测试，完成四条构建链和逐页脱敏记录；真实 Chrome 页面已在 1920×855 完成逐页 DOM、可访问性和视觉检查。由于当前浏览器自动化接口不提供 375/768/1440 viewport emulation，三档仅完成响应式断点静态核对，T208-10 的真实浏览器多视口条目保持未勾选，不能宣称最终完成。
 
 ## 5. 任务数量与依赖波次
 
