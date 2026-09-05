@@ -85,7 +85,6 @@
             :data="pagedQueueData"
             :loading="loading"
             style="width: 100%"
-            height="100%"
             @selection-change="handleSelectionChange"
             @row-click="openTaskDetail"
           >
@@ -873,11 +872,12 @@ onMounted(() => {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .job-queue-table {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
 }
 
 .job-queue-table :deep(.t-table__content) {

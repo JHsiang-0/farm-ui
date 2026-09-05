@@ -69,6 +69,93 @@ const createAdditionalPrinters = () => {
   })
 }
 
+const createAdditionalFiles = () => {
+  const names = [
+    '机甲面罩', '面板组件', '齿轮样件', '定位支架', '连接件', '外壳组件', '测试夹具', '散热风道',
+    '安装底座', '电机支架', '传感器外壳', '装配治具', '线缆固定座', '机器人关节', '相机支架', '风扇罩',
+    '快速夹具', '结构样件', '按钮面板', '工具托盘', '灯带卡扣', '校准模型', '保护盖板', '小型齿轮',
+    '实验支架', '收纳盒', '打印测试件', '机械臂末端', '定位销', '设备铭牌'
+  ]
+  const materials = ['PLA', 'PETG', 'ABS', 'TPU']
+  const models = ['A1', 'X1-Carbon', 'P1S', 'K1 Max']
+
+  return names.map((name, index) => {
+    const id = 24 + index
+    const materialType = materials[index % materials.length]
+    const extension = index % 5 === 0 ? 'bgcode' : 'gcode'
+    const fileName = `${name}.${extension}`
+    const fileSize = 48 * 1024 + index * 8192
+    const estimatedSeconds = 1200 + index * 180
+
+    return {
+      id,
+      parentId: null,
+      folder: false,
+      isFolder: 0,
+      originalName: fileName,
+      safeName: fileName,
+      fileSize,
+      fileUrl: mockFileUrl(fileName),
+      userId: index % 5 === 0 ? 2 : 1,
+      createdAt: `2026-09-${String((index % 2) + 1).padStart(2, '0')}T${String(10 + (index % 8)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00`,
+      estTime: estimatedSeconds,
+      estimatedSeconds,
+      materialType,
+      machineModel: models[index % models.length],
+      buildPlate: index % 2 === 0 ? 'Textured PEI Plate' : 'High Temp Plate',
+      nozzleSize: [0.4, 0.6, 0.8][index % 3],
+      filamentWeight: Number((5.5 + index * 1.7).toFixed(1)),
+      filamentLength: 1200 + index * 280,
+      nozzleTemp: materialType === 'ABS' ? 245 : materialType === 'PETG' ? 235 : 210,
+      bedTemp: materialType === 'ABS' ? 90 : materialType === 'PETG' ? 75 : 60,
+      layerHeight: index % 3 === 0 ? 0.2 : index % 3 === 1 ? 0.16 : 0.28,
+      firstLayerHeight: 0.24,
+      firstLayerNozzleTemp: materialType === 'ABS' ? 250 : 215,
+      firstLayerBedTemp: materialType === 'ABS' ? 90 : 60,
+      printCount: index % 7,
+      successRate: index % 6 === 0 ? 0 : Number((82 + (index % 5) * 3.5).toFixed(1))
+    }
+  })
+}
+
+const createAdditionalJobs = () => {
+  const statuses = [
+    'QUEUED', 'ASSIGNED', 'READY', 'PRINTING', 'PAUSED', 'COMPLETED', 'FAILED', 'CANCELLED',
+    'QUEUED', 'READY', 'ASSIGNED', 'PRINTING', 'COMPLETED', 'FAILED', 'QUEUED', 'PAUSED',
+    'READY', 'COMPLETED', 'CANCELLED', 'QUEUED', 'ASSIGNED', 'PRINTING', 'FAILED', 'READY',
+    'COMPLETED', 'QUEUED', 'PAUSED', 'CANCELLED', 'ASSIGNED', 'COMPLETED'
+  ]
+  const activeStatuses = new Set(['ASSIGNED', 'READY', 'PRINTING', 'PAUSED'])
+
+  return statuses.map((status, index) => {
+    const id = 1007 + index
+    const progress = status === 'COMPLETED'
+      ? 100
+      : status === 'PRINTING' || status === 'PAUSED' || status === 'FAILED'
+        ? 15 + (index * 11) % 75
+        : 0
+    const createdAt = `2026-09-${String((index % 2) + 1).padStart(2, '0')}T${String(9 + (index % 9)).padStart(2, '0')}:${String((index * 7) % 60).padStart(2, '0')}:00`
+
+    return {
+      id,
+      fileId: 24 + index,
+      printerId: activeStatuses.has(status) ? 409 + (index % 25) : null,
+      userId: index % 4 === 0 ? 2 : 1,
+      operatorId: index % 3 === 0 ? 2 : null,
+      priority: [90, 75, 60, 45, 30, 20, 10][index % 7],
+      status,
+      progress,
+      startedAt: activeStatuses.has(status) || status === 'COMPLETED' || status === 'FAILED'
+        ? `2026-09-${String((index % 2) + 1).padStart(2, '0')}T${String(10 + (index % 8)).padStart(2, '0')}:00:00`
+        : null,
+      completedAt: ['COMPLETED', 'FAILED', 'CANCELLED'].includes(status) ? createdAt : null,
+      errorReason: status === 'FAILED' ? (index % 2 === 0 ? '喷嘴温度异常' : '打印机通信中断') : null,
+      createdAt,
+      updatedAt: createdAt
+    }
+  })
+}
+
 const createSeedData = () => ({
   users: [
     {
@@ -400,7 +487,8 @@ const createSeedData = () => ({
       firstLayerBedTemp: 60,
       printCount: 12,
       successRate: 100
-    }
+    },
+    ...createAdditionalFiles()
   ],
   jobs: [
     {
@@ -492,13 +580,14 @@ const createSeedData = () => ({
       errorReason: null,
       createdAt: '2026-09-01T16:00:00',
       updatedAt: '2026-09-01T16:10:00'
-    }
+    },
+    ...createAdditionalJobs()
   ],
   nextIds: {
     users: 3,
-    file: 24,
+    file: 54,
     folder: 3,
-    job: 1007,
+    job: 1037,
     printer: 434
   },
   sessions: {}

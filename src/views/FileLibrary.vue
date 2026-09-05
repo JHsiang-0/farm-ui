@@ -157,7 +157,6 @@
               @selection-change="handleSelectionChange"
               @row-click="handleTableRowClick"
               style="width: 100%"
-              height="100%"
             >
               <TdTableColumn type="selection" width="44" align="center" />
               <TdTableColumn prop="originalName" label="文件名称" min-width="245">
@@ -1327,11 +1326,12 @@ onMounted(() => {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .file-library-table {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
 }
 
 .file-library-table :deep(.t-table__content) {
