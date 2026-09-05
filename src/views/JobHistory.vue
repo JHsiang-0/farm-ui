@@ -9,9 +9,9 @@
       </div>
     </div>
 
-    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+    <t-card class="app-page-card history-card">
       <!-- 顶部检索区 -->
-      <div class="bg-gray-50 p-4 rounded-lg mb-4">
+      <div class="history-filter-toolbar">
         <div class="flex flex-wrap items-center gap-4">
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">任务状态</span>
@@ -74,8 +74,8 @@
         @row-click="openTaskDetail"
         :loading="loading"
         style="width: 100%"
-        class="rounded-lg overflow-hidden flex-1"
-        :header-cell-style="{ background: '#f9fafb' }"
+        class="history-table"
+        :header-cell-style="{ background: 'var(--app-surface-muted)' }"
         height="100%"
       >
         <TdTableColumn prop="id" label="任务ID" width="100" align="center">
@@ -435,3 +435,35 @@ const fetchData = async () => {
 // 初始化数据
 fetchData()
 </script>
+
+<style scoped>
+.history-card :deep(.t-card__body) {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-filter-toolbar {
+  flex: 0 0 auto;
+  margin-bottom: var(--app-spacing-4);
+  padding: var(--app-spacing-4);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+}
+
+.history-table {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.history-table :deep(.t-table) {
+  width: 100%;
+  min-width: 0;
+}
+</style>

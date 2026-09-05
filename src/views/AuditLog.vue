@@ -7,8 +7,8 @@
       </div>
     </div>
 
-    <t-card class="app-page-card shadow-sm">
-      <t-form :data="query" layout="inline" label-align="top" class="flex flex-wrap items-end gap-3 mb-4">
+    <t-card class="app-page-card management-card">
+      <t-form :data="query" layout="inline" label-align="top" class="app-query-toolbar">
         <t-form-item label="操作者 ID">
           <t-input v-model="query.actorId" placeholder="操作者 ID" clearable style="width: 130px" @enter="handleQuery" />
         </t-form-item>
@@ -53,7 +53,7 @@
         empty-description="暂无操作日志"
         @retry="fetchData"
       />
-      <TdTable v-else :data="logs" :loading="loading" class="flex-1 min-h-0" @row-click="openDetail">
+      <TdTable v-else :data="logs" :loading="loading" class="management-table" @row-click="openDetail">
         <TdTableColumn prop="actorUsername" label="操作者" min-width="140">
           <template #default="{ row }">
             <span>{{ row.actorUsername || (row.actorId ? `用户 #${row.actorId}` : '未识别用户') }}</span>

@@ -1,9 +1,9 @@
 <template>
-  <div class="batch-dispatch-page">
-    <div class="page-header">
+  <div class="batch-dispatch-page app-page-background">
+    <div class="page-header app-page-toolbar">
       <div>
-        <h1>批量手动派发</h1>
-        <p>先选择文件和打印机生成预览，确认后才会创建任务或启动打印。</p>
+        <h1 class="app-page-toolbar__title app-route-title">批量手动派发</h1>
+        <p class="page-header__description">先选择文件和打印机生成预览，确认后才会创建任务或启动打印。</p>
       </div>
       <t-tag theme="default" variant="outline" title="v3 自动派单尚未开放，不会发送自动派单请求">
         v3 自动派单：规划中
@@ -465,26 +465,15 @@ onUnmounted(stopPreviewExpiryTimer)
 </script>
 
 <style scoped>
-.batch-dispatch-page { padding: 24px; height: 100%; overflow: auto; background: var(--app-page-background); color: var(--app-text-primary); }
-.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-h1, h2 { margin: 0 0 8px; }
-h1 { font-size: 24px; }
-h2 { font-size: 17px; }
-.page-header p, .hint { color: var(--app-text-secondary); margin: 0 0 12px; }
-.panel { background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.batch-dispatch-page { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: auto; color: var(--app-text-primary); }
+.page-header { flex: 0 0 auto; margin-bottom: 16px; }
+.page-header__description, .hint { color: var(--app-text-secondary); margin: 6px 0 12px; }
+.panel { margin-bottom: 16px; }
+.panel :deep(.t-card__body) { min-width: 0; }
 .selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--app-border-subtle); }
 .selection-row span { flex: 1; }
 small { color: var(--app-text-placeholder); }
 .options-panel { display: flex; gap: 18px; align-items: end; flex-wrap: wrap; }
-label { display: flex; flex-direction: column; gap: 6px; }
-select { min-width: 180px; padding: 7px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; }
-button { border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; }
-button:disabled { opacity: .55; cursor: not-allowed; }
-.primary-button { color: #fff; background: #2563eb; margin: 8px 8px 0 0; }
-.secondary-button { color: #374151; background: #e5e7eb; }
-.result-box { margin-top: 12px; padding: 10px; background: #eff6ff; border-radius: 4px; line-height: 1.8; }
-.ok { color: #15803d; }
-.error { color: #b91c1c; }
 @media (max-width: 800px) { .selection-grid { grid-template-columns: 1fr; } .page-header { gap: 12px; flex-direction: column; } }
 </style>

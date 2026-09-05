@@ -1,7 +1,13 @@
 <template>
-  <div class="profile-page app-page-background h-full overflow-auto p-6">
-    <div class="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2">
-      <t-card title="个人资料" class="app-page-card shadow-sm">
+  <div class="profile-page app-page-shell app-page-background">
+    <div class="app-page-toolbar profile-toolbar">
+      <div>
+        <h1 class="app-page-toolbar__title app-route-title">个人中心</h1>
+        <p class="profile-toolbar__description">管理个人资料与登录安全设置</p>
+      </div>
+    </div>
+    <div class="profile-grid">
+      <t-card title="个人资料" class="profile-card">
         <t-loading v-if="profileLoading && !profileLoaded" class="profile-loading" />
         <t-alert v-else-if="profileError" theme="error" :close-btn="false">
           {{ profileError }}
@@ -24,7 +30,7 @@
         </t-form>
       </t-card>
 
-      <t-card title="修改密码" class="app-page-card shadow-sm">
+      <t-card title="修改密码" class="profile-card">
         <t-form :data="passwordForm" :rules="passwordRules" label-align="top" @submit="savePassword">
           <t-form-item name="oldPassword" label="当前密码">
             <t-input v-model="passwordForm.oldPassword" type="password" autocomplete="current-password" />
@@ -175,6 +181,39 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener('beforeunload', handleBeforeUnload))
 </script>
+
+<style scoped>
+.profile-toolbar {
+  flex: 0 0 auto;
+  margin-bottom: var(--app-spacing-6);
+}
+
+.profile-toolbar__description {
+  margin: 6px 0 0;
+  color: var(--app-text-secondary);
+}
+
+.profile-grid {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-spacing-6);
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.profile-card {
+  align-self: start;
+}
+
+@media (max-width: 900px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>
 
 <style scoped>
 .profile-loading { min-height: 180px; }

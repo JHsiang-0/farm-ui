@@ -7,8 +7,8 @@
       </div>
     </div>
 
-    <t-card class="app-page-card shadow-sm">
-      <t-form :data="query" layout="inline" label-align="top" class="flex flex-wrap gap-3 mb-4">
+    <t-card class="app-page-card management-card">
+      <t-form :data="query" layout="inline" label-align="top" class="app-query-toolbar">
         <t-form-item label="用户名">
           <t-input v-model="query.username" placeholder="按用户名搜索" clearable @enter="fetchUsers" />
         </t-form-item>
@@ -37,7 +37,7 @@
         empty-description="暂无用户"
         @retry="fetchUsers"
       />
-      <TdTable v-else :data="users" :loading="loading" class="flex-1 min-h-0">
+      <TdTable v-else :data="users" :loading="loading" class="management-table">
         <TdTableColumn prop="id" label="ID" width="80" />
         <TdTableColumn prop="username" label="用户名" />
         <TdTableColumn prop="role" label="角色" />
