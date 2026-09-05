@@ -158,7 +158,6 @@
           @row-click="handleRowClick"
           @selection-change="handlePrinterSelectionChange"
           row-class-name="printer-management-table__row"
-          height="100%"
         >
           <TdTableColumn type="selection" width="42" align="center" />
 
@@ -1873,11 +1872,12 @@ onMounted(() => {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .printer-management-table {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   min-width: 0;
 }
 

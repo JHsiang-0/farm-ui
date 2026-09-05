@@ -5,6 +5,70 @@ const mockFileUrl = name => {
   return `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`
 }
 
+// 用于测试打印机管理分页、筛选、状态标签和横向滚动的扩展设备数据。
+const createAdditionalPrinters = () => {
+  const models = ['拓竹 A1', '拓竹 X1-Carbon', '创想三维 K1 Max', '拓竹 P1S']
+  const materials = ['PLA', 'PETG', 'ABS', 'TPU']
+  const profiles = [
+    { status: 'PRINTING', isSafeToPrint: true, progress: 28, currentLayer: 84, totalLayers: 300, printSpeed: 100, currentJobFileName: '机甲面罩.gcode', currentJobStatus: 'PRINTING' },
+    { status: 'IDLE', isSafeToPrint: true },
+    { status: 'IDLE', isSafeToPrint: false },
+    { status: 'PAUSED', isSafeToPrint: true, progress: 46, currentLayer: 138, totalLayers: 300, printSpeed: 80, currentJobFileName: '支架组件.gcode', currentJobStatus: 'PAUSED' },
+    { status: 'OFFLINE', isSafeToPrint: false },
+    { status: 'ERROR', isSafeToPrint: false, lastError: '热床温度异常' },
+    { status: 'PRINTING', isSafeToPrint: true, progress: 71, currentLayer: 213, totalLayers: 300, printSpeed: 100, currentJobFileName: '外壳组件.gcode', currentJobStatus: 'PRINTING' },
+    { status: 'IDLE', isSafeToPrint: true },
+    { status: 'IDLE', isSafeToPrint: false },
+    { status: 'OFFLINE', isSafeToPrint: false },
+    { status: 'PRINTING', isSafeToPrint: true, progress: 12, currentLayer: 36, totalLayers: 300, printSpeed: 90, currentJobFileName: '齿轮样件.gcode', currentJobStatus: 'PRINTING' },
+    { status: 'PAUSED', isSafeToPrint: false, progress: 63, currentLayer: 189, totalLayers: 300, printSpeed: 70, currentJobFileName: '连接件.gcode', currentJobStatus: 'PAUSED' },
+    { status: 'IDLE', isSafeToPrint: true },
+    { status: 'ERROR', isSafeToPrint: false, lastError: '喷嘴温度异常' },
+    { status: 'IDLE', isSafeToPrint: false },
+    { status: 'PRINTING', isSafeToPrint: true, progress: 88, currentLayer: 264, totalLayers: 300, printSpeed: 100, currentJobFileName: '面板组件.gcode', currentJobStatus: 'PRINTING' },
+    { status: 'OFFLINE', isSafeToPrint: false },
+    { status: 'IDLE', isSafeToPrint: true },
+    { status: 'PAUSED', isSafeToPrint: true, progress: 35, currentLayer: 105, totalLayers: 300, printSpeed: 80, currentJobFileName: '外观件.gcode', currentJobStatus: 'PAUSED' },
+    { status: 'ERROR', isSafeToPrint: false, lastError: '通信连接中断' },
+    { status: 'PRINTING', isSafeToPrint: true, progress: 54, currentLayer: 162, totalLayers: 300, printSpeed: 100, currentJobFileName: '测试夹具.gcode', currentJobStatus: 'PRINTING' },
+    { status: 'IDLE', isSafeToPrint: false },
+    { status: 'IDLE', isSafeToPrint: true },
+    { status: 'OFFLINE', isSafeToPrint: false },
+    { status: 'PRINTING', isSafeToPrint: true, progress: 6, currentLayer: 18, totalLayers: 300, printSpeed: 90, currentJobFileName: '定位板.gcode', currentJobStatus: 'PRINTING' }
+  ]
+
+  return profiles.map((profile, index) => {
+    const id = 409 + index
+    const zoneIndex = Math.floor(index / 9)
+    const zone = `${String.fromCharCode(65 + zoneIndex)}区`
+    const material = materials[index % materials.length]
+    const firmwareType = index % 3 === 0 ? 'RRF' : 'KLIPPER'
+
+    return {
+      id,
+      name: `Printer_${String(index + 7).padStart(2, '0')}`,
+      machineModel: models[index % models.length],
+      machineNumber: `${String.fromCharCode(65 + zoneIndex)}-${String((index % 9) + 1).padStart(2, '0')}`,
+      ipAddress: `192.168.${zoneIndex + 1}.${86 + index}`,
+      macAddress: `AA:BB:CC:DD:EF:${String(index + 7).padStart(2, '0')}`,
+      firmwareType,
+      currentJobId: null,
+      currentMaterial: material,
+      nozzleSize: [0.4, 0.6, 0.8][index % 3],
+      zone,
+      progress: 0,
+      currentLayer: 0,
+      totalLayers: 0,
+      printSpeed: 0,
+      gridRow: zoneIndex + 2,
+      gridCol: (index % 9) + 1,
+      createdAt: `2026-09-01T11:${String(index).padStart(2, '0')}:00`,
+      updatedAt: `2026-09-02T16:${String(index).padStart(2, '0')}:00`,
+      ...profile
+    }
+  })
+}
+
 const createSeedData = () => ({
   users: [
     {
@@ -173,7 +237,8 @@ const createSeedData = () => ({
       gridCol: null,
       createdAt: '2026-09-01T10:25:00',
       updatedAt: '2026-09-02T16:40:00'
-    }
+    },
+    ...createAdditionalPrinters()
   ],
   files: [
     {
@@ -434,7 +499,7 @@ const createSeedData = () => ({
     file: 24,
     folder: 3,
     job: 1007,
-    printer: 409
+    printer: 434
   },
   sessions: {}
 })
