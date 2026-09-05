@@ -56,10 +56,21 @@ body {
   overflow: hidden;
 }
 
+.app-page-card > .t-loading__parent,
 .app-page-card > .t-card__body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-page-card > .t-loading__parent > .t-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
 }
 

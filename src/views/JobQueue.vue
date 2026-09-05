@@ -29,8 +29,6 @@
         :loading="loading"
         style="width: 100%"
         class="job-table"
-        :header-cell-style="{ background: 'var(--app-surface-muted)' }"
-        height="100%"
       >
         <TdTableColumn prop="id" label="任务单号" width="100" align="center">
           <template #default="scope">
@@ -145,7 +143,6 @@
         :loading="activeLoading"
         style="width: 100%"
         class="job-table"
-        :header-cell-style="{ background: 'var(--app-surface-muted)' }"
       >
         <TdTableColumn prop="id" label="任务单号" width="110" align="center">
           <template #default="scope">

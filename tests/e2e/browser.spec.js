@@ -119,14 +119,27 @@ test('服务器连接页在桌面和移动视口保持可用且拆分地址操�
     const context = await browser.newContext({ viewport })
     const page = await context.newPage()
     try {
+      await page.route('**/actuator/health', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"UP"}' }))
       await page.goto('/server-connection')
       await expect(page.getByRole('heading', { name: '连接生产服务器' })).toBeVisible()
-      await expect(page.locator('.connection-endpoint-grid__host input')).toBeVisible()
-      await expect(page.locator('.connection-endpoint-grid input[placeholder="8080"]')).toBeVisible()
+      const hostInput = page.locator('.connection-endpoint-grid__host input')
+      const portInput = page.locator('.connection-endpoint-grid input[placeholder="8080"]')
+      await expect(hostInput).toBeVisible()
+      await expect(portInput).toBeVisible()
       await expect(page.getByRole('button', { name: '测试', exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: '保存并连接', exact: true })).toBeVisible()
       await expect(page.getByText('测试并保存', { exact: true })).toHaveCount(0)
       await assertNoViewportOverflow(page)
+      if (viewport.width === 1920) {
+        await hostInput.fill('http://farm.local/path')
+        await portInput.fill('8080')
+        await page.getByRole('button', { name: '测试', exact: true }).click()
+        await expect(page.getByText('请输入有效的服务器 IP 或主机名，不要包含协议、路径或查询参数')).toBeVisible()
+        await hostInput.fill('127.0.0.1')
+        await page.getByRole('button', { name: '保存并连接', exact: true }).click()
+        await expect(page).toHaveURL(/\/login$/)
+        await expect.poll(() => page.evaluate(() => window.localStorage.getItem('fabmatrix.server.connection'))).toContain('127.0.0.1')
+      }
     } finally {
       await context.close()
     }
@@ -141,22 +154,50 @@ test('打印机和文件结果区拥有真实可用的局部滚动容器', async
     await openSidebarItem(page, 1920, '打印机管理')
     await expect(page).toHaveURL(/\/printers$/)
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '删除打印机' }).first()).toBeVisible()
     const printerScrollMetrics = await page.locator('.printer-table .t-table__content').first().evaluate(element => {
+      const body = element.querySelector('tbody')
+      const row = body?.firstElementChild
+      if (body && row) {
+        for (let index = 0; index < 20; index += 1) body.appendChild(row.cloneNode(true))
+      }
       const style = getComputedStyle(element)
-      return { overflowY: style.overflowY, clientHeight: element.clientHeight }
+      const before = element.scrollTop
+      element.scrollTop = element.scrollHeight
+      return {
+        overflowY: style.overflowY,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        moved: element.scrollTop > before
+      }
     })
     expect(['auto', 'scroll']).toContain(printerScrollMetrics.overflowY)
     expect(printerScrollMetrics.clientHeight).toBeGreaterThan(0)
+    expect(printerScrollMetrics.scrollHeight).toBeGreaterThan(printerScrollMetrics.clientHeight)
+    expect(printerScrollMetrics.moved).toBe(true)
 
     await openSidebarItem(page, 1920, '文件库')
     await expect(page).toHaveURL(/\/files$/)
     await expect(page.getByRole('heading', { name: '文件库' })).toBeVisible()
     const fileScrollMetrics = await page.locator('.file-grid-view').evaluate(element => {
+      const card = element.firstElementChild
+      if (card) {
+        for (let index = 0; index < 12; index += 1) element.appendChild(card.cloneNode(true))
+      }
       const style = getComputedStyle(element)
-      return { overflowY: style.overflowY, clientHeight: element.clientHeight }
+      const before = element.scrollTop
+      element.scrollTop = element.scrollHeight
+      return {
+        overflowY: style.overflowY,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        moved: element.scrollTop > before
+      }
     })
     expect(['auto', 'scroll']).toContain(fileScrollMetrics.overflowY)
     expect(fileScrollMetrics.clientHeight).toBeGreaterThan(0)
+    expect(fileScrollMetrics.scrollHeight).toBeGreaterThan(fileScrollMetrics.clientHeight)
+    expect(fileScrollMetrics.moved).toBe(true)
     await assertNoViewportOverflow(page)
   } finally {
     await context.close()

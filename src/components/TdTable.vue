@@ -52,8 +52,6 @@ const tableAttrs = computed(() => {
     style,
     rowClassName,
     'row-class-name': legacyRowClassName,
-    'header-cell-style': _headerCellStyle,
-    headerCellStyle: _headerCellStyleCamel,
     'highlight-current-row': highlightCurrentRow,
     highlightCurrentRow: highlightCurrentRowCamel,
     border,
@@ -61,12 +59,10 @@ const tableAttrs = computed(() => {
     stripe,
     ...rest
   } = attrs
-  void _headerCellStyle
-  void _headerCellStyleCamel
+  void className
+  void style
   return {
     ...rest,
-    class: className,
-    style,
     data: props.data,
     columns: columns.value,
     loading: props.loading,
@@ -103,12 +99,16 @@ const tableAttrs = computed(() => {
 }
 
 .td-table-adapter :deep(.t-table) {
+  display: flex;
   flex: 1 1 0%;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .td-table-adapter :deep(.t-table__content) {
+  flex: 1 1 0%;
   min-height: 0;
 }
 </style>

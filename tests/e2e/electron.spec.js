@@ -34,6 +34,16 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await page.getByRole('button', { name: '退出全屏', exact: true }).click()
     await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/printers/)
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '删除打印机' }).first()).toBeVisible()
+
+    await page.goto('http://127.0.0.1:5176/#/server-connection')
+    await expect(page.getByRole('heading', { name: '连接生产服务器' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '测试', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '保存并连接', exact: true })).toBeVisible()
+
+    await page.goto('http://127.0.0.1:5176/#/files')
+    await expect(page.getByRole('heading', { name: '文件库' })).toBeVisible()
+    await expect(page.locator('.file-library-layout')).toBeVisible()
   } finally {
     await electronApp.close()
   }

@@ -84,10 +84,8 @@
           :loading="loading"
           style="width: 100%"
           class="printer-table"
-          :header-cell-style="{ background: 'var(--td-bg-color-secondarycontainer)' }"
           @row-click="handleRowClick"
           row-class-name="printer-table-row"
-          height="100%"
         >
         <TdTableColumn prop="id" label="ID" width="80" align="center">
           <template #default="scope">
@@ -199,9 +197,10 @@
                 theme="danger"
                 @confirm="handleDelete(scope.row.id)"
               >
-                <template>
+                <template #default>
                   <t-button size="small" theme="danger" variant="outline" aria-label="删除打印机" :loading="deletingIds.includes(scope.row.id)">
                     <span><delete /></span>
+                    删除
                   </t-button>
                 </template>
               </t-popconfirm>
@@ -370,7 +369,6 @@
           :data="scanResults"
           style="width: 100%"
           class="rounded-lg overflow-hidden"
-          :header-cell-style="{ background: '#f9fafb' }"
           @selection-change="handleSelectionChange"
         >
           <TdTableColumn type="selection" width="50" align="center" />
@@ -1072,6 +1070,7 @@ const handleBatchAdd = async () => {
   flex: 1 1 0%;
   flex-direction: column;
   min-height: 0;
+  position: relative;
   overflow: hidden;
 }
 
@@ -1081,7 +1080,8 @@ const handleBatchAdd = async () => {
 }
 
 .printer-manage-card__table {
-  flex: 1 1 0%;
+  position: absolute;
+  inset: 0;
   min-height: 0;
   overflow: hidden;
 }

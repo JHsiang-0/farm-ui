@@ -76,7 +76,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { buildServerBaseUrl, getEnvironmentServerConfig, getServerConfig, parseServerEndpoint, saveServerConfig } from '@/utils/serverConfig'
+import { buildServerBaseUrl, getEnvironmentServerConfig, getServerConfig, isValidServerHost, parseServerEndpoint, saveServerConfig } from '@/utils/serverConfig'
 
 defineOptions({ name: 'ServerConnectionView' })
 
@@ -99,7 +99,7 @@ const getHealthUrl = baseUrl => `${baseUrl}/actuator/health`
 
 const resolveBaseUrl = () => {
   const baseUrl = buildServerBaseUrl(form)
-  if (!form.host?.trim()) throw new Error('请输入服务器 IP 或主机名')
+  if (!isValidServerHost(form.host)) throw new Error('请输入有效的服务器 IP 或主机名，不要包含协议、路径或查询参数')
   if (!/^\d{1,5}$/.test(String(form.port || '').trim()) || Number(form.port) < 1 || Number(form.port) > 65535) {
     throw new Error('端口必须是 1 到 65535 的数字')
   }
@@ -139,7 +139,7 @@ const saveAndConnect = async () => {
   try {
     const apiBaseUrl = await requestHealth()
     saveServerConfig({ apiBaseUrl })
-    successMessage.value = '服务器连接成功，配置已保存。'
+    await router.push({ name: 'login' })
   } catch (error) {
     errorMessage.value = error?.message || '无法连接服务器，配置未保存。'
   } finally {

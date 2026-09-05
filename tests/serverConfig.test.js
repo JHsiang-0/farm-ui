@@ -18,6 +18,7 @@ const {
   getEnvironmentServerConfig,
   getServerConfig,
   getWebSocketBaseUrl,
+  isValidServerHost,
   normalizeServerUrl,
   parseServerEndpoint,
   saveServerConfig
@@ -37,6 +38,17 @@ test('拆分并重建服务器 IP、端口和协议', () => {
   })
   assert.equal(buildServerBaseUrl({ protocol: 'http', host: '192.168.0.10', port: '8080' }), 'http://192.168.0.10:8080')
   assert.equal(buildServerBaseUrl({ protocol: 'http', host: '192.168.0.10', port: '0' }), '')
+})
+
+test('服务器地址输入只接受纯 IP、主机名或 IPv6', () => {
+  assert.equal(isValidServerHost('192.168.0.10'), true)
+  assert.equal(isValidServerHost('farm.local'), true)
+  assert.equal(isValidServerHost('::1'), true)
+  assert.equal(isValidServerHost('http://farm.local'), false)
+  assert.equal(isValidServerHost('farm.local/api'), false)
+  assert.equal(isValidServerHost('192.168.0.256'), false)
+  assert.equal(buildServerBaseUrl({ protocol: 'http', host: 'farm.local/api', port: '8080' }), '')
+  assert.equal(buildServerBaseUrl({ protocol: 'http', host: '::1', port: '8080' }), 'http://[::1]:8080')
 })
 
 test('uses the saved server endpoint for HTTP and derives its WebSocket endpoint', () => {

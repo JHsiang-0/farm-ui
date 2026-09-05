@@ -75,8 +75,6 @@
         :loading="loading"
         style="width: 100%"
         class="history-table"
-        :header-cell-style="{ background: 'var(--app-surface-muted)' }"
-        height="100%"
       >
         <TdTableColumn prop="id" label="任务ID" width="100" align="center">
           <template #default="scope">

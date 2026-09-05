@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <t-card class="file-library-card" bordered>
+    <t-card class="file-library-card app-page-card" bordered>
       <div class="file-library-layout">
         <aside class="file-library-sidebar" aria-label="文件目录">
           <div class="file-library-panel-heading">
@@ -126,7 +126,7 @@
           @click="handleFileClick(file)"
         >
           <!-- 卡片选中状态 -->
-          <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
+          <div v-if="isBatchMode" class="file-card__selection">
             <t-checkbox :checked="selectedIds.includes(file.id)" disabled
               @click.stop="toggleSelection(file.id)"
               size="small" />
@@ -134,7 +134,7 @@
 
           <!-- 文件夹图标 -->
           <div class="file-card__media file-card__media--folder">
-            <IconFolder :size="64" class="text-blue-500" />
+            <IconFolder :size="64" />
           </div>
 
           <!-- 卡片内容 -->
@@ -146,7 +146,7 @@
 
             <!-- 文件夹统计 -->
             <div class="file-card__stats">
-              <div class="flex flex-col gap-0.5">
+              <div class="file-card__stat">
                 <span class="file-card__stat-label">类型</span>
                 <span class="file-card__stat-value">文件夹</span>
               </div>
@@ -175,7 +175,7 @@
           :class="{ 'file-card--selected': isBatchMode && selectedIds.includes(file.id) }"
           @click="handleFileClick(file)">
           <!-- 卡片选中状态 -->
-          <div v-if="isBatchMode" class="absolute top-2 left-2 z-10">
+          <div v-if="isBatchMode" class="file-card__selection">
             <t-checkbox :checked="selectedIds.includes(file.id)" @click.stop="toggleSelection(file.id)"
               size="small" />
           </div>
@@ -183,20 +183,20 @@
           <!-- 缩略图区域 -->
           <div class="file-card__media">
             <t-image v-if="file.thumbnailUrl" :src="file.thumbnailUrl" :alt="file.originalName" fit="cover"
-              class="w-full h-full">
+              class="file-card__thumbnail">
               <template #error>
                 <div class="file-card__media-placeholder">
                   <Picture :size="36" />
-                  <span class="text-sm">加载失败</span>
+                  <span>加载失败</span>
                 </div>
               </template>
             </t-image>
             <div v-else class="file-card__media-placeholder">
               <Document :size="36" />
-              <span class="text-sm">NO IMAGE</span>
+              <span>NO IMAGE</span>
             </div>
             <!-- 材质标签 -->
-            <t-tag :theme="getMaterialTagType(file.materialType)" class="absolute top-2 right-2 z-5" size="small">
+            <t-tag :theme="getMaterialTagType(file.materialType)" class="file-card__material-tag" size="small">
               {{ file.materialType || '未指定' }}
             </t-tag>
           </div>
@@ -211,15 +211,15 @@
             <!-- 核心数据指标 -->
             <div class="file-card__metrics">
               <div>
-                <Clock :size="14" class="text-gray-600" />
+                <Clock :size="14" class="file-card__metric-icon" />
                 <span>{{ formatDuration(file.estTime) }}</span>
               </div>
               <div>
-                <ScaleToOriginal :size="14" class="text-gray-600" />
+                <ScaleToOriginal :size="14" class="file-card__metric-icon" />
                 <span>{{ formatMetric(file.filamentWeight, 'g') }}</span>
               </div>
               <div>
-                <FullScreen :size="14" class="text-gray-600" />
+                <FullScreen :size="14" class="file-card__metric-icon" />
                 <span>{{ formatMetric(file.filamentLength, 'm') }}</span>
               </div>
               <div>
@@ -236,7 +236,7 @@
               <div class="file-card__success-rate">
                 <span class="file-card__stat-label">成功率</span>
                 <t-progress v-if="hasValue(file.successRate)" :percentage="file.successRate" :stroke-width="4" :label="false"
-                  :class="getSuccessRateClass(file.successRate)" class="flex-1" />
+                  :class="['file-card__success-rate-progress', getSuccessRateClass(file.successRate)]" />
                 <span class="file-card__stat-value">{{ formatMetric(file.successRate, '%') }}</span>
               </div>
             </div>
@@ -259,29 +259,29 @@
       <!-- 列表视图 -->
       <div v-else class="file-table-view">
         <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
-          @row-click="handleTableRowClick" border stripe style="width: 100%" height="100%">
+          @row-click="handleTableRowClick" border stripe style="width: 100%">
           <TdTableColumn type="selection" width="50" align="center" />
 
           <TdTableColumn prop="originalName" label="文件名" min-width="200">
             <template #default="{ row }">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                  <span v-if="row.folder" class="text-blue-500">
+              <div class="file-table__name-cell">
+                <div class="file-table__icon">
+                  <span v-if="row.folder" class="file-table__folder-icon">
                     <IconFolder />
                   </span>
-                  <t-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="w-full h-full" />
-                  <span v-else class="text-gray-600">
+                  <t-image v-else-if="row.thumbnailUrl" :src="row.thumbnailUrl" fit="cover" class="file-table__thumbnail" />
+                  <span v-else class="file-table__file-icon">
                     <Document />
                   </span>
                 </div>
-                <span class="text-sm font-medium text-gray-900 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+                <span class="file-table__name"
                   :title="row.originalName">{{
                     row.originalName
                   }}</span>
-                <t-tag v-if="row.folder" size="small" class="flex-shrink-0">
+                <t-tag v-if="row.folder" size="small" class="file-table__type-tag">
                   文件夹
                 </t-tag>
-                <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small" class="flex-shrink-0">
+                <t-tag v-else :theme="getMaterialTagType(row.materialType)" size="small" class="file-table__type-tag">
                   {{ row.materialType || '未指定' }}
                 </t-tag>
               </div>
@@ -314,10 +314,10 @@
 
           <TdTableColumn prop="successRate" label="成功率" width="100" v-if="currentParentId">
             <template #default="{ row }">
-              <div class="flex items-center gap-2" v-if="!row.folder && hasValue(row.successRate)">
+              <div class="file-table__rate" v-if="!row.folder && hasValue(row.successRate)">
                 <t-progress :percentage="row.successRate" :stroke-width="6" :label="false"
-                  :class="getSuccessRateClass(row.successRate)" class="w-16" />
-                <span class="text-sm">{{ formatMetric(row.successRate, '%') }}</span>
+                  :class="getSuccessRateClass(row.successRate)" />
+                <span>{{ formatMetric(row.successRate, '%') }}</span>
               </div>
               <span v-else>-</span>
             </template>
@@ -325,7 +325,7 @@
 
           <TdTableColumn label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <div class="flex items-center gap-1">
+              <div class="file-table__actions">
                 <t-button v-if="row.folder" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
                   打开
                 </t-button>
@@ -1319,207 +1319,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.file-library-page-toolbar {
-  flex: 0 0 auto;
-  margin-bottom: var(--app-spacing-4);
-}
-
-.file-library-content-card {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
-  min-height: 0;
-  padding: var(--app-spacing-4);
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-large);
-  box-shadow: var(--app-shadow);
-  overflow: hidden;
-}
-
-.file-tree-card :deep(.t-card__body) {
-  max-height: 12rem;
-  overflow-y: auto;
-}
-
-.file-tree-card {
-  flex: 0 0 auto;
-  margin-bottom: var(--app-spacing-4);
-}
-
-.file-tree-card :deep(.t-tree__label) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-library-filter-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex: 0 0 auto;
-  gap: 1rem;
-  min-width: 0;
-  padding: var(--app-spacing-3);
-  background: var(--app-surface-muted);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
-}
-
-.file-library-navigation {
-  min-width: 0;
-  flex: 1;
-}
-
-.file-library-toolbar__filters,
-.file-library-toolbar__actions {
-  display: flex;
-  align-items: center;
-}
-
-.file-library-toolbar__filters,
-.file-library-toolbar__actions {
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.file-library-toolbar__filters {
-  flex: 0 0 auto;
-  justify-content: flex-end;
-}
-
-.file-library-toolbar__actions {
-  justify-content: flex-end;
-}
-
-.file-library-list {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  min-width: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.file-view-toggle {
-  padding: 0.125rem;
-  background: var(--app-surface-muted);
-  border: 1px solid var(--app-border);
-  border-radius: 0.375rem;
-}
-
-.file-view-toggle :deep(.t-button) {
-  min-width: 2rem;
-  color: var(--app-text-secondary);
-}
-
-.file-view-toggle :deep(.file-view-toggle__active) {
-  color: var(--app-primary);
-  background: var(--app-surface);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
-}
-
-/* 网格视图布局 */
-.file-grid-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(200px, 16vw, 280px)), 1fr));
-  gap: clamp(0.75rem, 1vw, 1.25rem);
-  align-content: start;
-  overflow-y: auto;
-  min-height: 0;
-  padding-bottom: 1rem;
-}
-
-/* 文件卡片样式 */
-.file-card {
-  height: auto;
-  min-height: 260px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
-  box-shadow: var(--app-shadow);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.file-card:hover,
-.file-card--selected {
-  border-color: var(--app-primary);
-  box-shadow: var(--app-shadow-raised);
-}
-
-.file-card__media {
-  height: clamp(88px, 8vw, 112px);
-  flex-shrink: 0;
-}
-
-.file-card__body {
-  min-height: 0;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.file-card__body > h3 {
-  flex-shrink: 0;
-}
-
-.file-card__metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-width: 0;
-  flex-shrink: 0;
-}
-
-.file-card__metrics > div {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.file-card__stats {
-  flex-shrink: 0;
-}
-
-.file-card__actions {
-  flex-shrink: 0;
-  margin-top: auto;
-}
-
-@media (max-width: 640px) {
-  .file-library-filter-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .file-library-navigation,
-  .file-library-toolbar__filters,
-  .file-library-toolbar__actions {
-    width: 100%;
-  }
-
-  .file-library-toolbar__filters {
-    justify-content: flex-end;
-  }
-
-  .file-library-toolbar__actions {
-    justify-content: flex-start;
-  }
-
-  .file-library-toolbar__actions > .t-button {
-    flex: 1 1 auto;
-  }
-
-  .file-card__media {
-    height: 88px;
-  }
-}
-
-/* T208 visual reset: the file workspace owns one layout and one scroll region. */
+/* The file workspace has one canonical visual system and one result scroll region. */
 .file-library-page {
   gap: var(--app-spacing-4);
 }
@@ -1746,6 +1546,13 @@ onMounted(() => {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.file-card__selection {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
 .file-card:hover,
 .file-card--selected {
   border-color: var(--app-primary);
@@ -1756,11 +1563,24 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   height: 128px;
   flex-shrink: 0;
   background: var(--app-surface-muted);
   border-bottom: 1px solid var(--app-border);
   overflow: hidden;
+}
+
+.file-card__thumbnail {
+  width: 100%;
+  height: 100%;
+}
+
+.file-card__material-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
 }
 
 .file-card__media--folder {
@@ -1778,6 +1598,11 @@ onMounted(() => {
   height: 100%;
   color: var(--app-text-secondary);
   font-size: 12px;
+}
+
+.file-card__metric-icon {
+  flex: 0 0 auto;
+  color: var(--app-text-secondary);
 }
 
 .file-card__body {
@@ -1854,7 +1679,7 @@ onMounted(() => {
   gap: 8px !important;
 }
 
-.file-card__success-rate .t-progress {
+.file-card__success-rate-progress {
   min-width: 40px;
   flex: 1 1 auto;
 }
@@ -1863,6 +1688,12 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   margin-top: auto;
+}
+
+.file-card__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .file-card__action {
@@ -1874,6 +1705,72 @@ onMounted(() => {
   justify-content: flex-end;
   flex: 0 0 auto;
   padding-top: var(--app-spacing-4);
+}
+
+.file-table__name-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-2);
+  min-width: 0;
+}
+
+.file-table__icon {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-small);
+}
+
+.file-table__folder-icon {
+  color: var(--app-primary);
+}
+
+.file-table__file-icon {
+  color: var(--app-text-secondary);
+}
+
+.file-table__thumbnail {
+  width: 100%;
+  height: 100%;
+}
+
+.file-table__name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--app-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-table__type-tag {
+  flex: 0 0 auto;
+}
+
+.file-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-spacing-2);
+}
+
+.file-table__rate {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-2);
+}
+
+.file-table__rate :deep(.t-progress) {
+  width: 64px;
 }
 
 @media (max-width: 900px) {

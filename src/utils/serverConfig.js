@@ -60,11 +60,34 @@ export const parseServerEndpoint = value => {
   }
 }
 
+const normalizeEndpointHost = value => String(value || '').trim().replace(/^\[|\]$/g, '')
+
+export const isValidServerHost = value => {
+  const host = normalizeEndpointHost(value)
+  if (!host || /[\s/\\?#@]/.test(host) || host.includes('://')) return false
+
+  if (host.includes(':')) {
+    try {
+      const parsed = new URL(`http://[${host}]`)
+      return parsed.hostname === `[${host}]`
+    } catch {
+      return false
+    }
+  }
+
+  const ipv4Parts = host.split('.')
+  if (ipv4Parts.length === 4 && ipv4Parts.every(part => /^\d{1,3}$/.test(part))) {
+    return ipv4Parts.every(part => Number(part) <= 255)
+  }
+
+  return /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(host)
+}
+
 export const buildServerBaseUrl = ({ protocol = 'http', host, port }) => {
   const normalizedProtocol = protocol === 'https' ? 'https' : 'http'
-  const normalizedHost = String(host || '').trim()
+  const normalizedHost = normalizeEndpointHost(host)
   const normalizedPort = String(port || '').trim()
-  if (!normalizedHost || !/^\d{1,5}$/.test(normalizedPort) || Number(normalizedPort) < 1 || Number(normalizedPort) > 65535) return ''
+  if (!isValidServerHost(normalizedHost) || !/^\d{1,5}$/.test(normalizedPort) || Number(normalizedPort) < 1 || Number(normalizedPort) > 65535) return ''
 
   const hostWithBrackets = normalizedHost.includes(':') && !normalizedHost.startsWith('[')
     ? `[${normalizedHost}]`
