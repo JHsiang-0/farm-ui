@@ -1,40 +1,52 @@
 import axios from 'axios'
-import { message } from './message'
+import { notifyRequestError } from './message'
 import { useUserStore } from '@/stores/user'
 import router from '@/router'
-import {
-  HTTP_STATUS,
-  BUSINESS_CODE,
-  ERROR_MESSAGE_MAP,
-  REQUEST_TIMEOUT
-} from './constants'
+import { REQUEST_TIMEOUT } from './constants'
 import { isMockEnabled, mockRequest } from '@/mock'
+import {
+  getErrorContext,
+  getErrorMessage,
+  isBinaryResponse,
+  isSuccessfulEnvelope,
+  normalizeResponseEnvelope,
+  RequestError
+} from './requestCore'
 
-/**
- * 请求配置常量
- * @constant {Object}
- */
+export { RequestError } from './requestCore'
+export {
+  getErrorContext,
+  getErrorMessage,
+  isBinaryResponse,
+  isSuccessfulEnvelope,
+  normalizeResponseEnvelope
+} from './requestCore'
+
 const REQUEST_CONFIG = {
   TIMEOUT: REQUEST_TIMEOUT.DEFAULT,
   BASE_URL: import.meta.env.VITE_API_BASE_URL || ''
 }
 
-// 创建 axios 实例
-const service = axios.create({
+export const service = axios.create({
   baseURL: REQUEST_CONFIG.BASE_URL,
   timeout: REQUEST_CONFIG.TIMEOUT
 })
 
 const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete'])
 const pendingRequests = new Map()
+let handledAuthToken
+let authFailureHandled = false
+
+const isCanceledError = error => (
+  error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
+)
 
 const isUnsupportedBody = value => {
   if (value == null) return false
 
   return (
     (typeof FormData !== 'undefined' && value instanceof FormData) ||
-    (typeof Blob !== 'undefined' && value instanceof Blob) ||
-    (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer)
+    isBinaryResponse(value)
   )
 }
 
@@ -51,14 +63,14 @@ const serializeRequestPart = value => {
 }
 
 /**
- * 为非幂等请求生成锁键。同一请求在完成前只执行一次，避免快速重复点击造成重复提交。
+ * Generate a lock key for non-idempotent requests. Callers may opt out for
+ * operations where submitting the same body twice is intentional.
  */
-const getRequestLockKey = config => {
+export const getRequestLockKey = config => {
   if (config.dedupe === false) return null
 
   const method = String(config.method || 'get').toLowerCase()
   if (!MUTATING_METHODS.has(method)) return null
-
   if (config.dedupeKey) return String(config.dedupeKey)
 
   const params = serializeRequestPart(config.params)
@@ -72,114 +84,133 @@ const withAuthHeader = config => {
   const userStore = useUserStore()
   const headers = { ...config.headers }
 
-  if (userStore.token) {
-    headers.Authorization = `Bearer ${userStore.token}`
-  }
-
+  if (userStore.token) headers.Authorization = `Bearer ${userStore.token}`
   return { ...config, headers }
 }
 
-const validateResponse = res => {
-  if (!res || res.code !== BUSINESS_CODE.SUCCESS) {
-    const error = new Error(res?.message || '系统异常')
-    error.code = res?.code
-    error.response = {
-      status: res?.code,
-      data: res
-    }
-    throw error
-  }
+const createErrorFromFailure = (error, config) => {
+  if (error instanceof RequestError) return error
 
-  return res
+  const response = error?.response
+  const responsePayload = response?.data
+  const status = response?.status ?? null
+  const envelope = responsePayload && typeof responsePayload === 'object' && !isBinaryResponse(responsePayload)
+    ? normalizeResponseEnvelope(responsePayload, status || 500)
+    : null
+  const code = envelope?.code ?? status ?? error?.code ?? 'REQUEST_ERROR'
+  const responseMessage = typeof envelope?.message === 'string' ? envelope.message : ''
+  const messageText = getErrorMessage({
+    code,
+    status,
+    originalCode: error?.code,
+    originalMessage: error?.message,
+    responseMessage
+  })
+  const requestConfig = config || error?.config
+  const normalizedResponse = response
+    ? { ...response, data: envelope || responsePayload }
+    : undefined
+
+  return new RequestError({
+    message: messageText,
+    code,
+    businessCode: envelope?.code ?? (typeof code === 'number' ? code : null),
+    status,
+    data: envelope?.data ?? null,
+    timestamp: envelope?.timestamp ?? null,
+    context: getErrorContext(code, status, error?.code),
+    method: requestConfig?.method,
+    url: requestConfig?.url,
+    axiosCode: error?.code,
+    response: normalizedResponse,
+    request: error?.request,
+    config: requestConfig,
+    originalError: error
+  })
 }
 
-const handleRequestError = error => {
-  const safeError = error instanceof Error ? error : new Error(String(error || '请求失败'))
-  if (safeError.code === 'ERR_CANCELED' || safeError.name === 'CanceledError') {
-    return Promise.reject(safeError)
+const handleUnauthorized = error => {
+  if (error.context !== 'unauthorized') return
+
+  const userStore = useUserStore()
+  const currentToken = userStore.token || ''
+  if (authFailureHandled && (!currentToken || handledAuthToken === currentToken)) return
+
+  authFailureHandled = true
+  handledAuthToken = currentToken
+  userStore.logout()
+
+  const currentPath = router.currentRoute?.value?.path
+  if (currentPath !== '/login') {
+    void router.push({ name: 'login' }).catch(() => {})
   }
-  const responseData = safeError.response?.data
-  const status = safeError.response?.status
-  const code = responseData?.code ?? safeError.code ?? status
-  const getErrorMessage = () => {
-    if (responseData?.message) return responseData.message
-
-    if (ERROR_MESSAGE_MAP[code]) return ERROR_MESSAGE_MAP[code]
-
-    if (!status && !responseData) {
-      return safeError.code === 'ECONNABORTED' || safeError.message?.includes('timeout')
-        ? '请求超时，请检查后端服务是否正常运行'
-        : '网络连接异常，请检查服务地址和网络连接'
-    }
-
-    switch (status) {
-      case HTTP_STATUS.UNAUTHORIZED:
-        return ERROR_MESSAGE_MAP[BUSINESS_CODE.UNAUTHORIZED]
-      case HTTP_STATUS.FORBIDDEN:
-        return ERROR_MESSAGE_MAP[BUSINESS_CODE.FORBIDDEN]
-      case HTTP_STATUS.NOT_FOUND:
-        return ERROR_MESSAGE_MAP[BUSINESS_CODE.NOT_FOUND]
-      case HTTP_STATUS.CONFLICT:
-        return ERROR_MESSAGE_MAP[BUSINESS_CODE.CONFLICT]
-      case HTTP_STATUS.UNPROCESSABLE_ENTITY:
-        return ERROR_MESSAGE_MAP[BUSINESS_CODE.UNPROCESSABLE_ENTITY]
-      case HTTP_STATUS.SERVER_ERROR:
-        return ERROR_MESSAGE_MAP[BUSINESS_CODE.ERROR]
-      case HTTP_STATUS.SERVICE_UNAVAILABLE:
-        return '服务暂时不可用，请稍后重试'
-      default:
-        return status ? `请求失败 (${status})` : safeError.message || '网络连接异常'
-    }
-  }
-
-  if (status === HTTP_STATUS.UNAUTHORIZED || code === BUSINESS_CODE.UNAUTHORIZED) {
-    const userStore = useUserStore()
-    userStore.logout()
-    if (router.currentRoute.value.path !== '/login') {
-      router.push('/login')
-    }
-  }
-
-  message.error(getErrorMessage())
-  console.error('[Response Error]', safeError)
-  return Promise.reject(safeError)
 }
 
-// Request 拦截器：统一处理请求配置
+export const handleRequestError = error => {
+  if (isCanceledError(error)) return Promise.reject(error)
+
+  const requestError = createErrorFromFailure(error)
+  handleUnauthorized(requestError)
+
+  if (!requestError.toastShown) {
+    requestError.toastShown = true
+    notifyRequestError(requestError)
+  }
+
+  console.error('[Request Error]', requestError)
+  return Promise.reject(requestError)
+}
+
+const normalizeSuccess = (responseData, config, status = 200) => {
+  if (isBinaryResponse(responseData, config)) return responseData
+
+  const envelope = normalizeResponseEnvelope(responseData, status)
+  if (!isSuccessfulEnvelope(envelope, status)) {
+    throw new RequestError({
+      message: getErrorMessage({
+        code: envelope.code,
+        status,
+        responseMessage: envelope.message
+      }),
+      code: envelope.code,
+      businessCode: envelope.code,
+      status,
+      data: envelope.data,
+      timestamp: envelope.timestamp,
+      context: getErrorContext(envelope.code, status),
+      response: { status, data: envelope },
+      config
+    })
+  }
+
+  return envelope
+}
+
+const validateAxiosResponse = response => {
+  try {
+    return normalizeSuccess(response.data, response.config, response.status)
+  } catch (error) {
+    return handleRequestError(error)
+  }
+}
+
 service.interceptors.request.use(
   config => {
     const userStore = useUserStore()
-    
-    // 携带 Token
-    if (userStore.token) {
-      config.headers['Authorization'] = `Bearer ${userStore.token}`
-    }
-
+    config.headers = { ...config.headers }
+    if (userStore.token) config.headers.Authorization = `Bearer ${userStore.token}`
     return config
   },
-  error => {
-    console.error('[Request Error]', error)
-    return Promise.reject(error)
-  }
+  error => Promise.reject(error)
 )
 
-// Response 拦截器：统一处理响应数据和错误
-service.interceptors.response.use(
-  response => {
-    try {
-      return validateResponse(response.data)
-    } catch (error) {
-      return handleRequestError(error)
-    }
-  },
-  handleRequestError
-)
+service.interceptors.response.use(validateAxiosResponse, handleRequestError)
 
 const executeRequest = config => {
   if (!isMockEnabled) return service(config)
 
   return mockRequest(withAuthHeader(config))
-    .then(validateResponse)
+    .then(response => normalizeSuccess(response, config, 200))
     .catch(handleRequestError)
 }
 
@@ -197,9 +228,7 @@ const request = config => {
   const promise = Promise.resolve()
     .then(() => executeRequest(requestConfig))
     .finally(() => {
-      if (pendingRequests.get(lockKey) === promise) {
-        pendingRequests.delete(lockKey)
-      }
+      if (pendingRequests.get(lockKey) === promise) pendingRequests.delete(lockKey)
     })
 
   pendingRequests.set(lockKey, promise)
