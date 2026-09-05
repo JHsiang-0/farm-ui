@@ -2,6 +2,8 @@
 import { computed, provide, shallowRef, useAttrs } from 'vue'
 import { Table } from 'tdesign-vue-next'
 
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps({
   data: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
@@ -34,7 +36,12 @@ const columns = computed(() => registeredColumns.value.map((column, index) => {
     fixed: column.fixed,
     ellipsis: column.showOverflowTooltip,
     cell: column.slot
-      ? (_h, { row, rowIndex }) => column.slot({ row, $index: rowIndex, rowIndex })
+      ? (_h, { row, rowIndex }) => {
+        const content = column.slot({ row, $index: rowIndex, rowIndex })
+        // 条件插槽在更新期间可能返回 false/true，过滤掉非 VNode 值，避免 TDesign
+        // 在 TR 重绘时尝试创建非法 VNode。
+        return Array.isArray(content) ? content.filter(Boolean) : content
+      }
       : undefined
   }
 }))
@@ -76,7 +83,10 @@ const tableAttrs = computed(() => {
 </script>
 
 <template>
-  <Table v-bind="tableAttrs" />
-  <!-- 保留列组件插槽，确保 TdTableColumn 能完成列注册。 -->
-  <slot />
+  <div class="td-table-adapter">
+    <!-- 先让 TdTableColumn 完成注册，再挂载 TDesign Table。 -->
+    <Table v-if="columns.length" v-bind="tableAttrs" />
+    <!-- 保留列组件插槽，确保 TdTableColumn 在 Table 首次挂载前完成列注册。 -->
+    <span class="hidden" aria-hidden="true"><slot /></span>
+  </div>
 </template>

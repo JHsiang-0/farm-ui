@@ -11,7 +11,7 @@
 
     <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <AsyncState
-        v-if="queueLoading || queueError || queueData.length === 0"
+        v-show="queueLoading || queueError || queueData.length === 0"
         :loading="queueLoading"
         :error="queueError"
         :empty="queueData.length === 0"
@@ -19,7 +19,7 @@
         @retry="fetchQueue"
       />
       <TdTable
-        v-else
+        v-show="!(queueLoading || queueError || queueData.length === 0)"
         :data="queueData"
         :loading="loading"
         style="width: 100%"
@@ -75,7 +75,7 @@
         <TdTableColumn prop="status" label="状态" width="140" align="center">
           <template #default="scope">
             <div class="flex items-center justify-center gap-2">
-              <span v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><loading /></span>
+              <span v-if="scope.row.status === 'QUEUED'" class="text-sm animate-spin"><Loading /></span>
               <span v-else-if="scope.row.status === 'ASSIGNED'" class="text-sm text-yellow-600"><pointer /></span>
               <span v-else-if="scope.row.status === 'PRINTING'" class="text-sm text-gray-600"><printer /></span>
               <span v-else-if="scope.row.status === 'COMPLETED'" class="text-sm text-green-600"><check /></span>
@@ -143,7 +143,7 @@
     <t-card class="app-page-card mt-4 shadow-sm rounded-xl">
       <template #title>活动任务</template>
       <AsyncState
-        v-if="activeLoading || activeError || activePageData.length === 0"
+        v-show="activeLoading || activeError || activePageData.length === 0"
         :loading="activeLoading"
         :error="activeError"
         :empty="activePageData.length === 0"
@@ -151,7 +151,7 @@
         @retry="fetchActive"
       />
       <TdTable
-        v-else
+        v-show="!(activeLoading || activeError || activePageData.length === 0)"
         :data="activePageData"
         :loading="activeLoading"
         style="width: 100%"
@@ -299,6 +299,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import {
+  LoadingIcon as Loading,
   RefreshIcon as Refresh,
   LocationIcon as Pointer,
   PrintIcon as Printer,
