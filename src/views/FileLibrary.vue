@@ -63,7 +63,15 @@
       </div>
 
       <!-- 文件列表区 -->
-      <div v-if="fileList.length > 0" class="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <AsyncState
+        v-if="loading || loadError || fileList.length === 0"
+        :loading="loading"
+        :error="loadError"
+        :empty="fileList.length === 0"
+        empty-description="暂无文件，请上传 G-Code 文件"
+        @retry="fetchData"
+      />
+      <div v-else class="flex-1 min-h-0 overflow-hidden flex flex-col">
       <!-- 网格视图 -->
       <div v-if="viewMode === 'grid'" class="file-grid-view flex-1 overflow-y-auto pb-4">
         <!-- 文件夹 -->
@@ -289,26 +297,6 @@
       </div>
     </div>
 
-      <!-- 空状态 -->
-      <div v-else-if="!loading" class="flex justify-center flex-1 py-16 px-4">
-      <t-empty description="暂无文件，请上传 G-Code 文件">
-        <template #image>
-          <FolderOpened :size="80" class="text-gray-400" />
-        </template>
-        <template #description>
-          <div class="text-center">
-            <p class="text-gray-600">暂无文件，请上传 G-Code 文件</p>
-          </div>
-        </template>
-      </t-empty>
-    </div>
-
-      <!-- 加载状态 -->
-      <div v-if="loading" class="flex flex-col items-center justify-center flex-1 py-16 px-4 text-gray-600">
-      <Refresh :size="48" class="is-loading mb-3" />
-      <p>加载中...</p>
-    </div>
-
       <!-- 分页 -->
       <div v-if="fileList.length > 0" class="flex justify-center pt-2 shrink-0">
       <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize"
@@ -531,6 +519,7 @@ import { getPrinterList } from '@/api/printer'
 import { formatDuration, formatFileSize } from '@/utils/formatters'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
+import AsyncState from '@/components/AsyncState.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import {
@@ -543,6 +532,7 @@ defineOptions({ name: 'FileLibrary' })
 
 // ============ 状态定义 ============
 const loading = ref(false)
+const loadError = ref('')
 const fileList = ref([])
 const selectedIds = ref([])
 const searchKeyword = ref('')
@@ -631,6 +621,7 @@ const restoreFileDetailContext = () => {
  */
 const fetchData = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     const params = {
       pageNum: pagination.pageNum,
@@ -648,6 +639,7 @@ const fetchData = async () => {
     restoreFileDetailContext()
   } catch (error) {
     console.error('获取文件列表失败:', error)
+    loadError.value = error?.message || '文件列表加载失败，请重试'
     message.error('获取文件列表失败')
   } finally {
     loading.value = false

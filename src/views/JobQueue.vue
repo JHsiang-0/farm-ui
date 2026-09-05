@@ -10,7 +10,16 @@
     </div>
 
     <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+      <AsyncState
+        v-if="queueLoading || queueError || queueData.length === 0"
+        :loading="queueLoading"
+        :error="queueError"
+        :empty="queueData.length === 0"
+        empty-description="当前没有排队中的任务，机器都在闲着呢！"
+        @retry="fetchQueue"
+      />
       <TdTable
+        v-else
         :data="queueData"
         :loading="loading"
         style="width: 100%"
@@ -129,19 +138,20 @@
         </TdTableColumn>
       </TdTable>
 
-      <t-empty
-        v-if="queueData.length === 0 && !loading"
-        description="当前没有排队中的任务，机器都在闲着呢！"
-      >
-        <template #image>
-          <coffee :size="64" class="text-gray-400" />
-        </template>
-      </t-empty>
     </t-card>
 
     <t-card class="app-page-card mt-4 shadow-sm rounded-xl">
       <template #title>活动任务</template>
+      <AsyncState
+        v-if="activeLoading || activeError || activePageData.length === 0"
+        :loading="activeLoading"
+        :error="activeError"
+        :empty="activePageData.length === 0"
+        empty-description="当前没有活动任务"
+        @retry="fetchActive"
+      />
       <TdTable
+        v-else
         :data="activePageData"
         :loading="activeLoading"
         style="width: 100%"
@@ -208,7 +218,6 @@
           </template>
         </TdTableColumn>
       </TdTable>
-      <t-empty v-if="activePageData.length === 0 && !activeLoading" description="当前没有活动任务" />
       <div v-if="activeTotal > activePageSize" class="flex justify-center mt-4">
         <t-pagination
           v-model:current="activePage"
@@ -296,7 +305,6 @@ import {
   TimeIcon as Clock,
   SendIcon as Promotion,
   CloseCircleIcon as CircleClose,
-  FileIcon as Coffee,
   CheckIcon as Check
 } from 'tdesign-icons-vue-next'
 import { cancelJob, assignJobToPrinter, requeueJob, updateJobPriority, startJob } from '@/api/job'
@@ -306,6 +314,7 @@ import { formatDateTime } from '@/utils/formatters'
 import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import AsyncState from '@/components/AsyncState.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { useJobStore } from '@/stores/jobStore'
 import { JOB_STATUS_MAP } from '@/utils/constants'
@@ -319,9 +328,13 @@ const {
   activeLoading,
   activePage,
   activePageSize,
-  activeTotal
+  activeTotal,
+  queueError,
+  activeError
 } = storeToRefs(jobStore)
+const queueLoading = computed(() => jobStore.queueLoading)
 const loading = computed(() => jobStore.queueLoading || jobStore.activeLoading)
+const fetchActive = () => jobStore.fetchActive()
 
 // 派单弹窗状态
 const assignDialogVisible = ref(false)

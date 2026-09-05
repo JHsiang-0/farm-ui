@@ -16,7 +16,15 @@
         </t-select>
         <t-button @click="fetchUsers" :loading="loading">查询</t-button>
       </div>
-      <TdTable :data="users" :loading="loading" class="flex-1 min-h-0">
+      <AsyncState
+        v-if="loading || loadError || users.length === 0"
+        :loading="loading"
+        :error="loadError"
+        :empty="users.length === 0"
+        empty-description="暂无用户"
+        @retry="fetchUsers"
+      />
+      <TdTable v-else :data="users" :loading="loading" class="flex-1 min-h-0">
         <TdTableColumn prop="id" label="ID" width="80" />
         <TdTableColumn prop="username" label="用户名" />
         <TdTableColumn prop="role" label="角色" />
@@ -49,6 +57,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { getAdminUsers, createAdminUser, setAdminUserEnabled } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import { message } from '@/utils/message'
+import AsyncState from '@/components/AsyncState.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 
@@ -56,6 +65,7 @@ defineOptions({ name: 'UserManagement' })
 const userStore = useUserStore()
 const currentUserId = userStore.userInfo.id
 const loading = ref(false)
+const loadError = ref('')
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const users = ref([])
@@ -65,10 +75,13 @@ const form = reactive({ username: '', password: '', confirmPassword: '', email: 
 
 const fetchUsers = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await getAdminUsers({ ...query, ...pagination })
     users.value = res.data?.records || []
     pagination.total = res.data?.total || 0
+  } catch (error) {
+    loadError.value = error?.message || '用户列表加载失败，请重试'
   } finally { loading.value = false }
 }
 const openCreate = () => { Object.assign(form, { username: '', password: '', confirmPassword: '', email: '', phone: '' }); dialogVisible.value = true }

@@ -49,7 +49,16 @@
     <!-- 数据表格 -->
     <t-card class="printer-manage-card app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <div class="printer-manage-card__table flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+        <AsyncState
+          v-if="loading || loadError || tableData.length === 0"
+          :loading="loading"
+          :error="loadError"
+          :empty="tableData.length === 0"
+          empty-description="暂无打印机"
+          @retry="fetchData"
+        />
         <TdTable
+          v-else
           :data="tableData"
           :loading="loading"
           style="width: 100%"
@@ -441,6 +450,7 @@ import { useDeviceStore } from '@/stores/printer/deviceStore'
 import { useRealtimeStore } from '@/stores/printer/realtimeStore'
 import { PRINTER_STATUS_MAP } from '@/utils/constants'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
+import AsyncState from '@/components/AsyncState.vue'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 
@@ -448,6 +458,7 @@ defineOptions({ name: 'PrinterManage' })
 
 // ===== 列表与分页状态 =====
 const loading = ref(false)
+const loadError = ref('')
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -741,6 +752,7 @@ const restorePrinterDetailContext = () => {
 // 加载分页数据
 const fetchData = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await getPrinterList({
       ...queryParams,
@@ -749,8 +761,8 @@ const fetchData = async () => {
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
     restorePrinterDetailContext()
-  } catch {
-    // 错误在拦截器处理
+  } catch (error) {
+    loadError.value = error?.message || '打印机列表加载失败，请重试'
   } finally {
     loading.value = false
   }

@@ -15,6 +15,9 @@
       </div>
     </header>
 
+    <AsyncState v-if="loading" :loading="true" />
+    <AsyncState v-else-if="loadError" :error="loadError" @retry="fetchOverview" />
+
     <section class="stat-grid" aria-label="设备和任务统计">
       <t-card
         v-for="stat in statCards"
@@ -188,11 +191,13 @@ import {
 import { getPrinterList } from '@/api/printer'
 import { getJobPage } from '@/api/job'
 import { renderIcon } from '@/utils/tdesign'
+import AsyncState from '@/components/AsyncState.vue'
 
 defineOptions({ name: 'DashboardView' })
 
 const router = useRouter()
 const loading = ref(false)
+const loadError = ref('')
 const printers = ref([])
 const jobs = ref([])
 
@@ -329,6 +334,7 @@ const attentionPrinters = computed(() => printers.value
 
 const fetchOverview = async () => {
   loading.value = true
+  loadError.value = ''
   const [printerResult, jobResult] = await Promise.allSettled([
     getPrinterList({ pageNum: 1, pageSize: 100 }),
     getJobPage({ pageNum: 1, pageSize: 100 })
@@ -340,6 +346,8 @@ const fetchOverview = async () => {
   if (jobResult.status === 'fulfilled') {
     jobs.value = jobResult.value.data?.records || []
   }
+  const failedCount = [printerResult, jobResult].filter(result => result.status === 'rejected').length
+  if (failedCount) loadError.value = failedCount === 2 ? '概览数据加载失败，请重试' : '部分概览数据加载失败，请重试'
   loading.value = false
 }
 

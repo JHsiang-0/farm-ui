@@ -62,7 +62,16 @@
       </div>
 
       <!-- 数据表格区 -->
+      <AsyncState
+        v-if="loading || loadError || tableData.length === 0"
+        :loading="loading"
+        :error="loadError"
+        :empty="tableData.length === 0"
+        empty-description="暂无打印历史记录"
+        @retry="fetchData"
+      />
       <TdTable
+        v-else
         :data="tableData"
         @row-click="openTaskDetail"
         :loading="loading"
@@ -165,16 +174,6 @@
         </TdTableColumn>
       </TdTable>
 
-      <!-- 空状态 -->
-      <t-empty
-        v-if="tableData.length === 0 && !loading"
-        description="暂无打印历史记录"
-      >
-        <template #image>
-          <document :size="64" class="text-gray-400" />
-        </template>
-      </t-empty>
-
       <!-- 底部分页区 -->
       <div class="mt-4 flex justify-center px-4">
         <t-pagination
@@ -197,7 +196,6 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import {
-  FileIcon as Document,
   RefreshIcon as Refresh,
   SearchIcon as Search,
   TimeIcon as Clock,
@@ -210,12 +208,14 @@ import { formatDateTime } from '@/utils/formatters'
 import { renderIcon } from '@/utils/tdesign'
 import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
+import AsyncState from '@/components/AsyncState.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { useJobStore } from '@/stores/jobStore'
 
 defineOptions({ name: 'JobHistory' })
 
 const loading = ref(false)
+const loadError = ref('')
 const jobStore = useJobStore()
 const tableData = ref([])
 const detailDrawerVisible = ref(false)
@@ -410,6 +410,7 @@ const handlePaginationChange = ({ current, pageSize }) => {
 // 获取数据
 const fetchData = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     const params = buildParams()
     const res = await getJobPage(params)
@@ -419,10 +420,12 @@ const fetchData = async () => {
       pagination.total = res.data?.total || 0
       restoreTaskDetailContext()
     } else {
+      loadError.value = res.message || '打印历史加载失败，请重试'
       message.error(res.message || '获取数据失败')
     }
   } catch (error) {
     console.error('获取打印历史记录失败:', error)
+    loadError.value = error?.message || '打印历史加载失败，请重试'
     message.error('获取打印历史记录失败')
   } finally {
     loading.value = false
