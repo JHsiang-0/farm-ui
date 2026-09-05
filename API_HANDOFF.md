@@ -1,7 +1,7 @@
 # FabMatrix 前后端接口交接与契约文档
 
-版本：v2.0
-更新时间：2026-09-03
+版本：v2.1
+更新时间：2026-09-05
 适用范围：FabMatrix 本地 3D 打印生产管理服务端与浏览器/客户端
 
 > 本文以当前 Java 源码、`SecurityConfig` 和当前 OpenAPI 注解为准。第 4 节列出的正式 Farm API 均已有对应 Controller；开发环境兼容用路由单独列在第 4.6 节。v2 不提供后台自动派单接口，相关能力延期到 v3。
@@ -182,7 +182,7 @@ Local Edition 全新数据目录没有预置管理员账号。前端首次打开
 |---|---|---|---|---|
 | POST | `/auth/register` | ADMIN | 用户注册 DTO | `Result<Long>` |
 | POST | `/auth/admin/users` | ADMIN | 用户注册 DTO | `Result<Long>` |
-| GET | `/auth/admin/users` | ADMIN | `pageNum,pageSize,username,role,email` | `PageResult<UserVO>`，不包含密码 |
+| GET | `/auth/admin/users` | ADMIN | `pageNum,pageSize,username,role,email,enabled` | `PageResult<UserVO>`，不包含密码 |
 | PUT | `/auth/admin/users/{userId}` | ADMIN | 用户更新 DTO | `Result<null>` |
 | POST | `/auth/admin/users/{userId}/disable` | ADMIN | Path ID | `Result<null>` |
 | POST | `/auth/admin/users/{userId}/enable` | ADMIN | Path ID | `Result<null>` |
@@ -199,7 +199,7 @@ Local Edition 全新数据目录没有预置管理员账号。前端首次打开
 
 管理员密码迁移和状态检查接口只接受 `X-Admin-Secret` 请求头，不接受 URL 查询参数，避免管理员密钥进入浏览器、代理或访问日志。
 
-`GET /auth/me` 从 Bearer JWT 的当前用户 ID 读取用户资料，不需要也不接受路径参数；前端登录成功后可直接调用该接口初始化用户状态。用户资料和管理员用户分页统一返回 `UserVO`，字段只有 `id,username,role,email,phone,createdAt,updatedAt`，不包含 `passwordHash`。
+`GET /auth/me` 从 Bearer JWT 的当前用户 ID 读取用户资料，不需要也不接受路径参数；前端登录成功后可直接调用该接口初始化用户状态。用户资料和管理员用户分页统一返回 `UserVO`，字段为 `id,username,role,enabled,email,phone,createdAt,updatedAt`，不包含 `passwordHash`。`enabled=true` 表示账号可用，`enabled=false` 表示账号已禁用。
 
 ### 3.3 操作审计日志（T205）
 
@@ -217,6 +217,8 @@ Local Edition 全新数据目录没有预置管理员账号。前端首次打开
 |---|---|---|---|---|
 | GET | `/printers/page` | ADMIN/OPERATOR | Query：`pageNum,pageSize,name,status` | `PageResult<PrinterVO>`，不含 apiKey |
 | GET | `/printers/{id}` | ADMIN/OPERATOR | Path：打印机 ID | `PrinterDetailVO`：安全配置、缓存实时状态和当前任务摘要 |
+| GET | `/printers/{id}/history` | ADMIN/OPERATOR | Query：`pageNum,pageSize,from?,to?` | `PageResult<PrinterStatusHistoryVO>` |
+| GET | `/printers/{id}/statistics` | ADMIN/OPERATOR | Query：`from?,to?` | `PrinterStatisticsVO` |
 | POST | `/printers/add` | ADMIN | 打印机配置 | `Result<null>` |
 | PUT | `/printers/update` | ADMIN | 包含 `id` 的打印机配置 | `Result<null>` |
 | DELETE | `/printers/delete/{id}` | ADMIN | Path ID | `Result<null>` |
@@ -272,6 +274,7 @@ Local Edition 全新数据目录没有预置管理员账号。前端首次打开
 | POST | `/print-jobs/safe/start` | ADMIN/OPERATOR | `jobId,operatorId?,action?` | 启动或仅上传 |
 | POST | `/print-jobs/batch/preview` | ADMIN/OPERATOR | `fileIds,printerIds,strategy,action` | `DispatchPlanPreviewVO`；预览无副作用 |
 | POST | `/print-jobs/batch/confirm` | ADMIN/OPERATOR | `planId,version,itemIds,confirmationToken` | `BatchDispatchConfirmVO`；逐项创建任务并返回结果 |
+| POST | `/print-jobs/batch/retry-preview` | ADMIN/OPERATOR | `sourcePlanId,sourceItemIds,retryKey` | `DispatchPlanPreviewVO`；只恢复无任务 ID 且可重试的失败项 |
 
 ### 4.4 设备控制
 
@@ -299,7 +302,7 @@ Local Edition 全新数据目录没有预置管理员账号。前端首次打开
 
 ### 4.6 开发环境 Moonraker 兼容接口
 
-以下路由由 [MoonrakerMockController](src/main/java/com/example/farm/controller/MoonrakerMockController.java) 提供，只有 `dev`、`test` Profile 加载，用于兼容 OrcaSlicer 等工具，不属于 `/api/v1` Farm 业务 API，也不使用 `Result<T>` 返回格式。配置了 `farm.moonraker-api-key` 时，所有路由都要求 `X-Api-Key` 请求头；未配置时仅适合本地开发。
+以下路由由后端仓库 `src/main/java/com/example/farm/controller/MoonrakerMockController.java` 提供，只有 `dev`、`test` Profile 加载，用于兼容 OrcaSlicer 等工具，不属于 `/api/v1` Farm 业务 API，也不使用 `Result<T>` 返回格式。配置了 `farm.moonraker-api-key` 时，所有路由都要求 `X-Api-Key` 请求头；未配置时仅适合本地开发。
 
 | 方法 | 地址 | 请求参数 | 返回格式 |
 |---|---|---|---|
@@ -311,6 +314,81 @@ Local Edition 全新数据目录没有预置管理员账号。前端首次打开
 | DELETE | `/server/files/{filename:.+}` | Path：`filename`；Header：`X-Api-Key?` | Moonraker `{"result":{"deleted":"..."}}` |
 
 该模拟控制器返回固定或简化的兼容数据，不代表真实 Klipper 或 RRF 设备能力；生产 Profile 不加载。
+
+### 4.7 前端请求 DTO 速查
+
+以下字段名以 Java DTO 的 JSON 属性为准。除特别说明外，JSON 请求均使用 `Content-Type: application/json`，时间使用不带时区的 `yyyy-MM-dd'T'HH:mm:ss`。
+
+#### 认证和用户
+
+| DTO | 字段 | 规则 |
+|---|---|---|
+| `UserLoginDTO` | `username,password` | 均必填；密码不写入日志 |
+| `UserRegisterDTO` | `username,password,confirmPassword,email?,phone?` | 用户名 3-20 位，仅字母/数字/下划线；密码 6-20 位，必须含大小写字母和数字；确认密码一致 |
+| `UserUpdateDTO` | `id,email?,phone?,role?` | `id` 必填；`role` 只能为 `ADMIN` 或 `OPERATOR`；仅 ADMIN 可修改角色 |
+| `ChangePasswordDTO` | `oldPassword,newPassword,confirmPassword` | 三项必填；新密码遵循注册密码规则 |
+| `UserQueryDTO` | `pageNum?,pageSize?,username?,role?,email?,enabled?` | 默认 `pageNum=1,pageSize=10`；`role` 为 `ADMIN|OPERATOR`；`enabled` 不传表示全部 |
+
+登录成功的 `LoginResultDTO` 字段为 `token`、`expiresIn`（秒）、`userId`、`username`、`role`、`email`、`phone`。首次初始化状态 `FirstAdminSetupStatusDTO` 字段为 `initialized` 和 `setupAvailable`。
+
+#### 打印机
+
+| DTO | 字段 | 规则 |
+|---|---|---|
+| `PrinterQueryDTO` | `pageNum?,pageSize?,name?,status?` | 默认 `1/10`；状态使用 `OFFLINE|IDLE|PREPARING|PRINTING|PAUSED|ERROR|UNKNOWN` |
+| `PrinterAddDTO` | `name,ipAddress,macAddress?,firmwareType?,apiKey?,currentMaterial?,nozzleSize?,machineNumber?,gridRow?,gridCol?` | `name`、`ipAddress` 必填；固件为 `KLIPPER|RRF`；网格行 1-4、列 1-12；`apiKey` 只允许出现在写入请求 |
+| `PrinterUpdateDTO` | `id,name?,ipAddress?,macAddress?,firmwareType?,apiKey?,currentMaterial?,nozzleSize?,machineNumber?,gridRow?,gridCol?` | `id` 必填；`apiKey` 省略或空白表示保留旧凭据 |
+| `PrinterScanResultDTO` | `ipAddress,macAddress,firmwareType,isNewDevice,status,apiKey?,suggestedName?` | 扫描结果用于 `/printers/batch-add`；响应中的凭据不得回显到普通 VO |
+| `PrinterPositionUpdateDTO[]` | `id,gridRow?,gridCol?` | `gridRow/gridCol` 同时为空表示移入待分配区；单次最多 100 项 |
+| `PrinterHistoryQueryDTO` | `pageNum?,pageSize?,from?,to?` | 默认 `1/20`；页大小 1-100；`from` 不得晚于 `to` |
+| `PrinterStatisticsQueryDTO` | `from?,to?` | 省略表示统计全部任务；按任务 `createdAt` 筛选 |
+
+#### 文件
+
+| DTO/请求 | 字段 | 规则 |
+|---|---|---|
+| `PrintFileQueryDTO` | `pageNum?,pageSize?,fileName?,materialType?,userId?,parentId?` | 文件名包含匹配；材质精确匹配；`parentId` 省略或 null 表示根目录；ADMIN 可用 `userId` 筛选 |
+| `FileJobsQueryDTO` | `pageNum?,pageSize?` | 默认 `1/10`；页大小 1-100 |
+| `CreateFolderRequest` | `parentId?,folderName` | `folderName` 必填，最多 100 字符；禁止路径分隔符、控制字符及 `:*?\"<>|` |
+| `BatchDeleteFilesRequest` | `ids` | 必填数组，单次最多 100 个正数 ID；逐项返回成功或失败原因 |
+| 上传请求 | Multipart `file` 或重复字段 `files`，`parentId?` | 单文件 `/upload`；批量 `/batch-upload`；批量最多 100 个文件，逐项返回结果，不因单项失败回滚整批 |
+
+文件响应中的 `rustfsKey`、`safeName`、`fileUrl` 永远不会返回。下载和缩略图必须先请求独立接口获取短期 URL；URL 过期时重新请求一次，不能把 URL 持久化为业务数据。
+
+#### 打印任务和批量派发
+
+| DTO/请求 | 字段 | 规则 |
+|---|---|---|
+| `PrintJobCreateDTO` | `fileId,priority?,printerId?,idempotencyKey?` | `fileId` 必填正数；优先级 0-100；幂等键最多 100 字符；不传打印机进入 `QUEUED` |
+| `PrintJobQueryDTO` | `pageNum?,pageSize?,status?,printerId?,userId?,startTime?,endTime?` | 默认 `1/10`；时间按任务创建时间筛选；ADMIN 可按 `userId` 查询 |
+| `AssignJobRequest` | `jobId,printerId` | 两项均为正数；安全派发后等待现场确认 |
+| `ConfirmSafeRequest` | `printerId,operatorId?` | `printerId` 必填；`operatorId` 已废弃，后端使用 JWT 当前用户 |
+| `StartPrintJobRequest` | `jobId,operatorId?,action?` | `action` 为 `START_PRINT` 或 `UPLOAD_ONLY`；`operatorId` 已废弃 |
+| `UpdatePrintJobPriorityRequest` | `priority` | 必填，范围 0-100；只允许修改 `QUEUED` 任务 |
+| `BatchDispatchPreviewRequest` | `fileIds,printerIds,strategy,action?` | 两个数组均非空且最多 100 项；策略为 `ONE_TO_ONE|ROUND_ROBIN|AUTO_MATCH`；动作默认为 `UPLOAD_ONLY`，还可为 `QUEUE|START_AFTER_CONFIRM` |
+| `BatchDispatchConfirmRequest` | `planId,version,itemIds,confirmationToken` | 均必填；使用最近一次未过期预览返回的值；`itemIds` 最多 100 个 |
+| `BatchDispatchRetryPreviewRequest` | `sourcePlanId,sourceItemIds,retryKey` | 均必填；只提交确认结果中 `retryable=true` 且 `jobId=null` 的明细；每次最多 100 个 |
+
+批量预览响应 `DispatchPlanPreviewVO` 字段为 `planId`、`version`、`mode`、`strategy`、`action`、`confirmationToken`、`expiresAt`、`items`、`conflicts`。明细 `DispatchPlanItemVO` 包含 `itemId`、文件/打印机 ID 和名称、`printerStatus`、`canExecute`、`status`、`reasonCode`、`message`、`jobId`、`sourcePlanId`、`sourceItemId`、`recoveryAction`、`attemptCount`、`retryable`。确认响应 `BatchDispatchConfirmVO` 包含 `planId`、`status`、`repeated` 和逐项 `items`。
+
+批量确认是幂等的：重复提交同一 `planId + version + confirmationToken` 时读取已保存结果并返回 `repeated=true`；前端不要用旧计划调用恢复预览。恢复预览必须使用 `sourcePlanId`、`sourceItemIds` 和新的 `retryKey`。
+
+### 4.8 前端错误处理约定
+
+`request.js` 负责 Bearer Token、统一响应解包和未授权跳转。前端业务代码必须保留后端的 `code`、HTTP 状态和 `traceId`（若响应包含），不能仅根据 HTTP 200 判断业务成功。
+
+| 场景 | HTTP/code | 前端处理 |
+|---|---:|---|
+| 参数校验失败 | 400/400 | 展示字段或表单错误，不自动重试 |
+| 未登录或 Token 失效 | 401/401 | 清理本地用户状态，断开 WebSocket，回到登录页 |
+| 无权限或账号被禁用 | 403/403 | 提示无权限；不要重复请求 |
+| 资源不存在 | 404/404 | 刷新列表或提示资源已不存在 |
+| 资源冲突 | 409/409 | 保留用户输入，提示重新获取最新状态 |
+| 状态不允许 | 422/422 | 刷新任务/设备状态后再决定是否允许操作 |
+| 设备离线/忙/协议不支持 | 503/10001、409/10002、422/10003 | 提示设备状态，不显示为操作成功 |
+| MySQL/Redis/RustFS/网络不可用 | 503/5001、5002、5003、5004 | 按基础设施类型提示；仅幂等读请求可按退避策略重试 |
+
+错误响应仍使用统一结构：`{ code, message, data: null, timestamp }`。前端不得把密码、JWT、设备 API Key、对象存储 URL 或完整请求体写入日志。
 
 ## 5. 已完成接口补充契约
 
@@ -665,6 +743,59 @@ PRINTER_OFFLINE   打印机离线
 JOB_STATUS        任务状态变化
 ```
 
+四类消息的 `data` 结构固定如下。所有消息都保留相同的顶层字段；`SNAPSHOT` 不携带 `printerId`，其余三类必须携带正数 `printerId`。
+
+`SNAPSHOT`：
+
+```json
+{
+  "version": "1",
+  "type": "SNAPSHOT",
+  "eventId": "evt-snapshot-001",
+  "sequence": 43,
+  "printerId": null,
+  "timestamp": 1756790000000,
+  "data": { "printers": [] }
+}
+```
+
+`PRINTER_STATUS` 的 `data` 为实时设备状态对象，字段包括 `unifiedState`、`state`、`filename`、`progress`、`printDuration`、`totalDuration`、`filamentUsed`、`toolTemperature`、`toolTarget`、`bedTemperature`、`bedTarget`、`systemState`、`systemMessage`、`currentJobId` 和 `currentJobFileName`；没有值时可为 null。
+
+`PRINTER_OFFLINE`：
+
+```json
+{
+  "version": "1",
+  "type": "PRINTER_OFFLINE",
+  "eventId": "evt-offline-001",
+  "sequence": 44,
+  "printerId": 403,
+  "timestamp": 1756790000000,
+  "data": { "status": "OFFLINE", "reason": "设备无法连接" }
+}
+```
+
+`JOB_STATUS`：
+
+```json
+{
+  "version": "1",
+  "type": "JOB_STATUS",
+  "eventId": "evt-job-001",
+  "sequence": 45,
+  "printerId": 403,
+  "timestamp": 1756790000000,
+  "data": {
+    "currentJobId": 1001,
+    "status": "FAILED",
+    "progress": 35.5,
+    "errorReason": "设备报告任务失败"
+  }
+}
+```
+
+`JOB_STATUS` 只在任务有绑定打印机时发送；没有打印机的 `QUEUED` 任务以 REST 队列/分页结果为准。客户端必须丢弃重复或旧 `sequence` 事件，发现断档或未知 `version` 时重新请求打印机 REST 快照。服务端不会发送包含 API Key、Token、密码、session key 或 RustFS key 的消息。
+
 当前已实现消息类型和 `FarmStatusMessage` 顶层结构，并由服务端校验类型、时间戳、关联 ID 和敏感字段。鉴权成功后服务端发送一次 `SNAPSHOT`，其 `data.printers` 使用安全 `PrinterVO`，没有打印机时返回空数组。监控任务通过 `WebSocketEventPublisher` 发布 `PRINTER_STATUS` 和 `PRINTER_OFFLINE`：状态/进度数据变化时推送，连续离线只推送一次，设备恢复后重新推送状态。任务服务和监控任务在任务状态 `updateById` 成功后发布 `JOB_STATUS`；有数据库事务时，四类业务事件统一在事务提交后广播，事务回滚不广播；无事务的监控场景直接发布。没有绑定打印机的排队任务不发送任务事件。服务端按 `farm.websocket.heartbeat-interval`（Spring Duration，默认 `30s`）发送协议级 Ping，连接上限按 `farm.websocket.max-connections` 配置（默认 100），失败连接会清理。2026-09-03 的历史容器冒烟曾收到 46 台打印机的快照，后续当前实例验证为 49 台；两者均为当时数据库设备数量，不属于固定契约。前端已完成自动重连、告警展示、重复/乱序事件丢弃、sequence 断档后的 REST 快照恢复和客户端测试，浏览器端完整端到端与真实设备事件仍待后续联调。本阶段已完成握手鉴权，生产环境不再允许匿名广播。
 
 ## 8. 打印机协议适配约定
@@ -905,7 +1036,11 @@ http://localhost:8080/swagger-ui.html
 http://localhost:8080/v3/api-docs
 ```
 
-Swagger 反映当前 Controller 上的 OpenAPI 注解；WebSocket `@ServerEndpoint` 不会作为 REST OpenAPI 路由展示。本文第 4 节正式 API 与当前 Controller 对应，批量接口的请求体、响应体、枚举和 Bearer Token 说明已同步。新增或修改 Controller 后，必须同步本文并检查 `/v3/api-docs`。
+开发环境 Swagger UI 的 Authorize 使用 `bearerAuth`，输入登录接口返回的 JWT（只输入 Token，UI 会自动补充 Bearer 前缀）。开发环境同时注册 `moonrakerApiKey` 方案，但 Moonraker 兼容接口是否实际要求 `X-Api-Key` 由服务端配置决定。
+
+当前后端 OpenAPI 配置包括：FabMatrix API 标题和版本、统一 `Result<T>`/`PageResult<T>` 模型说明、JWT Bearer 安全方案、Moonraker API Key 方案、Controller 路由、请求 DTO 字段约束、响应 VO 字段和常见 400/401/403/404/409/422/500/503 响应说明。生产 Profile 必须关闭 `springdoc.api-docs.enabled` 和 `springdoc.swagger-ui.enabled`，生产安全检查会拒绝启用状态。
+
+Swagger 反映当前 Controller 上的 OpenAPI 注解；WebSocket `@ServerEndpoint` 不会作为 REST OpenAPI 路由展示，必须按第 7 节手工联调。本文第 4 节正式 API 与当前 Controller 对应，批量接口的请求体、响应体、枚举和 Bearer Token 说明已同步。新增或修改 Controller、DTO、VO 后，必须同步本文并检查 `/v3/api-docs`。
 
 本文是当前唯一的接口交接文档；接口联调以本文、实际 Controller、`SecurityConfig` 和 `/v3/api-docs` 为准。
 
