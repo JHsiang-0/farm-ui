@@ -309,10 +309,14 @@
     </div>
 
       <!-- 分页 -->
-      <div v-if="fileList.length > 0" class="flex justify-center pt-2 shrink-0">
-      <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize"
-        :total="pagination.total" :show-page-size="false"
-        @change="handlePageChange" class="p-4" />
+      <div v-if="fileList.length > 0" class="app-pagination-footer">
+        <t-pagination
+          v-model:current="pagination.pageNum"
+          v-model:pageSize="pagination.pageSize"
+          :total="pagination.total"
+          :show-page-size="false"
+          @change="handlePageChange"
+        />
       </div>
     </div>
 

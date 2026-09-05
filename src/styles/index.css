@@ -74,6 +74,19 @@ body {
   min-height: 0;
 }
 
+.app-pagination-footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: 100%;
+  min-height: 2.5rem;
+  margin-top: 1rem;
+}
+
+.app-pagination-footer .t-pagination {
+  width: 100%;
+}
+
 .app-page-toolbar {
   display: flex;
   align-items: center;

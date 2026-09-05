@@ -29,7 +29,15 @@
           </template>
         </TdTableColumn>
       </TdTable>
-      <t-pagination v-model:current="pagination.pageNum" v-model:pageSize="pagination.pageSize" :total="pagination.total" class="mt-4 justify-center" @change="fetchUsers" />
+      <div class="app-pagination-footer">
+        <t-pagination
+          v-model:current="pagination.pageNum"
+          :page-size="pagination.pageSize"
+          :total="pagination.total"
+          :show-page-size="false"
+          @change="fetchUsers"
+        />
+      </div>
     </t-card>
 
     <t-dialog v-model:visible="dialogVisible" header="新增用户" @confirm="submitCreate" :confirm-btn="{ loading: submitting }">

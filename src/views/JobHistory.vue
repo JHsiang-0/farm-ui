@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <t-card class="app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
+    <t-card class="job-history-card app-page-card shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
       <!-- 顶部检索区 -->
       <div class="bg-gray-50 p-4 rounded-lg mb-4">
         <div class="flex flex-wrap items-center gap-4">
@@ -186,7 +186,7 @@
       </div>
 
       <!-- 底部分页区 -->
-      <div class="mt-4 flex justify-center px-4">
+      <div class="app-pagination-footer">
         <t-pagination
           v-model:current="pagination.pageNum"
           v-model:pageSize="pagination.pageSize"
@@ -443,6 +443,25 @@ fetchData()
 </script>
 
 <style scoped>
+.job-history-card {
+  position: relative;
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+  height: auto;
+}
+
+.job-history-card :deep(.t-card__body) {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+  padding-bottom: 4.5rem;
+}
+
 .job-history-table-panel {
   display: flex;
   flex: 1 1 auto;
@@ -463,6 +482,15 @@ fetchData()
 
 .job-history-table :deep(th) {
   white-space: nowrap;
+}
+
+.job-history-card .app-pagination-footer {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1rem;
+  left: 1.5rem;
+  width: auto;
+  margin-top: 0;
 }
 
 .history-action-group {
