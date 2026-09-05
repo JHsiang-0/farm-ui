@@ -35,6 +35,9 @@
         <t-button :icon="renderIcon(Refresh)" :loading="loading" @click="fetchData" size="medium">
           刷新
         </t-button>
+        <t-button variant="outline" @click="openUnallocatedDialog">
+          未分配设备
+        </t-button>
         <t-button v-if="isAdmin" theme="warning" @click="openScanDialog">
           <span><aim /></span>
           扫描局域网设备
@@ -44,6 +47,23 @@
           新增打印机
         </t-button>
       </div>
+    </div>
+
+    <div class="printer-filter-bar app-page-card">
+      <t-input
+        v-model="keyword"
+        clearable
+        placeholder="按机器名称搜索"
+        @enter="applyFilters"
+        @clear="applyFilters"
+      >
+        <template #prefixIcon><search /></template>
+      </t-input>
+      <t-select v-model="statusFilter" clearable placeholder="按状态筛选" @change="applyFilters">
+        <t-option label="全部状态" value="" />
+        <t-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+      </t-select>
+      <t-button theme="primary" @click="applyFilters">查询</t-button>
     </div>
 
     <!-- 数据表格 -->
@@ -59,11 +79,11 @@
         />
         <TdTable
           v-else
-          :data="tableData"
+          :data="displayTableData"
           :loading="loading"
           style="width: 100%"
           class="min-h-0 flex-1 overflow-hidden rounded-lg"
-          :header-cell-style="{ background: '#f9fafb' }"
+          :header-cell-style="{ background: 'var(--td-bg-color-secondarycontainer)' }"
           @row-click="handleRowClick"
           row-class-name="cursor-pointer hover:bg-gray-50"
           height="100%"
@@ -174,12 +194,12 @@
                 编辑
               </t-button>
               <!-- 删除按钮 -->
-              <t-popconfirm v-if="isAdmin" content="确定要删除这台机器吗？"
+              <t-popconfirm v-if="isAdmin" :content="getDeleteMessage(scope.row)"
                 theme="danger"
                 @confirm="handleDelete(scope.row.id)"
               >
                 <template>
-                  <t-button size="small" theme="danger" variant="outline">
+                  <t-button size="small" theme="danger" variant="outline" :loading="deletingIds.includes(scope.row.id)">
                     <span><delete /></span>
                   </t-button>
                 </template>
@@ -264,6 +284,38 @@
         </div>
       </template>
     </t-dialog>
+
+    <!-- 未分配设备抽屉 -->
+    <t-drawer v-model:visible="unallocatedDialogVisible" header="未分配设备" size="720px" destroy-on-close>
+      <AsyncState
+        v-if="unallocatedLoading || unallocatedError || unallocatedPrinters.length === 0"
+        :loading="unallocatedLoading"
+        :error="unallocatedError"
+        :empty="unallocatedPrinters.length === 0"
+        empty-description="暂无未分配设备"
+        @retry="loadUnallocatedPrinters"
+      />
+      <t-table
+        v-else
+        :data="unallocatedPrinters"
+        :columns="unallocatedColumns"
+        row-key="id"
+        bordered
+        hover
+      >
+        <template #status="slotProps">
+          <t-tag :theme="getStatusType(slotProps.row.status)" variant="light" size="small">
+            {{ getStatusLabel(slotProps.row.status) }}
+          </t-tag>
+        </template>
+        <template #position>
+          <t-button size="small" variant="text" @click="goToDashboard">前往看板管理位置</t-button>
+        </template>
+      </t-table>
+      <template #footer>
+        <t-button @click="unallocatedDialogVisible = false">关闭</t-button>
+      </template>
+    </t-drawer>
 
     <!-- 扫描局域网设备弹窗 -->
     <t-dialog v-model:visible="scanDialogVisible" header="扫描局域网设备"
@@ -416,7 +468,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import {
   RefreshIcon as Refresh,
@@ -438,6 +491,7 @@ import {
   deletePrinter,
   scanPrinters,
   batchAddPrinters,
+  getUnallocatedPrinters,
   confirmSafe,
   getPrinterStatusHistory,
   getPrinterStatistics
@@ -448,7 +502,8 @@ import { renderIcon } from '@/utils/tdesign'
 import { useUserStore } from '@/stores/user'
 import { useDeviceStore } from '@/stores/printer/deviceStore'
 import { useRealtimeStore } from '@/stores/printer/realtimeStore'
-import { PRINTER_STATUS_MAP } from '@/utils/constants'
+import { PRINTER_STATUS, PRINTER_STATUS_MAP } from '@/utils/constants'
+import { normalizePrinterStatus } from '@/utils/dataAdapters'
 import DeviceDetailDrawer from '@/components/device/DeviceDetailDrawer.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -464,6 +519,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const deviceStore = useDeviceStore()
 const realtimeStore = useRealtimeStore()
+const { statusMap } = storeToRefs(realtimeStore)
 const isAdmin = computed(() => userStore.isAdmin)
 const tableData = ref([])
 const total = ref(0)
@@ -472,11 +528,17 @@ const queryParams = reactive({
   pageSize: 20
 })
 
-const statusFilterConfig = {
-  PRINTING: { label: '打印中', theme: 'primary' },
-  IDLE: { label: '空闲打印机', theme: 'success' },
-  ATTENTION: { label: '异常设备', theme: 'danger' }
-}
+const keyword = ref('')
+const statusFilter = ref('')
+const statusFilterConfig = Object.fromEntries(Object.entries(PRINTER_STATUS_MAP).map(([value, config]) => [value, {
+    label: config.label,
+    theme: config.type
+  }]))
+
+const statusOptions = Object.values(PRINTER_STATUS).map(value => ({
+  value,
+  label: PRINTER_STATUS_MAP[value].label
+}))
 
 const activeStatusFilterKey = computed(() => {
   const value = Array.isArray(route.query.status) ? route.query.status[0] : route.query.status
@@ -487,7 +549,9 @@ const activeStatusFilter = computed(() => statusFilterConfig[activeStatusFilterK
 // ===== 设备详情抽屉状态 =====
 const detailDrawerVisible = ref(false)
 const selectedDevice = ref(null)
-const selectedDeviceRealTimeData = ref(null)
+const selectedDeviceRealTimeData = computed(() => {
+  return selectedDevice.value ? statusMap.value.get(String(selectedDevice.value.id)) || null : null
+})
 const detailLoading = ref(false)
 const detailError = ref('')
 const PRINTER_DETAIL_CONTEXT_KEY = 'farm-ui:printer-detail'
@@ -532,10 +596,28 @@ const scanResults = ref([])
 const isBatchAdding = ref(false)
 const selectedDevices = ref([])
 const scanTableRef = ref(null)
+const unallocatedDialogVisible = ref(false)
+const unallocatedPrinters = ref([])
+const unallocatedLoading = ref(false)
+const unallocatedError = ref('')
+const unallocatedColumns = [
+  { colKey: 'name', title: '机器名称', ellipsis: true },
+  { colKey: 'ipAddress', title: 'IP 地址', width: 150 },
+  { colKey: 'status', title: '状态', width: 100, cell: 'status' },
+  { colKey: 'firmwareType', title: '协议', width: 100 },
+  { colKey: 'position', title: '位置', width: 140, cell: 'position' }
+]
 
 // ===== 现场操作状态 =====
 const confirmingSafeIds = ref([])
 const startingJobIds = ref([])
+const deletingIds = ref([])
+
+const displayTableData = computed(() => tableData.value.map(printer => {
+  const realtime = statusMap.value.get(String(printer.id))
+  const realtimeState = realtime?.unifiedState || realtime?.state
+  return realtimeState ? { ...printer, status: normalizePrinterStatus(realtimeState) } : printer
+}))
 
 // 扫描统计文案
 const scanStatsText = computed(() => {
@@ -644,7 +726,6 @@ const handleStartJob = async (printer) => {
 const handleRowClick = (row) => {
   selectedDevice.value = row
   sessionStorage.setItem(PRINTER_DETAIL_CONTEXT_KEY, String(row.id))
-  selectedDeviceRealTimeData.value = realtimeStore.getDeviceRealTimeStatus(row.id)
   detailError.value = ''
   historyPageNum.value = 1
   historyRange.value = []
@@ -728,7 +809,6 @@ const clearPrinterDetailContext = () => {
   detailDrawerVisible.value = false
   sessionStorage.removeItem(PRINTER_DETAIL_CONTEXT_KEY)
   selectedDevice.value = null
-  selectedDeviceRealTimeData.value = null
   detailLoading.value = false
   detailError.value = ''
   printerHistory.value = []
@@ -756,7 +836,8 @@ const fetchData = async () => {
   try {
     const res = await getPrinterList({
       ...queryParams,
-      ...(activeStatusFilterKey.value ? { status: activeStatusFilterKey.value } : {})
+      ...(activeStatusFilterKey.value ? { status: activeStatusFilterKey.value } : {}),
+      ...(keyword.value.trim() ? { name: keyword.value.trim() } : {})
     })
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
@@ -768,17 +849,25 @@ const fetchData = async () => {
   }
 }
 
-const clearStatusFilter = () => {
-  const query = { ...route.query }
-  delete query.status
+const applyFilters = () => {
   queryParams.pageNum = 1
+  const query = { ...route.query }
+  if (statusFilter.value) query.status = statusFilter.value
+  else delete query.status
   router.replace({ path: route.path, query })
+  if (statusFilter.value === activeStatusFilterKey.value) fetchData()
 }
 
-watch(() => route.query.status, () => {
+const clearStatusFilter = () => {
+  statusFilter.value = ''
+  applyFilters()
+}
+
+watch(() => route.query.status, value => {
+  statusFilter.value = Array.isArray(value) ? value[0] || '' : value || ''
   queryParams.pageNum = 1
   fetchData()
-})
+}, { immediate: true })
 
 // 点击新增按钮
 const handleAdd = () => {
@@ -833,6 +922,8 @@ const submitForm = async () => {
 
 // 删除数据
 const handleDelete = async (id) => {
+  if (deletingIds.value.includes(id)) return
+  deletingIds.value.push(id)
   try {
     await deletePrinter(id)
     message.success('删除成功')
@@ -840,9 +931,41 @@ const handleDelete = async (id) => {
       queryParams.pageNum--
     }
     fetchData()
-  } catch {
-    // 错误在拦截器处理
+  } catch (error) {
+    message.error(error?.message || '删除失败，请刷新后重试')
+  } finally {
+    const index = deletingIds.value.indexOf(id)
+    if (index > -1) deletingIds.value.splice(index, 1)
   }
+}
+
+const getDeleteMessage = printer => {
+  const currentState = getStatusLabel(printer.status)
+  return printer.currentJobId
+    ? `该设备当前为“${currentState}”，并关联任务 #${printer.currentJobId}。删除可能被服务端拒绝，确定继续吗？`
+    : `确定删除设备“${printer.name || printer.ipAddress}”吗？`
+}
+
+const openUnallocatedDialog = () => {
+  unallocatedDialogVisible.value = true
+  loadUnallocatedPrinters()
+}
+
+const loadUnallocatedPrinters = async () => {
+  unallocatedLoading.value = true
+  unallocatedError.value = ''
+  try {
+    unallocatedPrinters.value = await getUnallocatedPrinters()
+  } catch (error) {
+    unallocatedError.value = error?.message || '未分配设备加载失败，请重试'
+  } finally {
+    unallocatedLoading.value = false
+  }
+}
+
+const goToDashboard = () => {
+  unallocatedDialogVisible.value = false
+  router.push({ name: 'fullscreen-dashboard' })
 }
 
 // ===== 局域网扫描逻辑 =====
@@ -914,12 +1037,23 @@ const handleBatchAdd = async () => {
   }
 }
 
-onMounted(() => {
-  fetchData()
-})
 </script>
 
 <style scoped>
+.printer-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-3);
+  margin-bottom: var(--app-spacing-4);
+  padding: var(--app-spacing-3);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-medium);
+}
+
+.printer-filter-bar .t-input { width: min(320px, 100%); }
+.printer-filter-bar .t-select { width: 180px; }
+
 .printer-manage-card {
   height: 100%;
 }
@@ -939,5 +1073,11 @@ onMounted(() => {
 .printer-manage-card__table {
   flex: 1 1 0%;
   min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .printer-filter-bar { align-items: stretch; flex-direction: column; }
+  .printer-filter-bar .t-input,
+  .printer-filter-bar .t-select { width: 100%; }
 }
 </style>
