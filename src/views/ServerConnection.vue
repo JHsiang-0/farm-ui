@@ -22,19 +22,34 @@
         {{ successMessage }}
       </t-alert>
 
-      <t-form :data="form" :rules="rules" label-align="top" @submit="handleSubmit">
-        <t-form-item label="服务器地址" name="apiBaseUrl" help="例如：http://192.168.0.10:8080">
-          <t-input v-model="form.apiBaseUrl" placeholder="http://服务器地址:端口" clearable />
-        </t-form-item>
-        <t-form-item label="WebSocket 地址（可选）" name="wsUrl" help="留空时根据服务器地址自动推导 /ws/farm-status">
-          <t-input v-model="form.wsUrl" placeholder="ws://服务器地址:端口/ws/farm-status" clearable />
-        </t-form-item>
+      <t-form :data="form" label-align="top">
+        <div class="connection-endpoint-grid">
+          <t-form-item label="协议" name="protocol">
+            <t-select v-model="form.protocol">
+              <t-option label="HTTP" value="http" />
+              <t-option label="HTTPS" value="https" />
+            </t-select>
+          </t-form-item>
+          <t-form-item class="connection-endpoint-grid__host" label="服务器 IP / 主机" name="host">
+            <t-input v-model="form.host" placeholder="例如：192.168.0.10" clearable />
+          </t-form-item>
+          <t-form-item label="端口" name="port">
+            <t-input v-model="form.port" inputmode="numeric" placeholder="8080" clearable />
+          </t-form-item>
+        </div>
+        <div class="connection-endpoint-preview">
+          <span>连接地址</span>
+          <code>{{ displayBaseUrl }}</code>
+        </div>
 
         <div class="connection-actions">
-          <t-button theme="primary" type="submit" :loading="testing">
-            {{ testing ? '正在测试连接' : '测试并保存' }}
+          <t-button variant="outline" :loading="testing" :disabled="testing" @click="testConnection">
+            测试
           </t-button>
-          <t-button variant="outline" :disabled="testing" @click="resetToEnvironment">
+          <t-button theme="primary" :loading="saving" :disabled="testing || saving" @click="saveAndConnect">
+            保存并连接
+          </t-button>
+          <t-button variant="text" :disabled="testing || saving" @click="resetToEnvironment">
             使用启动配置
           </t-button>
         </div>
@@ -46,6 +61,7 @@
           <li>地址只保存在当前浏览器或 Electron 用户配置中，不包含账号、密码和 Token。</li>
           <li>自动搜索局域网服务器需要后端提供发现协议；当前 API 的扫描功能仅用于发现打印机。</li>
           <li>测试会访问后端公开的健康检查接口，不会执行业务写操作。</li>
+          <li>WebSocket 会按后端约定自动使用同一主机和端口的 <code>/ws/farm-status</code>。</li>
         </ul>
       </div>
 
@@ -60,53 +76,83 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getEnvironmentServerConfig, getServerConfig, normalizeServerUrl, saveServerConfig } from '@/utils/serverConfig'
+import { buildServerBaseUrl, getEnvironmentServerConfig, getServerConfig, parseServerEndpoint, saveServerConfig } from '@/utils/serverConfig'
 
 defineOptions({ name: 'ServerConnectionView' })
 
 const router = useRouter()
 const initialConfig = getServerConfig()
+const initialEndpoint = parseServerEndpoint(initialConfig.apiBaseUrl)
 const form = reactive({
-  apiBaseUrl: initialConfig.apiBaseUrl,
-  wsUrl: initialConfig.wsUrl
+  protocol: initialEndpoint.protocol,
+  host: initialEndpoint.host,
+  port: initialEndpoint.port
 })
 const testing = ref(false)
+const saving = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const rules = {
-  apiBaseUrl: [{ required: true, message: '请输入服务器地址' }]
+
+const displayBaseUrl = computed(() => buildServerBaseUrl(form) || '尚未填写完整')
+
+const getHealthUrl = baseUrl => `${baseUrl}/actuator/health`
+
+const resolveBaseUrl = () => {
+  const baseUrl = buildServerBaseUrl(form)
+  if (!form.host?.trim()) throw new Error('请输入服务器 IP 或主机名')
+  if (!/^\d{1,5}$/.test(String(form.port || '').trim()) || Number(form.port) < 1 || Number(form.port) > 65535) {
+    throw new Error('端口必须是 1 到 65535 的数字')
+  }
+  if (!baseUrl) throw new Error('请输入有效的服务器地址')
+  return baseUrl
 }
 
-const displayBaseUrl = computed(() => form.apiBaseUrl || '使用当前页面代理')
+const requestHealth = async () => {
+  const baseUrl = resolveBaseUrl()
+  const response = await fetch(getHealthUrl(baseUrl), {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  })
+  if (!response.ok) throw new Error(`服务器返回 HTTP ${response.status}`)
+  return baseUrl
+}
 
-const getHealthUrl = baseUrl => `${normalizeServerUrl(baseUrl)}/actuator/health`
-
-const handleSubmit = async ({ validateResult }) => {
-  if (validateResult !== true) return
-
+const testConnection = async () => {
   testing.value = true
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    const response = await fetch(getHealthUrl(form.apiBaseUrl), {
-      method: 'GET',
-      headers: { Accept: 'application/json' }
-    })
-    if (!response.ok) throw new Error(`服务器返回 HTTP ${response.status}`)
-
-    saveServerConfig(form)
-    successMessage.value = '服务器连接成功，配置已保存。'
+    await requestHealth()
+    successMessage.value = '服务器连接测试成功，尚未保存配置。'
   } catch (error) {
-    errorMessage.value = error?.message || '无法连接服务器，请检查地址、端口和网络。'
+    errorMessage.value = error?.message || '无法连接服务器，请检查 IP、端口和网络。'
   } finally {
     testing.value = false
   }
 }
 
+const saveAndConnect = async () => {
+  saving.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    const apiBaseUrl = await requestHealth()
+    saveServerConfig({ apiBaseUrl })
+    successMessage.value = '服务器连接成功，配置已保存。'
+  } catch (error) {
+    errorMessage.value = error?.message || '无法连接服务器，配置未保存。'
+  } finally {
+    saving.value = false
+  }
+}
+
 const resetToEnvironment = () => {
   const config = getEnvironmentServerConfig()
-  form.apiBaseUrl = config.apiBaseUrl
-  form.wsUrl = config.wsUrl
+  const endpoint = parseServerEndpoint(config.apiBaseUrl)
+  form.protocol = endpoint.protocol
+  form.host = endpoint.host
+  form.port = endpoint.port
   errorMessage.value = ''
   successMessage.value = '已载入当前启动配置，请测试后保存。'
 }
@@ -116,11 +162,15 @@ const goLogin = () => router.push({ name: 'login' })
 
 <style scoped>
 .connection-page {
-  display: grid;
-  place-items: center;
-  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
   padding: 32px 20px;
   background: var(--app-page-background);
+  overflow-y: auto;
 }
 
 .connection-card {
@@ -130,6 +180,7 @@ const goLogin = () => router.push({ name: 'login' })
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-large);
   box-shadow: var(--app-shadow-raised);
+  margin: auto;
 }
 
 .connection-brand {
@@ -186,8 +237,37 @@ const goLogin = () => router.push({ name: 'login' })
   margin-bottom: 20px;
 }
 
+.connection-endpoint-grid {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 120px;
+  gap: 12px;
+}
+
+.connection-endpoint-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: -4px;
+  padding: 10px 12px;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
+  border-radius: var(--app-radius);
+  font-size: 13px;
+}
+
+.connection-endpoint-preview code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-primary);
+  font-family: var(--app-font-family);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .connection-actions {
   display: flex;
+  align-items: center;
   gap: 12px;
   margin-top: 24px;
 }
@@ -224,7 +304,12 @@ const goLogin = () => router.push({ name: 'login' })
 }
 
 @media (max-width: 640px) {
+  .connection-page {
+    padding: 16px 12px;
+  }
+
   .connection-card {
+    width: 100%;
     padding: 24px 20px;
   }
 
@@ -238,6 +323,15 @@ const goLogin = () => router.push({ name: 'login' })
 
   .connection-actions .t-button {
     width: 100%;
+  }
+
+  .connection-endpoint-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .connection-endpoint-grid__host {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
   .connection-footer {

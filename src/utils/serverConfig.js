@@ -48,6 +48,30 @@ export const getEnvironmentServerConfig = () => ({
   wsUrl: envWsUrl
 })
 
+export const parseServerEndpoint = value => {
+  const normalized = normalizeServerUrl(value)
+  if (!normalized) return { protocol: 'http', host: '', port: '' }
+
+  const parsed = new URL(normalized)
+  return {
+    protocol: parsed.protocol === 'https:' ? 'https' : 'http',
+    host: parsed.hostname,
+    port: parsed.port || (parsed.protocol === 'https:' ? '443' : '80')
+  }
+}
+
+export const buildServerBaseUrl = ({ protocol = 'http', host, port }) => {
+  const normalizedProtocol = protocol === 'https' ? 'https' : 'http'
+  const normalizedHost = String(host || '').trim()
+  const normalizedPort = String(port || '').trim()
+  if (!normalizedHost || !/^\d{1,5}$/.test(normalizedPort) || Number(normalizedPort) < 1 || Number(normalizedPort) > 65535) return ''
+
+  const hostWithBrackets = normalizedHost.includes(':') && !normalizedHost.startsWith('[')
+    ? `[${normalizedHost}]`
+    : normalizedHost
+  return normalizeServerUrl(`${normalizedProtocol}://${hostWithBrackets}:${normalizedPort}`)
+}
+
 export const getApiBaseUrl = () => getServerConfig().apiBaseUrl
 
 export const getWebSocketBaseUrl = () => {

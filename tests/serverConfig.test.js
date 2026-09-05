@@ -13,11 +13,13 @@ globalThis.window = {
 
 const {
   clearServerConfig,
+  buildServerBaseUrl,
   getApiBaseUrl,
   getEnvironmentServerConfig,
   getServerConfig,
   getWebSocketBaseUrl,
   normalizeServerUrl,
+  parseServerEndpoint,
   saveServerConfig
 } = await import('../src/utils/serverConfig.js')
 
@@ -25,6 +27,16 @@ test('normalizes and validates server URLs without accepting credentials or unsu
   assert.equal(normalizeServerUrl(' http://192.168.0.10:8080/ '), 'http://192.168.0.10:8080')
   assert.equal(normalizeServerUrl('ftp://192.168.0.10:8080'), '')
   assert.equal(normalizeServerUrl('http://user:password@192.168.0.10:8080'), '')
+})
+
+test('拆分并重建服务器 IP、端口和协议', () => {
+  assert.deepEqual(parseServerEndpoint('https://farm.example.com:8443'), {
+    protocol: 'https',
+    host: 'farm.example.com',
+    port: '8443'
+  })
+  assert.equal(buildServerBaseUrl({ protocol: 'http', host: '192.168.0.10', port: '8080' }), 'http://192.168.0.10:8080')
+  assert.equal(buildServerBaseUrl({ protocol: 'http', host: '192.168.0.10', port: '0' }), '')
 })
 
 test('uses the saved server endpoint for HTTP and derives its WebSocket endpoint', () => {
