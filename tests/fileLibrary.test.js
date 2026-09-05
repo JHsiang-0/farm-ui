@@ -36,3 +36,14 @@ test('文件详情仅展示安全元数据并区分缩略图不可用', () => {
   assert.doesNotMatch(detailSource, /上传用户ID/)
   assert.match(source, /getThumbnailUrl\(file\.id\)/)
 })
+
+test('文件库默认使用可滚动列表并保留网格切换和显式详情入口', () => {
+  assert.match(source, /const viewMode = ref\('list'\)/)
+  assert.match(source, /<QueryToolbar class="file-library-filter-row"/)
+  assert.match(source, /height="100%"[\s\S]*@selection-change/)
+  assert.match(source, /@click\.stop="openFileDetail\(row\)"/)
+  assert.match(source, /\.file-library-layout[\s\S]*height: clamp\(520px, calc\(100vh - 260px\), 780px\)/)
+  assert.match(source, /\.file-library-tree[\s\S]*overflow-y: auto/)
+  assert.match(source, /\.file-table-view :deep\(\.t-table__content\)[\s\S]*overflow-y: auto/)
+  assert.doesNotMatch(source, /viewMode = ref\('grid'\)/)
+})

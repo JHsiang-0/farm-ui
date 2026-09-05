@@ -1,10 +1,11 @@
 <template>
   <div class="app-page-shell app-page-background file-library-page">
-    <div class="app-page-toolbar file-library-page-toolbar">
-      <div class="file-library-page-toolbar__heading">
-        <h1 class="app-page-toolbar__title app-route-title">文件库</h1>
-        <p>管理可见的切片文件与目录，选择文件后可直接创建打印任务。</p>
-      </div>
+    <PageHeader
+      class="file-library-page-toolbar"
+      title="文件库"
+      description="管理可见的切片文件与目录，选择文件后可直接创建打印任务。"
+    >
+      <template #actions>
       <div class="file-library-toolbar__actions">
         <t-space class="file-view-toggle">
           <t-button variant="text" size="small" @click="viewMode = 'grid'"
@@ -30,7 +31,8 @@
           刷新
         </t-button>
       </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <t-card class="file-library-card app-page-card" bordered>
       <div class="file-library-layout">
@@ -65,7 +67,7 @@
         </aside>
 
         <section class="file-library-main" aria-labelledby="file-library-results-title">
-          <div class="file-library-filter-row">
+          <QueryToolbar class="file-library-filter-row" label="文件筛选条件">
             <div class="file-library-navigation">
               <span class="file-library-section-label">当前位置</span>
               <t-breadcrumb separator="/">
@@ -94,7 +96,7 @@
                 @change="handleSearch" @keyup.enter="handleSearch">
               </t-input>
             </div>
-          </div>
+          </QueryToolbar>
 
           <div class="file-library-results">
             <div class="file-library-results-heading">
@@ -106,14 +108,20 @@
             </div>
 
             <AsyncState
-              v-if="loading || loadError || fileList.length === 0"
+              v-if="fileList.length === 0"
               :loading="loading"
               :error="loadError"
-              :empty="fileList.length === 0"
+              :empty="!loading && !loadError"
               empty-description="暂无文件，请上传 G-Code 文件"
               @retry="fetchData"
             />
-            <div v-else class="file-library-list">
+            <t-alert v-if="loadError && fileList.length" theme="error" :close-btn="false" class="mb-3">
+              <template #default>{{ loadError }}</template>
+              <template #operation>
+                <t-button size="small" variant="outline" @click="fetchData">重试</t-button>
+              </template>
+            </t-alert>
+            <div v-if="fileList.length" class="file-library-list">
       <!-- 网格视图 -->
       <div v-if="viewMode === 'grid'" class="file-grid-view">
         <!-- 文件夹 -->
@@ -258,7 +266,7 @@
 
       <!-- 列表视图 -->
       <div v-else class="file-table-view">
-        <TdTable :data="fileList" :loading="loading" @selection-change="handleSelectionChange"
+        <TdTable :data="fileList" :loading="loading" height="100%" @selection-change="handleSelectionChange"
           @row-click="handleTableRowClick" border stripe style="width: 100%">
           <TdTableColumn type="selection" width="50" align="center" />
 
@@ -329,9 +337,14 @@
                 <t-button v-if="row.folder" theme="primary" size="small" :icon="renderIcon(FolderOpened)" @click="navigateToFolder(row)">
                   打开
                 </t-button>
-                <t-button v-else theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
-                  打印
-                </t-button>
+                <template v-else>
+                  <t-button variant="text" size="small" @click.stop="openFileDetail(row)">
+                    详情
+                  </t-button>
+                  <t-button theme="primary" size="small" :icon="renderIcon(Printer)" @click="handlePrint(row)">
+                    打印
+                  </t-button>
+                </template>
                 <t-button theme="danger" size="small" :icon="renderIcon(Delete)" :loading="deletingIds.includes(row.id)"
                   :disabled="batchDeleting || deletingIds.length > 0" @click="handleDelete(row.id)">
                   删除
@@ -567,6 +580,8 @@ import { createPrintJob } from '@/api/job'
 import { getPrinterList } from '@/api/printer'
 import { formatDuration, formatFileSize } from '@/utils/formatters'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import QueryToolbar from '@/components/layout/QueryToolbar.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -591,7 +606,7 @@ const selectedIds = ref([])
 const searchKeyword = ref('')
 const materialFilter = ref('')
 // 后端当前不支持标签筛选，避免向接口发送未定义参数。
-const viewMode = ref('grid')
+const viewMode = ref('list')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
 const creatingFolder = ref(false)
@@ -1326,41 +1341,24 @@ onMounted(() => {
 
 .file-library-page-toolbar {
   align-items: flex-start;
-  margin-bottom: 0;
-}
-
-.file-library-page-toolbar__heading {
-  min-width: 0;
-}
-
-.file-library-page-toolbar__heading p {
-  margin: 6px 0 0;
-  color: var(--app-text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .file-library-card {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
+  display: block;
   width: 100%;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .file-library-card :deep(.t-card__body) {
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
+  display: block;
   padding: 0;
 }
 
 .file-library-layout {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  flex: 1 1 0%;
+  height: clamp(520px, calc(100vh - 260px), 780px);
   min-width: 0;
   min-height: 0;
 }
@@ -1427,6 +1425,7 @@ onMounted(() => {
   min-height: 0;
   padding: var(--app-spacing-5);
   background: var(--app-surface);
+  overflow: hidden;
 }
 
 .file-library-filter-row {
@@ -1501,6 +1500,10 @@ onMounted(() => {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.file-table-view :deep(.t-table__content) {
+  overflow-y: auto;
 }
 
 .file-view-toggle {
@@ -1806,6 +1809,7 @@ onMounted(() => {
 
   .file-library-layout {
     display: flex;
+    height: auto;
     flex-direction: column;
   }
 
@@ -1818,6 +1822,7 @@ onMounted(() => {
   }
 
   .file-library-main {
+    min-height: 520px;
     padding: var(--app-spacing-3);
   }
 

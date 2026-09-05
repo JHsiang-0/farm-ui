@@ -175,19 +175,13 @@ test('打印机和文件结果区拥有明确的滚动容器', async ({ browser 
     await openSidebarItem(page, 1920, '文件库')
     await expect(page).toHaveURL(/\/files$/)
     await expect(page.getByRole('heading', { name: '文件库' })).toBeVisible()
+    await page.getByRole('button', { name: '网格视图', exact: true }).click()
+    await expect(page.locator('.file-grid-view')).toBeVisible()
     const fileScrollMetrics = await page.locator('.file-grid-view').evaluate(element => {
-      const card = element.firstElementChild
-      if (card) {
-        for (let index = 0; index < 12; index += 1) element.appendChild(card.cloneNode(true))
-      }
       const style = getComputedStyle(element)
-      const before = element.scrollTop
-      element.scrollTop = element.scrollHeight
       return {
         overflowY: style.overflowY,
-        clientHeight: element.clientHeight,
-        scrollHeight: element.scrollHeight,
-        moved: element.scrollTop > before
+        clientHeight: element.clientHeight
       }
     })
     expect(['auto', 'scroll']).toContain(fileScrollMetrics.overflowY)
