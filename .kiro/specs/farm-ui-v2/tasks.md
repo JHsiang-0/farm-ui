@@ -414,7 +414,7 @@
 - 需要后端配合：否，仅需可访问的测试服务。
 - 需要真实打印机：否。
 - 风险：当前仓库技术栈和桌面壳配置需在实施时重新确认。
-- 完成状态：待开始。
+- 完成状态：已完成。新增 `npm run verify` 门禁，覆盖全量测试、lint、普通/mock/desktop/desktop-mock 构建；桌面开发命令已实际启动 Vite 与 Electron，目录包在 `release-smoke/win-unpacked` 生成并完成 `Farm UI.exe` 可启动、窗口标题和响应性进程冒烟。Computer Use RPC 未配置，未宣称视觉级人工验收；未修改 v2 API 契约。
 
 ## 5. 任务数量与依赖波次
 

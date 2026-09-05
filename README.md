@@ -43,6 +43,21 @@ npm run build
 npm run lint
 ```
 
+### 交付前验证门禁
+
+```sh
+npm run verify              # 全量测试、lint、浏览器和桌面端构建
+npm run test:mock          # Mock HTTP 集成回归
+```
+
+`verify` 不连接真实后端或打印机；真实联调前仍需配置后端地址。Windows 桌面端可用以下命令生成目录包进行冒烟检查：
+
+```sh
+npm run desktop:build:dir
+```
+
+目录包默认输出到 `release/win-unpacked`；若该目录被系统或运行中的 Electron 占用，应先关闭占用进程，或为 electron-builder 指定一个新的输出目录。
+
 ## Windows 桌面端
 
 项目使用 Electron 运行前端页面，使用 electron-builder 生成 Windows NSIS 安装包。

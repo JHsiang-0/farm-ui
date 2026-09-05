@@ -19,6 +19,7 @@
     "desktop:build:dir": "npm run build:desktop && electron-builder --win dir",
     "test": "node --test tests/*.test.js",
     "test:mock": "node --test tests/p1MockE2E.test.js",
+    "verify": "npm run test && npm run lint && npm run build && npm run build:mock && npm run build:desktop && npm run build:desktop:mock",
     "preview": "vite preview",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
