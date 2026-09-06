@@ -13,5 +13,7 @@ test('项目验证门禁覆盖测试、lint、浏览器和桌面构建', async (
   assert.match(scripts.verify, /npm run build:desktop/)
   assert.match(scripts.verify, /npm run build:desktop:mock/)
   assert.equal(packageJson.main, 'electron/main.cjs')
+  assert.match(scripts['desktop:run'], /electron \. --farm-dist/)
+  assert.match(scripts['desktop:run:mock'], /electron \. --farm-dist/)
   assert.match(scripts['desktop:build:dir'], /electron-builder --win dir/)
 })

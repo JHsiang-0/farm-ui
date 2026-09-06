@@ -14,6 +14,8 @@ const WINDOW_SIZE = {
   viewportRatio: 0.7
 }
 
+let activeRenderer = null
+
 app.setAppUserModelId(APP_ID)
 
 // Playwright Electron smoke runs use an isolated profile so a developer's
@@ -24,13 +26,17 @@ if (process.env.FARM_ELECTRON_E2E_USER_DATA) {
 
 let mainWindow = null
 
-const shouldUseDistRenderer = () => app.isPackaged || process.env.FARM_ELECTRON_E2E_DIST === '1'
+const shouldUseDistRenderer = () => (
+  app.isPackaged
+  || process.env.FARM_ELECTRON_E2E_DIST === '1'
+  || process.argv.includes('--farm-dist')
+)
 
-const getRendererSource = () => shouldUseDistRenderer()
-  ? pathToFileURL(DIST_INDEX_PATH).href
-  : DEV_SERVER_URL
+const getPlannedRenderer = () => shouldUseDistRenderer()
+  ? { mode: 'dist-file', source: pathToFileURL(DIST_INDEX_PATH).href }
+  : { mode: 'dev-server', source: DEV_SERVER_URL }
 
-const getRendererMode = () => shouldUseDistRenderer() ? 'dist-file' : 'dev-server'
+const getRenderer = () => activeRenderer || getPlannedRenderer()
 
 const getRuntimeInfo = () => {
   const contentSize = mainWindow && !mainWindow.isDestroyed()
@@ -41,8 +47,8 @@ const getRuntimeInfo = () => {
     appId: APP_ID,
     appVersion: app.getVersion(),
     isPackaged: app.isPackaged,
-    rendererMode: getRendererMode(),
-    rendererSource: getRendererSource(),
+    rendererMode: getRenderer().mode,
+    rendererSource: getRenderer().source,
     userDataPath: app.getPath('userData'),
     window: {
       contentSize,
@@ -60,16 +66,19 @@ const loadRenderer = async () => {
     }
 
     await mainWindow.loadFile(DIST_INDEX_PATH)
+    activeRenderer = getPlannedRenderer()
     return
   }
 
   try {
     await mainWindow.loadURL(DEV_SERVER_URL)
+    activeRenderer = getPlannedRenderer()
   } catch (error) {
     if (!fs.existsSync(DIST_INDEX_PATH)) throw error
 
     console.warn('Vite 开发服务器不可用，将回退到本地构建产物:', error.message)
     await mainWindow.loadFile(DIST_INDEX_PATH)
+    activeRenderer = { mode: 'dist-file', source: pathToFileURL(DIST_INDEX_PATH).href }
   }
 }
 

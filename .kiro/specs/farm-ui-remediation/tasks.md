@@ -626,7 +626,7 @@ git diff --check：通过。
 任务：UI-003 Electron Window Chrome & Scroll Ownership Remediation
 所属 Spec：farm-ui-remediation
 状态说明：[ ] 待完成；[x] 已完成；[-] 有条件跳过并记录原因
-任务状态：待开始
+任务状态：进行中
 任务类型：独立 Electron UI/UX 与运行时布局整改，不属于 farm-ui-v2，不修改 UI-001、UI-002 历史完成状态。
 
 ### 7.0 任务目标与边界
@@ -638,7 +638,7 @@ git diff --check：通过。
 - 清理活动页面中的旧版 `overflow-auto`、仅针对 Firefox 的滚动条样式和与新 TDesign 页面壳冲突的高度规则；不修改备份文件。
 - 不新增、伪造或修改后端 API、字段、业务状态、账号和数据；窗口控制只使用 Electron IPC，不经过业务 API。
 
-### 7.1 UI-003.0 Electron 运行实例与窗口基线
+### [x] UI-003.0 Electron 运行实例与窗口基线
 
 优先级：P0
 范围：`electron/main.cjs`、`electron/preload.cjs`、`tests/e2e/electron.spec.js`、`tests/e2e/electron-dist.spec.js`、任务记录
@@ -656,6 +656,16 @@ git diff --check：通过。
 - 运行时诊断能区分 `dev-server` 与 `dist-file`，测试失败时记录实际 renderer source。
 - 不杀死或覆盖用户启动的未知进程；测试使用隔离用户目录并在结束后清理。
 - 完成后提交：`test: 建立 Electron 窗口渲染基线`。
+
+完成记录：已修正 Electron 运行时来源诊断，主进程在实际 `loadURL`/`loadFile` 完成后记录 `activeRenderer`；新增 `--farm-dist` 强制使用当前构建产物，并将 `desktop:run`、`desktop:run:mock` 改为构建后强制加载当前 `dist`，避免旧的 5176 Vite 进程污染桌面运行结果。项目脚本测试同步覆盖该入口约束。
+
+修改文件：`electron/main.cjs`、`package.json`、`tests/projectScripts.test.js`、本任务记录。
+
+验证记录：`npm test` 141/141 通过；`npm run test:electron:dist` 1/1 通过，运行时报告 `rendererMode=dist-file`、file URL、renderer mode `desktop`、`useMock=false`；`npm run lint` 通过；`npm run build` 与 `npm run build:desktop` 通过。构建仍有既有动态导入和大 chunk 警告，不影响退出码。
+
+环境限制：当前 5176 由用户启动的真实 `desktop` Vite 实例占用，本轮不杀死或覆盖该进程，因此没有对该实例运行依赖 `desktop-mock` 的常规 Electron E2E；此前已有的 desktop-mock 运行链路保持不改。本子任务使用隔离的 dist Electron 测试验证构建运行入口。未新增 API、字段、业务状态、Mock 数据或真实凭据。
+
+提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 通过。提交：`test: 建立 Electron 窗口渲染基线`。
 
 ### 7.2 UI-003.1 Electron 无边框窗口与自绘标题栏
 
