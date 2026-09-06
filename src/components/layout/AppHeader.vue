@@ -24,13 +24,13 @@
       >
         <DesktopIcon size="19" />
       </t-button>
-      <t-button variant="text" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
+      <t-button variant="text" class="header-icon-button" aria-label="消息通知" title="通知中心暂未开放" disabled>
         <MailIcon size="19" />
       </t-button>
-      <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心" @click="message.info('帮助中心将在后续版本开放')">
+      <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="帮助中心" title="帮助中心暂未开放" disabled>
         <HelpCircleIcon size="19" />
       </t-button>
-      <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置" @click="message.info('系统设置将在后续版本开放')">
+      <t-button variant="text" class="header-icon-button app-header__optional-action" aria-label="系统设置" title="系统设置暂未开放" disabled>
         <SettingIcon size="19" />
       </t-button>
       <t-tag
@@ -70,7 +70,6 @@ import {
   MenuUnfoldIcon,
   SettingIcon
 } from 'tdesign-icons-vue-next'
-import { message } from '@/utils/message'
 import { enterAppFullscreen } from '@/utils/fullscreen'
 import { useRealtimeStore } from '@/stores/printer/realtimeStore'
 import AppUserMenu from './AppUserMenu.vue'

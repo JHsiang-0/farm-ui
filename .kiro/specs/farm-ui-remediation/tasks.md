@@ -530,7 +530,7 @@ git diff --check：通过。
 
 提交：完成最终检查后创建独立本地提交 `fix: 优化 Electron 任务工作流`，不执行 push。
 
-### [ ] UI-002.5 全局反馈与桌面交互语义
+### [x] UI-002.5 全局反馈与桌面交互语义
 
 优先级：P1
 范围：`src/components/layout/AppHeader.vue`、`src/utils`、`src/views/RouteResult.vue`、各页面异步状态、相关测试
@@ -548,6 +548,30 @@ git diff --check：通过。
 - 重试动作不会重复提交或污染其他页面状态。
 - 页面刷新、返回、重新登录和实时恢复后的数据状态一致。
 - 完成后提交：`fix: 完善 Electron 全局状态反馈`。
+
+完成记录：Header 中通知、帮助、系统设置等尚未有正式业务能力支撑的入口改为明确 disabled 并提供暂未开放说明，不再使用 Toast 冒充功能；实时连接、陈旧、恢复和重连入口继续绑定真实 realtime Store。任务与文件详情 Drawer 统一使用 TDesign 受控 `v-model:visible`、显式关闭按钮和 Escape 关闭，页面级错误继续通过区域 Alert/Retry 保留上下文，请求层错误保留正式 HTTP/业务码映射和去重提示。
+
+修改文件：`src/components/layout/AppHeader.vue`、`tests/accessibilityInteraction.test.js`、本任务记录。任务/文件 Drawer 的受控关闭能力已分别在 UI-002.3 和 UI-002.4 完成，本子任务通过全局回归复核。
+
+用户流程影响：桌面和移动端都能识别哪些 Header 入口可用、哪些仍未开放；实时状态异常有文案和重连操作；任务/文件详情支持鼠标关闭和 Escape 关闭，关闭后父页面上下文同步恢复；401/403/404/409/422/503、网络失败和实时断开继续由现有请求/Store 链路处理，不把失败状态伪装成成功。
+
+API/OpenAPI 核对：未新增接口、字段或业务数据；本子任务只调整全局交互表达和既有错误上下文，实时状态继续使用已核对的 WebSocket 快照/事件协议，业务请求继续通过统一 request 层和 API 模块。
+
+Loading/Empty/Error：未移除既有页面/Drawer 的 Loading、Empty、Error/Retry；请求层继续按正式 HTTP 与业务错误码生成上下文；实时断开、陈旧和恢复通过状态 Tag/文案表达，重连动作由 Store 负责并避免重复连接。
+
+响应式视口：浏览器 375/768/1440/1920 四视口和 Electron 800×560、1024×640、1200×760 回归通过；通知入口在移动端保持可见但禁用，帮助/设置按现有移动端信息密度隐藏并保留桌面端明确 disabled 语义。
+
+测试：`npm test`（141/141）、`npm run test:e2e`（9/9）、`npm run test:electron`（2/2）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 分包提示和大 chunk 警告。
+
+git status --short：提交前仅包含本子任务的 Header、详情交互、相关测试和本任务记录。
+
+git diff --check：通过。
+
+提交：完成最终检查后创建独立本地提交 `fix: 完善 Electron 全局状态反馈`，不执行 push。
 
 ### [ ] UI-002.6 Electron 视觉回归与发布门禁
 
