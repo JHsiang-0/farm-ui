@@ -316,7 +316,7 @@ git diff --check：
 - 不执行 `git push`，不修改或引用 `src/stores/printerStore.js.backup`。
 - 每项记录 Loading、Empty、Error、状态同步、Electron 窗口尺寸和未验证的真实环境限制。
 
-### [ ] UI-002.0 Electron 运行基线与版本一致性
+### [x] UI-002.0 Electron 运行基线与版本一致性
 
 优先级：P0
 范围：`electron/main.cjs`、`electron/preload.cjs`、`vite.config.js`、`playwright.config.js`、`tests/e2e/electron.spec.js`、桌面启动文档（如需）
@@ -333,6 +333,30 @@ git diff --check：
 - 800×560、1024×640、1200×760 可启动并进入登录/主工作区。
 - 开发 Mock 与真实后端边界记录清楚；真实后端未验证时明确标记。
 - 完成后提交：`docs: 建立 Electron UI-002 运行基线`（若包含代码测试，则按代码任务门禁执行）。
+
+完成记录：Electron 主进程增加只读运行诊断，记录 appId、版本、运行模式、渲染资源来源、隔离用户目录和窗口边界；preload 暴露诊断入口；渲染层记录 Vite mode、BASE_URL、API 基地址、WebSocket 地址和 Mock 模式。桌面页面标题由 Web 统一为 Desktop。Playwright 增加真实 BrowserWindow 内容尺寸回归，使用 800×560、1024×640、1200×760 验证窗口尺寸和文档宽度；增加 dist-file smoke，实际加载 `dist/index.html`，不登录、不写业务数据。
+
+修改文件：`AGENTS.md`、`electron/main.cjs`、`electron/preload.cjs`、`index.html`、`package.json`、`playwright.config.js`、`src/main.js`、`tests/e2e/electron.spec.js`、`tests/e2e/electron-dist.spec.js`。
+
+用户流程影响：不改变业务接口和登录/初始化主视觉；Electron 开发模式与 desktop 构建产物的资源来源、窗口尺寸和运行配置现在有可重复诊断证据。
+
+API/OpenAPI 核对：未新增接口、字段或业务数据；渲染层诊断只读取现有环境配置，业务 API 仍按 API_HANDOFF 和既有 request 层执行。
+
+Loading/Empty/Error：本子任务不改变业务状态处理；dist-file smoke 不登录、不触发业务写操作，真实后端和实体设备状态仍由后续子任务验证。
+
+响应式视口：Electron 实际 BrowserWindow 内容尺寸覆盖 800×560、1024×640、1200×760；开发模式通过无页面级水平溢出检查，构建模式通过 dist-file 启动和无页面级水平溢出检查。
+
+测试：`npm test`（139/139）、`npm run test:electron`（1/1）、`npm run test:electron:dist`（包含 `npm run build:desktop`，1/1）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 分包提示和大 chunk 警告。
+
+git status --short：提交前仅包含 UI-002.0 的运行诊断、Electron 测试、构建配置、AGENTS 说明和本任务记录。
+
+git diff --check：通过。
+
+提交：完成最终检查后创建独立本地提交 `feat: 完成 UI-002.0 Electron 运行基线`，不执行 push。
 
 ### [ ] UI-002.1 App Shell 与滚动所有权复验
 

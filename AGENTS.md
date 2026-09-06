@@ -66,7 +66,7 @@ npm run lint        # 运行 Oxlint 和 ESLint（脚本会执行 --fix）
 npm run format      # 格式化 src/
 ```
 
-当前提供 `npm test`，使用 Node.js 内置测试运行器执行 `tests/` 下的测试文件。新增测试时应同步补充 `package.json` 命令和本文件说明。
+当前提供 `npm test`，使用 Node.js 内置测试运行器执行 `tests/` 下的测试文件；`npm run test:electron:dist` 会先构建 desktop 产物，再验证 Electron 的 `dist-file` 入口。新增测试时应同步补充 `package.json` 命令和本文件说明。
 
 ## 代码规范
 

@@ -26,6 +26,10 @@ export default defineConfig({
     {
       name: 'electron',
       testMatch: '**/electron.spec.js'
+    },
+    {
+      name: 'electron-dist',
+      testMatch: '**/electron-dist.spec.js'
     }
   ],
   webServer: [

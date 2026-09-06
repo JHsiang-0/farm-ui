@@ -1,5 +1,6 @@
 const path = require('node:path')
 const fs = require('node:fs')
+const { pathToFileURL } = require('node:url')
 const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
 
 const APP_ID = 'com.example.farmui'
@@ -23,8 +24,41 @@ if (process.env.FARM_ELECTRON_E2E_USER_DATA) {
 
 let mainWindow = null
 
+const shouldUseDistRenderer = () => app.isPackaged || process.env.FARM_ELECTRON_E2E_DIST === '1'
+
+const getRendererSource = () => shouldUseDistRenderer()
+  ? pathToFileURL(DIST_INDEX_PATH).href
+  : DEV_SERVER_URL
+
+const getRendererMode = () => shouldUseDistRenderer() ? 'dist-file' : 'dev-server'
+
+const getRuntimeInfo = () => {
+  const contentSize = mainWindow && !mainWindow.isDestroyed()
+    ? mainWindow.getContentSize()
+    : null
+
+  return {
+    appId: APP_ID,
+    appVersion: app.getVersion(),
+    isPackaged: app.isPackaged,
+    rendererMode: getRendererMode(),
+    rendererSource: getRendererSource(),
+    userDataPath: app.getPath('userData'),
+    window: {
+      contentSize,
+      isFullscreen: Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFullScreen()),
+      minSize: [WINDOW_SIZE.minWidth, WINDOW_SIZE.minHeight],
+      maxSize: [WINDOW_SIZE.maxWidth, WINDOW_SIZE.maxHeight]
+    }
+  }
+}
+
 const loadRenderer = async () => {
-  if (app.isPackaged) {
+  if (shouldUseDistRenderer()) {
+    if (!fs.existsSync(DIST_INDEX_PATH)) {
+      throw new Error(`找不到桌面构建入口：${DIST_INDEX_PATH}`)
+    }
+
     await mainWindow.loadFile(DIST_INDEX_PATH)
     return
   }
@@ -56,6 +90,8 @@ ipcMain.handle('farm-window:set-fullscreen', (_event, fullscreen) => {
   mainWindow.setFullScreen(Boolean(fullscreen))
   return mainWindow.isFullScreen()
 })
+
+ipcMain.handle('farm-runtime:get-info', () => getRuntimeInfo())
 
 const getWindowSize = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize

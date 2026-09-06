@@ -19,7 +19,26 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
   try {
     const page = await electronApp.firstWindow()
     await page.waitForLoadState('domcontentloaded')
-    await expect(page).toHaveTitle(/FabMatrix Web/)
+    await expect(page).toHaveTitle(/FabMatrix Desktop/)
+
+    const mainRuntime = await page.evaluate(() => window.farmDesktop.getRuntimeInfo())
+    expect(mainRuntime.appId).toBe('com.example.farmui')
+    expect(mainRuntime.isPackaged).toBe(false)
+    expect(mainRuntime.rendererMode).toBe('dev-server')
+    expect(mainRuntime.rendererSource).toBe('http://127.0.0.1:5176')
+    expect(mainRuntime.userDataPath).toContain('fabmatrix-electron-e2e-')
+    expect(mainRuntime.window.minSize).toEqual([800, 560])
+    expect(mainRuntime.window.maxSize).toEqual([1200, 760])
+
+    const rendererRuntime = await page.evaluate(() => window.__FARM_RUNTIME_DIAGNOSTICS__?.())
+    expect(rendererRuntime).toEqual({
+      mode: 'desktop-mock',
+      baseUrl: '/',
+      useMock: true,
+      apiBaseUrl: 'http://localhost:8080',
+      wsUrl: 'ws://localhost:8080/ws/farm-status'
+    })
+
     await expect(page.getByRole('heading', { name: '欢迎回来' })).toBeVisible()
     await page.getByLabel('用户名', { exact: true }).fill('admin')
     await page.getByLabel('密码', { exact: true }).fill('Admin123')
@@ -27,14 +46,19 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard/)
     await expect(page.getByRole('heading', { name: '概览仪表盘' })).toBeVisible()
 
-    const windowMetrics = await page.evaluate(() => ({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      documentWidth: document.documentElement.scrollWidth
-    }))
-    expect(windowMetrics.width).toBeGreaterThanOrEqual(800)
-    expect(windowMetrics.height).toBeGreaterThanOrEqual(560)
-    expect(windowMetrics.documentWidth).toBeLessThanOrEqual(windowMetrics.width + 1)
+    for (const size of [[800, 560], [1024, 640], [1200, 760]]) {
+      await electronApp.evaluate(({ BrowserWindow }, nextSize) => {
+        BrowserWindow.getAllWindows()[0]?.setContentSize(nextSize[0], nextSize[1])
+      }, size)
+      await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual(size)
+
+      const windowMetrics = await page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        documentWidth: document.documentElement.scrollWidth
+      }))
+      expect(windowMetrics.documentWidth).toBeLessThanOrEqual(windowMetrics.width + 1)
+    }
 
     await page.getByRole('button', { name: '实时设备看板', exact: true }).click()
     await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard\/fullscreen/)
