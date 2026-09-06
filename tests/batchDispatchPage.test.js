@@ -20,7 +20,7 @@ test('批量派发一次只展示当前步骤，并提供可回退的步骤操�
   assert.match(source, /currentStep === 0/)
   assert.match(source, /currentStep === 1/)
   assert.match(source, /currentStep === 2 \|\| currentStep === 3/)
-  assert.match(source, /v-else class="panel" title="逐项结果"/)
+  assert.match(source, /v-else class="dispatch-panel" aria-labelledby="dispatch-result-title"/)
   assert.match(source, /下一步：配置策略/)
   assert.match(source, /@click="goToSelection"/)
   assert.match(source, /@click="goToStrategy"/)

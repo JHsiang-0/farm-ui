@@ -18,7 +18,8 @@
     </t-steps>
 
     <template v-if="currentStep === 0">
-      <t-card class="panel" title="批量上传">
+      <section class="dispatch-panel" aria-labelledby="batch-upload-title">
+        <div class="dispatch-panel__heading"><h2 id="batch-upload-title">批量上传</h2></div>
         <p class="hint">支持多个 .gcode、.g、.3mf、.stl 文件；上传结果按文件分别返回。</p>
         <t-upload theme="file" multiple :auto-upload="false" accept=".gcode,.g,.3mf,.stl"
           :files="uploadFiles" @select-change="handleFileChange" />
@@ -38,10 +39,11 @@
             </t-button>
           </template>
         </t-alert>
-      </t-card>
+      </section>
 
       <div class="selection-grid">
-        <t-card class="panel" :title="`选择文件（${selectedFileIds.length}）`">
+        <section class="dispatch-panel" :aria-label="`选择文件（${selectedFileIds.length}）`">
+          <div class="dispatch-panel__heading"><h2>选择文件（{{ selectedFileIds.length }}）</h2></div>
           <t-checkbox-group v-model="selectedFileIds" class="selection-group">
             <t-checkbox v-for="file in files" :key="file.id" :value="file.id" class="selection-row">
               <span>{{ file.originalName || `文件 #${file.id}` }}</span>
@@ -49,9 +51,10 @@
             </t-checkbox>
           </t-checkbox-group>
           <t-empty v-if="!files.length" description="暂无文件，请先批量上传或刷新。" />
-        </t-card>
+        </section>
 
-        <t-card class="panel" :title="`选择打印机（${selectedPrinterIds.length}）`">
+        <section class="dispatch-panel" :aria-label="`选择打印机（${selectedPrinterIds.length}）`">
+          <div class="dispatch-panel__heading"><h2>选择打印机（{{ selectedPrinterIds.length }}）</h2></div>
           <t-checkbox-group v-model="selectedPrinterIds" class="selection-group">
             <t-checkbox v-for="printer in printers" :key="printer.id" :value="printer.id" class="selection-row">
               <span>{{ printer.name }}</span>
@@ -59,7 +62,7 @@
             </t-checkbox>
           </t-checkbox-group>
           <t-empty v-if="!printers.length" description="暂无打印机，请先添加设备。" />
-        </t-card>
+        </section>
       </div>
 
       <div class="step-actions">
@@ -69,7 +72,8 @@
       </div>
     </template>
 
-    <t-card v-else-if="currentStep === 1" class="panel step-panel" title="配置策略">
+    <section v-else-if="currentStep === 1" class="dispatch-panel step-panel" aria-labelledby="dispatch-strategy-title">
+      <div class="dispatch-panel__heading"><h2 id="dispatch-strategy-title">配置策略</h2></div>
       <t-alert theme="info" :close-btn="false" class="mb-4">
         已选择 {{ selectedFileIds.length }} 个文件和 {{ selectedPrinterIds.length }} 台打印机，请选择分配策略和确认后的动作。
       </t-alert>
@@ -95,9 +99,10 @@
           {{ previewing ? '生成中…' : '生成派发预览' }}
         </t-button>
       </div>
-    </t-card>
+    </section>
 
-    <t-card v-else-if="currentStep === 2 || currentStep === 3" class="panel" title="无副作用预览">
+    <section v-else-if="currentStep === 2 || currentStep === 3" class="dispatch-panel" aria-labelledby="dispatch-preview-title">
+      <div class="dispatch-panel__heading"><h2 id="dispatch-preview-title">无副作用预览</h2></div>
       <p class="hint">计划 {{ previewData.planId }} · 版本 {{ previewData.version }} · 动作 {{ previewData.action || action }}。</p>
       <t-alert v-if="previewExpired" class="mb-3" theme="warning" title="预览已过期，请重新生成" :close-btn="false" />
       <t-alert v-if="previewData.conflicts?.length" class="mb-3" theme="warning" title="存在不可分配冲突" :close-btn="false">
@@ -120,9 +125,10 @@
         {{ confirming ? '执行中…' : `确认执行（${executableItemIds.length}项）` }}
         </t-button>
       </div>
-    </t-card>
+    </section>
 
-    <t-card v-else class="panel" title="逐项结果">
+    <section v-else class="dispatch-panel" aria-labelledby="dispatch-result-title">
+      <div class="dispatch-panel__heading"><h2 id="dispatch-result-title">逐项结果</h2></div>
       <t-alert class="mb-3" theme="info" :title="`执行完成：计划状态 ${confirmData.planStatus || confirmData.status || '—'}`" :close-btn="false">
         成功 {{ confirmSuccessCount }} 项，失败 {{ confirmFailureCount }} 项
         <span v-if="confirmData.repeated">（重复确认已返回原结果）</span>
@@ -167,7 +173,7 @@
           再次获取执行结果
         </t-button>
       </div>
-    </t-card>
+    </section>
   </div>
 </template>
 
@@ -504,10 +510,11 @@ onUnmounted(stopPreviewExpiryTimer)
 </script>
 
 <style scoped>
-.batch-dispatch-page { display: flex; flex-direction: column; min-height: 100%; overflow: visible; color: var(--app-text-primary); }
+.batch-dispatch-page { display: flex; flex-direction: column; min-height: 100%; overflow: visible; color: var(--app-text-primary); gap: var(--app-spacing-4); }
 .hint { color: var(--app-text-secondary); margin: 6px 0 12px; }
-.panel { margin-bottom: 16px; }
-.panel :deep(.t-card__body) { min-width: 0; }
+.dispatch-panel { min-width: 0; padding: var(--app-spacing-5); background: var(--app-surface); border: 1px solid var(--app-border); border-radius: var(--app-radius-large); }
+.dispatch-panel__heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--app-spacing-4); }
+.dispatch-panel__heading h2 { margin: 0; color: var(--app-text-primary); font-size: var(--td-font-size-title-medium); font-weight: 700; }
 .selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--app-border-subtle); }
 .selection-row span { flex: 1; }

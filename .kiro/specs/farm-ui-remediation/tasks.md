@@ -486,7 +486,7 @@ git diff --check：通过。
 
 提交：完成最终检查后创建独立本地提交 `fix: 重构 Electron 文件库工作台`，不执行 push。
 
-### [ ] UI-002.4 任务中心与批量派发工作流
+### [x] UI-002.4 任务中心与批量派发工作流
 
 优先级：P1
 范围：`src/views/JobQueue.vue`、`src/views/JobHistory.vue`、`src/views/BatchDispatch.vue`、任务详情/状态适配器、相关测试
@@ -505,6 +505,30 @@ git diff --check：通过。
 - 只有 `retryable=true` 的失败项显示重试。
 - 小数据量不使用空白撑满内容；底部操作和分页可达。
 - 完成后提交：`fix: 优化 Electron 任务工作流`。
+
+完成记录：队列、活动任务和历史页面统一为单一任务工作区，保留 QUEUED、活动任务和历史独立数据集；少量数据保持自然高度，仅在数据量足够时启用 TDesign Table 局部滚动。队列和活动任务保留显式详情入口，低频操作按正式状态收进“更多”，历史筛选接入公共 QueryToolbar；任务详情 Drawer 改为受控 `v-model:visible` 并提供明确关闭按钮。批量派发继续使用五步 TDesign Steps，但每一步只呈现一个当前工作区，保留可回退操作、无副作用预览、确认幂等、逐项结果和 retryable 恢复入口，移除旧版 Card 堆叠。
+
+修改文件：`src/views/JobQueue.vue`、`src/views/JobHistory.vue`、`src/views/BatchDispatch.vue`、`src/components/TaskDetailDrawer.vue`、`tests/taskCenter.test.js`、`tests/batchDispatchPage.test.js`、本任务记录。
+
+用户流程影响：Electron 下可从队列/历史稳定打开和关闭任务详情；队列动作继续按任务状态显示，409/422 后重新读取服务端数据；新建任务、指派、取消、暂停、恢复、重排队和安全确认入口未改变业务语义；批量派发可在当前步骤完成资源选择、策略配置、预览、确认和逐项恢复。
+
+API/OpenAPI 核对：未新增接口、字段或业务数据；队列、活动、历史继续使用既有 `/api/v1/print-jobs/queue`、`/api/v1/print-jobs/active`、`/api/v1/print-jobs/page` 及状态动作接口；任务创建只提交正式 `fileId`、可选 `printerId`、`priority`、`idempotencyKey`；批量派发只复用文件树、打印机列表、预览、确认和 retryable 恢复契约。页面不把任务列表或预览对象扩展为未定义业务字段。
+
+Loading/Empty/Error：队列、活动、历史保留区域级 Loading、Empty、Error/Retry；刷新失败保留已有数据；任务详情加载失败保留列表任务上下文；任务创建、派发和设备动作保持操作中防重复提交，并在失败后重新同步服务端状态；批量上传部分失败和确认结果继续逐项展示，仅对 retryable 项显示恢复入口。
+
+响应式视口：浏览器 375/768/1440/1920 四视口及 Electron 800×560、1024×640、1200×760 均通过现有主流程回归；重点覆盖任务中心详情 Drawer、Escape 关闭、批量派发预览确认和页面级水平溢出。
+
+测试：`npm test`（141/141）、`npm run test:e2e`（9/9）、`npm run test:electron`（2/2）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 分包提示和大 chunk 警告。
+
+git status --short：提交前仅包含本子任务的队列、历史、批量派发、任务详情 Drawer、相关测试和本任务记录。
+
+git diff --check：通过。
+
+提交：完成最终检查后创建独立本地提交 `fix: 优化 Electron 任务工作流`，不执行 push。
 
 ### [ ] UI-002.5 全局反馈与桌面交互语义
 

@@ -10,9 +10,9 @@
       </template>
     </PageHeader>
 
-    <t-card class="app-page-card history-card">
+    <section class="history-workspace" aria-label="打印历史工作区">
       <!-- 顶部检索区 -->
-      <div class="history-filter-toolbar">
+      <QueryToolbar class="history-filter-toolbar" label="打印历史筛选条件">
         <div class="flex flex-wrap items-center gap-4">
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-700 whitespace-nowrap">任务状态</span>
@@ -58,17 +58,16 @@
             </t-button>
           </div>
         </div>
-      </div>
+      </QueryToolbar>
 
       <!-- 数据表格区 -->
       <AsyncState
-        v-if="tableData.length === 0"
+        v-if="loading || (loadError && tableData.length === 0)"
         :loading="loading"
         :error="loadError"
-        :empty="!loading && !loadError"
-        empty-description="暂无打印历史记录"
         @retry="fetchData"
       />
+      <t-empty v-else-if="tableData.length === 0" description="暂无打印历史记录" />
       <t-alert v-if="loadError && tableData.length" theme="error" :close-btn="false" class="mb-3">
         <template #default>{{ loadError }}</template>
         <template #operation>
@@ -189,7 +188,7 @@
           @change="handlePaginationChange"
         />
       </div>
-    </t-card>
+    </section>
     <TaskDetailDrawer
       v-model="detailDrawerVisible"
       :task="selectedJob"
@@ -217,6 +216,7 @@ import TdTable from '@/components/TdTable.vue'
 import TdTableColumn from '@/components/TdTableColumn.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import QueryToolbar from '@/components/layout/QueryToolbar.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { useJobStore } from '@/stores/jobStore'
@@ -416,17 +416,19 @@ fetchData()
 </script>
 
 <style scoped>
-.history-card :deep(.t-card__body) {
-  display: block;
+.history-workspace {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  padding: var(--app-spacing-5);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-large);
 }
 
 .history-filter-toolbar {
-  flex: 0 0 auto;
-  margin-bottom: var(--app-spacing-4);
-  padding: var(--app-spacing-4);
-  background: var(--app-surface-muted);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
+  margin-bottom: var(--app-spacing-5);
 }
 
 .history-table {

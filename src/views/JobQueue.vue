@@ -15,7 +15,7 @@
 
     <t-tabs v-model:value="activeTab" class="job-queue-tabs">
       <t-tab-panel value="queue" label="待派发任务">
-        <t-card class="job-panel-card app-page-card">
+        <section class="job-panel" aria-label="待派发任务">
       <AsyncState
         v-if="queueData.length === 0"
         :loading="queueLoading"
@@ -123,11 +123,11 @@
         </TdTableColumn>
       </TdTable>
 
-        </t-card>
+        </section>
       </t-tab-panel>
 
       <t-tab-panel value="active" label="活动任务">
-        <t-card class="job-panel-card app-page-card">
+        <section class="job-panel" aria-label="活动任务">
       <AsyncState
         v-if="activePageData.length === 0"
         :loading="activeLoading"
@@ -197,7 +197,7 @@
           @change="handleActivePageChange"
         />
       </div>
-        </t-card>
+        </section>
       </t-tab-panel>
     </t-tabs>
 
@@ -856,8 +856,15 @@ onMounted(() => {
   min-width: 0;
 }
 
-.job-panel-card :deep(.t-card__body) {
-  display: block;
+.job-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  padding: var(--app-spacing-5);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-large);
 }
 
 .job-table {

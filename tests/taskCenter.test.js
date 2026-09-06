@@ -40,3 +40,11 @@ test('任务详情只展示后端任务字段并对缺失值使用占位', () =>
   assert.match(detailSource, /v-if="hasValue\(task\.progress\)"/)
   assert.doesNotMatch(detailSource, /task\.progress \|\| 0/)
 })
+
+test('任务中心使用统一工作区并让详情 Drawer 受控关闭', () => {
+  assert.match(queueSource, /class="job-panel"/)
+  assert.match(historySource, /<QueryToolbar class="history-filter-toolbar"/)
+  assert.doesNotMatch(queueSource + historySource + detailSource, /job-panel-card|class="history-card"/)
+  assert.match(detailSource, /v-model:visible="drawerVisible"/)
+  assert.match(detailSource, /aria-label="关闭任务详情"/)
+})
