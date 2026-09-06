@@ -157,29 +157,40 @@
                 </t-tag>
               </template>
             </TdTableColumn>
-            <TdTableColumn label="调度操作" width="220" align="center" fixed="right">
+            <TdTableColumn label="调度操作" width="190" align="center" fixed="right">
               <template #default="scope">
                 <div class="task-action-group">
                   <t-button size="small" variant="text" @click.stop="openTaskDetail(scope.row)">详情</t-button>
                   <t-button v-if="scope.row.status === 'QUEUED'" size="small" variant="outline" theme="primary" @click.stop="openAssignDialog(scope.row)">
                     分配机位
                   </t-button>
-                  <t-button v-else-if="['ASSIGNED', 'READY'].includes(scope.row.status)" size="small" variant="text" @click.stop="handleRequeue(scope.row.id)">
-                    重新排队
-                  </t-button>
-                  <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId" size="small" variant="text" theme="warning" @click.stop="handleConfirmSafe(scope.row)">
+                  <t-button v-else-if="scope.row.status === 'ASSIGNED' && scope.row.printerId" size="small" variant="outline" theme="warning" @click.stop="handleConfirmSafe(scope.row)">
                     确认安全
                   </t-button>
-                  <t-button v-if="['ASSIGNED', 'READY'].includes(scope.row.status) && scope.row.printerId" size="small" variant="text" theme="success" @click.stop="handleStart(scope.row)">
+                  <t-button v-else-if="scope.row.status === 'READY' && scope.row.printerId" size="small" variant="outline" theme="success" @click.stop="handleStart(scope.row)">
                     启动
                   </t-button>
-                  <t-popconfirm v-if="canCancel(scope.row.status)" content="确定要移出这个任务吗？" theme="danger" @confirm="handleCancel(scope.row.id)">
-                    <template #trigger>
-                      <t-button size="small" variant="text" theme="danger" aria-label="移出队列" @click.stop>
-                        <Delete :size="15" />
-                      </t-button>
+                  <t-dropdown v-if="hasSecondaryActions(scope.row)" trigger="click" @click="handleTaskAction(scope.row, $event)">
+                    <t-button size="small" variant="outline" aria-label="更多调度操作" @click.stop>
+                      更多
+                    </t-button>
+                    <template #dropdown>
+                      <t-dropdown-menu>
+                        <t-dropdown-item v-if="['ASSIGNED', 'READY'].includes(scope.row.status)" value="requeue">
+                          重新排队
+                        </t-dropdown-item>
+                        <t-dropdown-item v-if="scope.row.status === 'ASSIGNED' && scope.row.printerId" value="start">
+                          启动
+                        </t-dropdown-item>
+                        <t-dropdown-item v-if="scope.row.status === 'READY' && scope.row.printerId" value="confirm-safe">
+                          确认安全
+                        </t-dropdown-item>
+                        <t-dropdown-item v-if="canCancel(scope.row.status)" value="cancel">
+                          移出队列
+                        </t-dropdown-item>
+                      </t-dropdown-menu>
                     </template>
-                  </t-popconfirm>
+                  </t-dropdown>
                 </div>
               </template>
             </TdTableColumn>
@@ -201,8 +212,29 @@
             <div class="job-card__actions">
               <t-button size="small" variant="text" @click="openTaskDetail(job)">详情</t-button>
               <t-button v-if="job.status === 'QUEUED'" size="small" variant="outline" theme="primary" @click="openAssignDialog(job)">分配机位</t-button>
-              <t-button v-else-if="['ASSIGNED', 'READY'].includes(job.status)" size="small" variant="text" @click="handleRequeue(job.id)">重新排队</t-button>
-              <t-button v-if="canCancel(job.status)" size="small" variant="text" theme="danger" @click="handleCancel(job.id)">移出</t-button>
+              <t-button v-else-if="job.status === 'ASSIGNED' && job.printerId" size="small" variant="outline" theme="warning" @click="handleConfirmSafe(job)">确认安全</t-button>
+              <t-button v-else-if="job.status === 'READY' && job.printerId" size="small" variant="outline" theme="success" @click="handleStart(job)">启动</t-button>
+              <t-dropdown v-if="hasSecondaryActions(job)" trigger="click" @click="handleTaskAction(job, $event)">
+                <t-button size="small" variant="outline" aria-label="更多调度操作">
+                  更多
+                </t-button>
+                <template #dropdown>
+                  <t-dropdown-menu>
+                    <t-dropdown-item v-if="['ASSIGNED', 'READY'].includes(job.status)" value="requeue">
+                      重新排队
+                    </t-dropdown-item>
+                    <t-dropdown-item v-if="job.status === 'ASSIGNED' && job.printerId" value="start">
+                      启动
+                    </t-dropdown-item>
+                    <t-dropdown-item v-if="job.status === 'READY' && job.printerId" value="confirm-safe">
+                      确认安全
+                    </t-dropdown-item>
+                    <t-dropdown-item v-if="canCancel(job.status)" value="cancel">
+                      移出队列
+                    </t-dropdown-item>
+                  </t-dropdown-menu>
+                </template>
+              </t-dropdown>
             </div>
           </article>
         </div>
@@ -455,6 +487,8 @@ const canCancel = (status) => {
   return cancelableStatuses.includes(status)
 }
 
+const hasSecondaryActions = job => ['QUEUED', 'ASSIGNED', 'READY', 'PAUSED'].includes(job.status)
+
 const getJobFileName = job => job.fileName || `文件 #${job.fileId}`
 
 const getJobMachineModel = job => job.machineModel || job.printerModel || job.printerName || (job.printerId ? `设备 ${job.printerId}` : '未指定')
@@ -592,6 +626,19 @@ const handleCancel = async (id) => {
   }
 }
 
+const handleCancelWithConfirm = async id => {
+  try {
+    await confirmMessage('确定要移出这个任务吗？', '移出队列确认', {
+      confirmButtonText: '确定移出',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await handleCancel(id)
+  } catch (error) {
+    if (error !== 'cancel') console.error('移出任务失败:', error)
+  }
+}
+
 const handleRequeue = async id => {
   try {
     await requeueJob(id)
@@ -673,6 +720,15 @@ const handleStart = async job => {
   } catch (error) {
     if (error !== 'cancel') console.error('启动打印失败:', error)
   }
+}
+
+const handleTaskAction = (job, item) => {
+  const action = typeof item === 'string' ? item : item?.value
+
+  if (action === 'requeue') handleRequeue(job.id)
+  if (action === 'start') handleStart(job)
+  if (action === 'confirm-safe') handleConfirmSafe(job)
+  if (action === 'cancel') handleCancelWithConfirm(job.id)
 }
 
 onMounted(() => {
@@ -997,14 +1053,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.125rem;
+  gap: 0.5rem;
   min-width: 0;
   white-space: nowrap;
 }
 
 .task-action-group :deep(.t-button) {
-  padding-right: 0.375rem;
-  padding-left: 0.375rem;
+  flex: 0 0 auto;
+}
+
+.task-action-group :deep(.t-dropdown) {
+  flex: 0 0 auto;
 }
 
 .job-queue-state {
@@ -1078,12 +1137,17 @@ onMounted(() => {
 }
 
 .job-card__actions {
-  gap: 0.25rem;
+  gap: 0.5rem;
   margin-top: auto;
+  flex-wrap: nowrap;
 }
 
 .job-card__actions :deep(.t-button) {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+}
+
+.job-card__actions :deep(.t-dropdown) {
+  flex: 0 0 auto;
 }
 
 .job-queue-footer {

@@ -127,7 +127,9 @@
             </TdTableColumn>
             <TdTableColumn label="角色" width="142">
               <template #default="{ row }">
-                <span class="user-management-role" :class="getRoleClass(row.role)">{{ row.role || '-' }}</span>
+                <t-tag class="user-management-role" size="small" variant="light" :theme="getRoleTheme(row.role)">
+                  {{ row.role || '-' }}
+                </t-tag>
               </template>
             </TdTableColumn>
             <TdTableColumn label="邮箱" min-width="210">
@@ -175,7 +177,9 @@
               </div>
               <span class="user-management-status" :class="{ 'user-management-status--disabled': !user.enabled }"><i />{{ user.enabled ? '启用' : '停用' }}</span>
             </div>
-            <span class="user-management-role" :class="getRoleClass(user.role)">{{ user.role }}</span>
+            <t-tag class="user-management-role" size="small" variant="light" :theme="getRoleTheme(user.role)">
+              {{ user.role || '-' }}
+            </t-tag>
             <span class="user-management-grid-card__email">{{ user.email || '未填写邮箱' }}</span>
             <div class="user-management-grid-card__bottom">
               <span>{{ getLastLogin(user) }}</span>
@@ -295,7 +299,7 @@ const dialogTitle = computed(() => ({
 const getInitials = username => String(username || '?').slice(0, 2).toUpperCase()
 const getUserDescription = user => user.role === 'ADMIN' ? '系统超级管理员' : '生产操作员'
 const getLastLogin = user => formatDateTime(user.lastLoginAt || user.lastLogin || user.updatedAt || user.createdAt)
-const getRoleClass = role => 'user-management-role--' + String(role || '').toLowerCase()
+const getRoleTheme = role => String(role || '').toUpperCase() === 'ADMIN' ? 'primary' : 'success'
 
 const fetchUsers = async () => {
   loading.value = true
@@ -487,10 +491,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalShortcut
 .user-management-user-cell > div { display: flex; flex-direction: column; min-width: 0; gap: 0.2rem; }
 .user-management-user-cell strong { color: var(--app-text-primary); font-size: 0.8125rem; font-weight: 600; }
 .user-management-user-cell small { color: var(--app-text-placeholder); font-size: 0.625rem; }
-.user-management-avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2rem; height: 2rem; border: 1px solid var(--app-success-light); border-radius: 50%; background: var(--app-success-light); color: var(--app-success-active); font-size: 0.6875rem; font-weight: 700; }
-.user-management-avatar--operator { border-color: var(--app-border); background: var(--app-surface-muted); color: var(--app-text-secondary); }
-.user-management-role { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.2rem; background: var(--app-text-primary); color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.03em; }
-.user-management-role--operator { background: var(--app-success); }
+.user-management-avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2rem; height: 2rem; border: 1px solid var(--app-primary-light); border-radius: 50%; background: var(--app-primary-light); color: var(--app-primary-active); font-size: 0.6875rem; font-weight: 700; }
+.user-management-avatar--operator { border-color: var(--app-success-light); background: var(--app-success-light); color: var(--app-success-active); }
+.user-management-role { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 600; letter-spacing: 0.03em; }
 .user-management-email { gap: 0.4rem; color: var(--app-text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; white-space: nowrap; }
 .user-management-email :deep(svg) { color: var(--app-text-placeholder); }
 .user-management-status { justify-content: center; gap: 0.4rem; width: fit-content; margin: 0 auto; padding: 0.3rem 0.6rem; border: 1px solid var(--app-success-light); border-radius: 999px; background: var(--app-success-light); color: var(--app-success-active); font-size: 0.6875rem; font-weight: 500; white-space: nowrap; }

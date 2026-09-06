@@ -32,7 +32,7 @@
           <t-button v-if="isAdmin" size="small" variant="outline" @click="openScanDialog">
             扫描设备
           </t-button>
-          <t-button v-if="isAdmin" size="small" theme="success" @click="handleAdd">
+          <t-button v-if="isAdmin" size="small" theme="primary" @click="handleAdd">
             新增打印机
           </t-button>
           <t-button v-if="isAdmin" size="small" variant="outline" @click="message.info('标签管理功能暂未开放')">
@@ -1714,7 +1714,7 @@ onMounted(() => {
 
 .printer-management-tab:hover,
 .printer-management-tab--active {
-  color: var(--app-success);
+  color: var(--app-primary);
 }
 
 .printer-management-tab--active {
@@ -1728,7 +1728,7 @@ onMounted(() => {
   left: 0;
   height: 2px;
   border-radius: 2px 2px 0 0;
-  background: var(--app-success);
+  background: var(--app-primary);
   content: '';
 }
 
@@ -1736,8 +1736,8 @@ onMounted(() => {
   min-width: 1.15rem;
   padding: 0.1rem 0.3rem;
   border-radius: 999px;
-  background: var(--app-success-light);
-  color: var(--app-success-active);
+  background: var(--app-primary-light);
+  color: var(--app-primary-active);
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.2;
@@ -1851,8 +1851,8 @@ onMounted(() => {
 }
 
 .printer-management-view-toggle__buttons :deep(.printer-management-view-toggle__active) {
-  background: var(--app-success-light);
-  color: var(--app-success);
+  background: var(--app-primary-light);
+  color: var(--app-primary);
 }
 
 .printer-management-table-card,
