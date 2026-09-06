@@ -154,7 +154,7 @@
           :loading="loading"
           style="width: 100%"
           class="printer-management-table"
-          :header-cell-style="{ background: '#f8fafc' }"
+          :header-cell-style="{ background: 'var(--app-surface-muted)' }"
           @row-click="handleRowClick"
           @selection-change="handlePrinterSelectionChange"
           row-class-name="printer-management-table__row"
@@ -482,7 +482,7 @@
           :data="scanResults"
           style="width: 100%"
           class="rounded-lg overflow-hidden"
-          :header-cell-style="{ background: '#f9fafb' }"
+          :header-cell-style="{ background: 'var(--app-surface-muted)' }"
           @selection-change="handleSelectionChange"
         >
           <TdTableColumn type="selection" width="50" align="center" />
@@ -1254,7 +1254,7 @@ onMounted(() => {
   min-height: 2.5rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #edf0f3;
+  border-top: 1px solid var(--app-border);
 }
 
 .printer-manage-card__footer :deep(.t-pagination) {
@@ -1268,7 +1268,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 1rem;
   min-width: 0;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -1280,7 +1280,7 @@ onMounted(() => {
 }
 
 .printer-manage-table :deep(.t-table) {
-  color: #374151;
+  color: var(--app-text-primary);
   font-size: 0.8125rem;
 }
 
@@ -1292,7 +1292,7 @@ onMounted(() => {
 }
 
 .printer-manage-table :deep(.t-table th) {
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
@@ -1307,7 +1307,7 @@ onMounted(() => {
 }
 
 .printer-manage-table :deep(.t-table__body tr:hover td) {
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .printer-manage-card__status-panel {
@@ -1319,7 +1319,7 @@ onMounted(() => {
   min-height: 3.5rem;
   margin: -0.5rem -0.5rem 0.75rem;
   padding: 0 0.75rem;
-  border-bottom: 1px solid #edf0f3;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .printer-status-tabs {
@@ -1338,7 +1338,7 @@ onMounted(() => {
   padding: 0 0.1rem;
   border: 0;
   background: transparent;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   cursor: pointer;
   font-size: 0.875rem;
   white-space: nowrap;
@@ -1347,7 +1347,7 @@ onMounted(() => {
 
 .printer-status-tab:hover,
 .printer-status-tab--active {
-  color: #2563eb;
+  color: var(--app-primary);
 }
 
 .printer-status-tab--active {
@@ -1361,7 +1361,7 @@ onMounted(() => {
   left: 0;
   height: 2px;
   border-radius: 2px 2px 0 0;
-  background: #2563eb;
+  background: var(--app-primary);
   content: '';
 }
 
@@ -1369,8 +1369,8 @@ onMounted(() => {
   min-width: 1.25rem;
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--app-page-background);
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.2;
@@ -1378,22 +1378,22 @@ onMounted(() => {
 }
 
 .printer-status-tab--active .printer-status-tab__count {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--app-primary-light-hover);
+  color: var(--app-primary-active);
 }
 
 .printer-status-tab__dot {
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 999px;
-  background: #f59e0b;
+  background: var(--app-warning);
 }
 
 .printer-manage-card__hint {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -1406,7 +1406,7 @@ onMounted(() => {
   margin-bottom: 0.75rem;
   padding: 0.625rem 0.75rem;
   border-radius: 0.5rem;
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .printer-filter-toolbar__search {
@@ -1423,7 +1423,7 @@ onMounted(() => {
 }
 
 .printer-filter-toolbar__label {
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -1441,7 +1441,7 @@ onMounted(() => {
   min-height: 2.5rem;
   margin-bottom: 0.5rem;
   padding: 0 0.25rem;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
 }
 
@@ -1453,7 +1453,7 @@ onMounted(() => {
 }
 
 .printer-batch-toolbar__left strong {
-  color: #374151;
+  color: var(--app-text-primary);
   font-weight: 600;
 }
 
@@ -1461,19 +1461,19 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   white-space: nowrap;
 }
 
 .printer-view-toggle :deep(.t-button) {
   min-width: 2rem;
   padding: 0.25rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
 }
 
 .printer-view-toggle :deep(.printer-view-toggle__active) {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--app-primary-light);
+  color: var(--app-primary);
 }
 
 .printer-grid-view {
@@ -1492,7 +1492,7 @@ onMounted(() => {
   gap: 0.75rem;
   min-height: 12rem;
   padding: 1rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 0.625rem;
   background: #fff;
   cursor: pointer;
@@ -1500,7 +1500,7 @@ onMounted(() => {
 }
 
 .printer-grid-card:hover {
-  border-color: #93c5fd;
+  border-color: var(--app-primary-light-hover);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
@@ -1515,13 +1515,13 @@ onMounted(() => {
 .printer-grid-card__body {
   display: grid;
   gap: 0.35rem;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
 }
 
 .printer-grid-card__progress {
   flex-wrap: wrap;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
 }
 
@@ -1530,7 +1530,7 @@ onMounted(() => {
 }
 
 .printer-grid-card__progress strong {
-  color: #111827;
+  color: var(--app-text-primary);
 }
 
 .printer-grid-card__actions {
@@ -1548,13 +1548,13 @@ onMounted(() => {
   flex: 0 0 auto;
   margin-top: 0.5rem;
   padding: 0.625rem 0.25rem 0;
-  border-top: 1px solid #f0f2f5;
-  color: #9ca3af;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-placeholder);
   font-size: 0.75rem;
 }
 
 .printer-network-status__connected {
-  color: #059669;
+  color: var(--app-success);
 }
 
 .printer-table-primary {
@@ -1577,7 +1577,7 @@ onMounted(() => {
 
 .printer-table-secondary {
   overflow: hidden;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
   text-overflow: ellipsis;
@@ -1585,7 +1585,7 @@ onMounted(() => {
 }
 
 .printer-table-secondary--muted {
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-family: inherit;
 }
 
@@ -1598,7 +1598,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.75rem;
 }
 
@@ -1669,7 +1669,7 @@ onMounted(() => {
   min-width: 0;
   min-height: 0;
   gap: 0.625rem;
-  color: #374151;
+  color: var(--app-text-primary);
   font-size: 0.75rem;
 }
 
@@ -1677,7 +1677,7 @@ onMounted(() => {
 .printer-management-filter-panel,
 .printer-management-table-card,
 .printer-management-grid-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 0.5rem;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -1708,7 +1708,7 @@ onMounted(() => {
   padding: 0 0.125rem;
   border: 0;
   background: transparent;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   cursor: pointer;
   font-size: 0.8125rem;
   white-space: nowrap;
@@ -1716,7 +1716,7 @@ onMounted(() => {
 
 .printer-management-tab:hover,
 .printer-management-tab--active {
-  color: #059669;
+  color: var(--app-success);
 }
 
 .printer-management-tab--active {
@@ -1730,7 +1730,7 @@ onMounted(() => {
   left: 0;
   height: 2px;
   border-radius: 2px 2px 0 0;
-  background: #10b981;
+  background: var(--app-success);
   content: '';
 }
 
@@ -1738,8 +1738,8 @@ onMounted(() => {
   min-width: 1.15rem;
   padding: 0.1rem 0.3rem;
   border-radius: 999px;
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--app-success-light);
+  color: var(--app-success-active);
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.2;
@@ -1748,14 +1748,14 @@ onMounted(() => {
 
 .printer-management-tab:not(.printer-management-tab--active) .printer-management-tab__count {
   background: transparent;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
 }
 
 .printer-management-tab__dot {
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 999px;
-  background: #f59e0b;
+  background: var(--app-warning);
 }
 
 .printer-management-tab-actions,
@@ -1790,7 +1790,7 @@ onMounted(() => {
 }
 
 .printer-management-filter__shortcut {
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-size: 0.625rem;
 }
 
@@ -1798,7 +1798,7 @@ onMounted(() => {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.625rem 0.875rem;
-  color: #6b7280;
+  color: var(--app-text-secondary);
   white-space: nowrap;
 }
 
@@ -1815,7 +1815,7 @@ onMounted(() => {
   flex: 0 0 auto;
   min-height: 2rem;
   padding: 0 0.25rem;
-  color: #6b7280;
+  color: var(--app-text-secondary);
 }
 
 .printer-management-batchbar__left {
@@ -1824,24 +1824,24 @@ onMounted(() => {
 }
 
 .printer-management-batchbar__left strong {
-  color: #374151;
+  color: var(--app-text-primary);
   font-weight: 600;
 }
 
 .printer-management-batchbar__separator {
-  color: #d1d5db;
+  color: var(--app-border-strong);
 }
 
 .printer-management-view-toggle {
   gap: 0.375rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   white-space: nowrap;
 }
 
 .printer-management-view-toggle__buttons {
   gap: 0.125rem;
   padding: 0.125rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 0.25rem;
   background: #fff;
 }
@@ -1849,12 +1849,12 @@ onMounted(() => {
 .printer-management-view-toggle__buttons :deep(.t-button) {
   min-width: 1.75rem;
   padding: 0.2rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
 }
 
 .printer-management-view-toggle__buttons :deep(.printer-management-view-toggle__active) {
-  background: #ecfdf5;
-  color: #059669;
+  background: var(--app-success-light);
+  color: var(--app-success);
 }
 
 .printer-management-table-card,
@@ -1882,7 +1882,7 @@ onMounted(() => {
 }
 
 .printer-management-table :deep(.t-table) {
-  color: #374151;
+  color: var(--app-text-primary);
   font-size: 0.6875rem;
 }
 
@@ -1894,7 +1894,7 @@ onMounted(() => {
 }
 
 .printer-management-table :deep(.t-table th) {
-  color: #6b7280;
+  color: var(--app-text-secondary);
   font-size: 0.6875rem;
   font-weight: 400;
   white-space: nowrap;
@@ -1909,7 +1909,7 @@ onMounted(() => {
 }
 
 .printer-management-table :deep(.t-table__body tr:hover td) {
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .printer-management-primary {
@@ -1926,7 +1926,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.375rem;
   max-width: 100%;
-  color: #374151;
+  color: var(--app-text-primary);
   font-weight: 500;
 }
 
@@ -1941,31 +1941,31 @@ onMounted(() => {
 
 .printer-management-status-dot--printing,
 .printer-management-status-pill--printing .printer-management-status-pill__dot {
-  background: #3b82f6;
+  background: var(--app-primary);
 }
 
 .printer-management-status-dot--idle,
 .printer-management-status-pill--idle .printer-management-status-pill__dot {
-  background: #10b981;
+  background: var(--app-success);
 }
 
 .printer-management-status-dot--attention,
 .printer-management-status-pill--attention .printer-management-status-pill__dot {
-  background: #ef4444;
+  background: var(--app-danger);
 }
 
 .printer-management-status-dot--paused,
 .printer-management-status-pill--paused .printer-management-status-pill__dot {
-  background: #f59e0b;
+  background: var(--app-warning);
 }
 
 .printer-management-status-dot--offline,
 .printer-management-status-pill--offline .printer-management-status-pill__dot {
-  background: #9ca3af;
+  background: var(--app-text-placeholder);
 }
 
 .printer-management-muted {
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-size: 0.625rem;
   white-space: nowrap;
 }
@@ -1989,16 +1989,16 @@ onMounted(() => {
   flex: 0 0 auto;
   width: 1.25rem;
   height: 1.25rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 0.25rem;
-  background: #f3f4f6;
-  color: #9ca3af;
+  background: var(--app-page-background);
+  color: var(--app-text-placeholder);
 }
 
 .printer-management-task__icon--active {
-  border-color: #fde68a;
-  background: #fffbeb;
-  color: #f59e0b;
+  border-color: var(--app-warning-light);
+  background: var(--app-warning-light);
+  color: var(--app-warning);
 }
 
 .printer-management-task__content {
@@ -2010,7 +2010,7 @@ onMounted(() => {
 
 .printer-management-task__name {
   overflow: hidden;
-  color: #374151;
+  color: var(--app-text-primary);
   font-size: 0.75rem;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -2029,33 +2029,33 @@ onMounted(() => {
 }
 
 .printer-management-status-pill--printing {
-  border-color: #dbeafe;
-  background: #eff6ff;
-  color: #2563eb;
+  border-color: var(--app-primary-light-hover);
+  background: var(--app-primary-light);
+  color: var(--app-primary);
 }
 
 .printer-management-status-pill--idle {
-  border-color: #d1fae5;
-  background: #ecfdf5;
-  color: #059669;
+  border-color: var(--app-success-light);
+  background: var(--app-success-light);
+  color: var(--app-success);
 }
 
 .printer-management-status-pill--attention {
-  border-color: #fee2e2;
-  background: #fef2f2;
-  color: #dc2626;
+  border-color: var(--app-danger-light);
+  background: var(--app-danger-light);
+  color: var(--app-danger);
 }
 
 .printer-management-status-pill--paused {
-  border-color: #fed7aa;
-  background: #fff7ed;
-  color: #ea580c;
+  border-color: var(--app-warning-light);
+  background: var(--app-warning-light);
+  color: var(--app-warning-active);
 }
 
 .printer-management-status-pill--offline {
-  border-color: #e5e7eb;
-  background: #f3f4f6;
-  color: #6b7280;
+  border-color: var(--app-border);
+  background: var(--app-page-background);
+  color: var(--app-text-secondary);
 }
 
 .printer-management-progress {
@@ -2070,13 +2070,13 @@ onMounted(() => {
   justify-content: space-between;
   gap: 0.375rem;
   margin-bottom: 0.25rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-size: 0.5625rem;
   white-space: nowrap;
 }
 
 .printer-management-progress__labels strong {
-  color: #2563eb;
+  color: var(--app-primary);
   font-weight: 600;
 }
 
@@ -2095,7 +2095,7 @@ onMounted(() => {
 .printer-management-material__tag {
   padding: 0.15rem 0.375rem;
   border-radius: 0.2rem;
-  background: #059669;
+  background: var(--app-success);
   color: #fff;
   font-size: 0.5625rem;
   font-weight: 500;
@@ -2103,12 +2103,12 @@ onMounted(() => {
 
 .printer-management-material__tag--abs,
 .printer-management-material__tag--tpu {
-  background: #111827;
+  background: var(--app-text-primary);
 }
 
 .printer-management-material__tag--unknown {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--app-page-background);
+  color: var(--app-text-secondary);
 }
 
 .printer-management-actions {
@@ -2130,8 +2130,8 @@ onMounted(() => {
   gap: 1rem;
   min-height: 2.75rem;
   padding: 0.5rem 1rem;
-  border-top: 1px solid #edf0f3;
-  color: #6b7280;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-secondary);
   font-size: 0.6875rem;
 }
 

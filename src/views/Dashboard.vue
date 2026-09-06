@@ -194,11 +194,11 @@ const printers = ref([])
 const jobs = ref([])
 
 const statusConfig = [
-  { status: 'PRINTING', label: '打印中', color: '#0052d9' },
-  { status: 'IDLE', label: '空闲', color: '#2ba471' },
-  { status: 'PAUSED', label: '暂停', color: '#e37318' },
-  { status: 'ERROR', label: '故障', color: '#d54941' },
-  { status: 'OFFLINE', label: '离线', color: '#8f959e' }
+  { status: 'PRINTING', label: '打印中', color: 'var(--app-primary)' },
+  { status: 'IDLE', label: '空闲', color: 'var(--app-success)' },
+  { status: 'PAUSED', label: '暂停', color: 'var(--app-warning)' },
+  { status: 'ERROR', label: '故障', color: 'var(--app-danger)' },
+  { status: 'OFFLINE', label: '离线', color: 'var(--app-text-placeholder)' }
 ]
 
 const totalPrinters = computed(() => printers.value.length)
@@ -258,7 +258,7 @@ const statusSegments = computed(() => {
 })
 
 const donutStyle = computed(() => {
-  if (!totalPrinters.value) return { background: '#e7e7e7' }
+  if (!totalPrinters.value) return { background: 'var(--app-border)' }
 
   let start = 0
   const segments = statusSegments.value
@@ -519,7 +519,7 @@ onMounted(fetchOverview)
   width: 36px;
   height: 36px;
   color: var(--app-primary);
-  background: #e8f3ff;
+  background: var(--app-primary-light);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -557,22 +557,22 @@ onMounted(fetchOverview)
 }
 
 .stat-card--blue .stat-card__icon {
-  color: #0052d9;
+  color: var(--app-primary);
 }
 
 .stat-card--orange .stat-card__icon {
-  color: #e37318;
-  background: #fff1e9;
+  color: var(--app-warning);
+  background: var(--app-warning-light);
 }
 
 .stat-card--green .stat-card__icon {
-  color: #2ba471;
-  background: #e8f8f2;
+  color: var(--app-success);
+  background: var(--app-success-light);
 }
 
 .stat-card--red .stat-card__icon {
-  color: #d54941;
-  background: #fff0ed;
+  color: var(--app-danger);
+  background: var(--app-danger-light);
 }
 
 .dashboard-grid,
@@ -617,17 +617,17 @@ onMounted(fetchOverview)
 }
 
 .chart-grid-line {
-  stroke: #e7e7e7;
+  stroke: var(--app-border);
   stroke-width: 1;
 }
 
 .chart-area {
-  fill: rgb(0 82 217 / 10%);
+  fill: color-mix(in srgb, var(--app-primary) 10%, transparent);
 }
 
 .chart-line {
   fill: none;
-  stroke: #0052d9;
+  stroke: var(--app-primary);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3;
@@ -635,7 +635,7 @@ onMounted(fetchOverview)
 
 .chart-point {
   fill: #fff;
-  stroke: #0052d9;
+  stroke: var(--app-primary);
   stroke-width: 3;
 }
 
@@ -759,7 +759,7 @@ onMounted(fetchOverview)
   width: 34px;
   height: 34px;
   color: var(--app-primary);
-  background: #e8f3ff;
+  background: var(--app-primary-light);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -803,7 +803,7 @@ onMounted(fetchOverview)
 
 .alert-row__icon {
   color: var(--app-danger);
-  background: #fff0ed;
+  background: var(--app-danger-light);
 }
 
 .alert-row__content {

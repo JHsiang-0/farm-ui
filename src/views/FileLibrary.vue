@@ -1048,12 +1048,12 @@ onMounted(() => {
 
 <style scoped>
 .file-library-page {
-  --file-primary: #00b96b;
-  --file-primary-hover: #059669;
-  --file-border: #e5e7eb;
-  --file-muted: #6b7280;
-  --file-subtle: #9ca3af;
-  color: #334155;
+  --file-primary: var(--app-primary);
+  --file-primary-hover: var(--app-primary-active);
+  --file-border: var(--app-border);
+  --file-muted: var(--app-text-secondary);
+  --file-subtle: var(--app-text-placeholder);
+  color: var(--app-text-primary);
 }
 
 .file-library-layout {
@@ -1086,14 +1086,14 @@ onMounted(() => {
   height: 2.75rem;
   justify-content: space-between;
   padding: 0 0.875rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--app-surface-muted);
 }
 
 .file-library-sidebar__title {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  color: #374151;
+  color: var(--app-text-primary);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -1115,7 +1115,7 @@ onMounted(() => {
 }
 
 .file-library-sidebar__search :deep(.t-input) {
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .file-library-folder-nav {
@@ -1144,13 +1144,13 @@ onMounted(() => {
 }
 
 .file-library-folder-item:hover {
-  color: #374151;
-  background: #f8fafc;
+  color: var(--app-text-primary);
+  background: var(--app-surface-muted);
 }
 
 .file-library-folder-item--active {
-  color: #059669;
-  background: #ecfdf5;
+  color: var(--file-primary);
+  background: var(--app-primary-light);
   font-weight: 600;
 }
 
@@ -1175,13 +1175,13 @@ onMounted(() => {
 }
 
 .file-library-folder-item--active .file-library-folder-item__count {
-  color: #059669;
+  color: var(--file-primary);
 }
 
 .file-library-storage {
   flex: 0 0 auto;
   padding: 0.75rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--app-surface-muted);
   color: var(--file-muted);
   font-size: 0.6875rem;
 }
@@ -1196,7 +1196,7 @@ onMounted(() => {
 }
 
 .file-library-storage__value {
-  color: #374151;
+  color: var(--app-text-primary);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1211,7 +1211,7 @@ onMounted(() => {
   height: 0.375rem;
   overflow: hidden;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: var(--app-surface-muted);
 }
 
 .file-library-storage__track span {
@@ -1238,7 +1238,7 @@ onMounted(() => {
   gap: 1rem;
   min-height: 3rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--app-surface-muted);
 }
 
 .file-library-header__breadcrumb {
@@ -1267,7 +1267,7 @@ onMounted(() => {
   padding: 0.125rem;
   border: 1px solid var(--file-border);
   border-radius: 0.375rem;
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .file-view-toggle :deep(.t-button) {
@@ -1286,7 +1286,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.625rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--app-surface-muted);
   background: #fff;
 }
 
@@ -1340,7 +1340,7 @@ onMounted(() => {
 
 .file-library-table :deep(.t-table th) {
   color: var(--file-muted);
-  background: #f8fafc;
+  background: var(--app-surface-muted);
   font-weight: 400;
 }
 
@@ -1348,11 +1348,11 @@ onMounted(() => {
 .file-library-table :deep(.t-table th) {
   height: 3.75rem;
   padding: 0.625rem 0.75rem;
-  border-color: #f1f5f9;
+  border-color: var(--app-surface-muted);
 }
 
 .file-library-table :deep(.t-table__body tr:hover td) {
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .file-library-name-cell {
@@ -1371,13 +1371,13 @@ onMounted(() => {
   height: 2rem;
   overflow: hidden;
   border-radius: 0.375rem;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
 }
 
 .file-library-name-cell__icon--folder {
-  color: #f59e0b;
-  background: #fffbeb;
+  color: var(--app-warning);
+  background: var(--app-warning-light);
 }
 
 .file-library-name-cell__icon :deep(.t-image) {
@@ -1394,7 +1394,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.375rem;
   min-width: 0;
-  color: #1f2937;
+  color: var(--app-text-primary);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -1430,7 +1430,7 @@ onMounted(() => {
 
 .file-library-compatibility strong,
 .file-library-material strong {
-  color: #374151;
+  color: var(--app-text-primary);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -1481,7 +1481,7 @@ onMounted(() => {
   gap: 1rem;
   min-height: 3rem;
   padding: 0.5rem 1rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--app-surface-muted);
   background: #fff;
   color: var(--file-muted);
   font-size: 0.75rem;
@@ -1529,7 +1529,7 @@ onMounted(() => {
   min-height: 17rem;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #dbe2ea;
+  border: 1px solid var(--app-border);
   border-radius: 0.5rem;
   background: #fff;
   cursor: pointer;
@@ -1557,13 +1557,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
 }
 
 .file-card__media--folder {
-  color: #3b82f6;
-  background: #eff6ff;
+  color: var(--app-primary);
+  background: var(--app-primary-light);
 }
 
 .file-card__media :deep(.t-tag) {
@@ -1593,7 +1593,7 @@ onMounted(() => {
 .file-card__body h3 {
   margin: 0;
   overflow: hidden;
-  color: #1f2937;
+  color: var(--app-text-primary);
   font-size: 0.8125rem;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -1629,7 +1629,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 0.5rem;
   border-radius: 0.25rem;
-  background: #f1f5f9;
+  background: var(--app-surface-muted);
 }
 
 .file-card__actions {

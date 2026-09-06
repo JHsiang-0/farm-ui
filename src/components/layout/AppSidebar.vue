@@ -154,8 +154,8 @@ const handleItemClick = item => {
 }
 
 :deep(.t-menu__item.t-is-active) {
-  color: #0052d9;
-  background: #e8f3ff;
+  color: var(--app-primary);
+  background: var(--app-primary-light);
 }
 
 @media (max-width: 768px) {

@@ -156,6 +156,48 @@ const createAdditionalJobs = () => {
   })
 }
 
+const createAdditionalUsers = () => {
+  const profiles = [
+    { username: 'ops_north', role: 'OPERATOR', email: 'ops.north@farm.local', department: '北区生产车间 / 一组' },
+    { username: 'ops_south', role: 'OPERATOR', email: 'ops.south@farm.local', department: '南区生产车间 / 二组' },
+    { username: 'ops_quality', role: 'OPERATOR', email: 'ops.quality@farm.local', department: '质量检验中心 / 质检组' },
+    { username: 'ops_maintenance', role: 'OPERATOR', email: 'ops.maintenance@farm.local', department: '设备运维中心 / 维护组' },
+    { username: 'ops_material', role: 'OPERATOR', email: 'ops.material@farm.local', department: '物料管理中心 / 仓储组' },
+    { username: 'ops_night', role: 'OPERATOR', email: 'ops.night@farm.local', department: '生产车间 / 夜班组', enabled: false },
+    { username: 'ops_training', role: 'OPERATOR', email: 'ops.training@farm.local', department: '生产运营中心 / 培训组' },
+    { username: 'ops_test', role: 'OPERATOR', email: 'ops.test@farm.local', department: '研发测试中心 / 测试组' },
+    { username: 'ops_backup', role: 'OPERATOR', email: 'ops.backup@farm.local', department: '生产运营中心 / 备用组', enabled: false },
+    { username: 'admin_ops', role: 'ADMIN', email: 'admin.ops@farm.local', department: '系统管理中心 / 运维组' },
+    { username: 'admin_security', role: 'ADMIN', email: 'admin.security@farm.local', department: '系统管理中心 / 安全组' },
+    { username: 'admin_audit', role: 'ADMIN', email: 'admin.audit@farm.local', department: '审计管理中心 / 审计组', enabled: false },
+    { username: 'ops_alpha', role: 'OPERATOR', email: 'ops.alpha@farm.local', department: 'A区生产车间 / 一组' },
+    { username: 'ops_beta', role: 'OPERATOR', email: 'ops.beta@farm.local', department: 'B区生产车间 / 一组' },
+    { username: 'ops_gamma', role: 'OPERATOR', email: 'ops.gamma@farm.local', department: 'C区生产车间 / 一组' },
+    { username: 'ops_support', role: 'OPERATOR', email: 'ops.support@farm.local', department: '客户支持中心 / 技术组' },
+    { username: 'ops_archive', role: 'OPERATOR', email: 'ops.archive@farm.local', department: '资料管理中心 / 归档组', enabled: false },
+    { username: 'admin_system', role: 'ADMIN', email: 'admin.system@farm.local', department: '系统管理中心 / 平台组' }
+  ]
+
+  return profiles.map((profile, index) => {
+    const minute = String((index * 3) % 60).padStart(2, '0')
+    const hour = String(10 + (index % 8)).padStart(2, '0')
+    const createdAt = `2026-09-02T${hour}:${minute}:00`
+    return {
+      id: 3 + index,
+      username: profile.username,
+      password: 'User1234',
+      role: profile.role,
+      email: profile.email,
+      department: profile.department,
+      phone: null,
+      enabled: profile.enabled !== false,
+      lastLoginAt: profile.enabled === false ? null : createdAt,
+      createdAt,
+      updatedAt: createdAt
+    }
+  })
+}
+
 const createSeedData = () => ({
   users: [
     {
@@ -179,7 +221,8 @@ const createSeedData = () => ({
       enabled: true,
       createdAt: '2026-09-01T09:10:00',
       updatedAt: '2026-09-01T09:10:00'
-    }
+    },
+    ...createAdditionalUsers()
   ],
   printers: [
     {
@@ -584,7 +627,7 @@ const createSeedData = () => ({
     ...createAdditionalJobs()
   ],
   nextIds: {
-    users: 3,
+    users: 21,
     file: 54,
     folder: 3,
     job: 1037,

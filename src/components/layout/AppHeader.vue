@@ -25,7 +25,7 @@
         <DesktopIcon :size="19" />
       </button>
       <button type="button" class="header-icon-button" aria-label="消息通知" title="消息通知" @click="message.info('暂无新的系统通知')">
-        <t-badge :count="3" color="#e34d59">
+        <t-badge :count="3" color="var(--app-danger)">
           <MailIcon :size="19" />
         </t-badge>
       </button>

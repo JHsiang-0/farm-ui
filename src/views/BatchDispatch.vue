@@ -244,26 +244,26 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.batch-dispatch-page { padding: 24px; height: 100%; overflow: auto; background: #f7f8fa; color: #1f2937; }
+.batch-dispatch-page { padding: 24px; height: 100%; overflow: auto; background: var(--app-page-background); color: var(--app-text-primary); }
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 h1, h2 { margin: 0 0 8px; }
 h1 { font-size: 24px; }
 h2 { font-size: 17px; }
-.page-header p, .hint { color: #6b7280; margin: 0 0 12px; }
-.panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.page-header p, .hint { color: var(--app-text-secondary); margin: 0 0 12px; }
+.panel { background: #fff; border: 1px solid var(--app-border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
 .selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+.selection-row, .preview-row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--app-border); }
 .selection-row span { flex: 1; }
-small { color: #9ca3af; }
+small { color: var(--app-text-placeholder); }
 .options-panel { display: flex; gap: 18px; align-items: end; flex-wrap: wrap; }
 label { display: flex; flex-direction: column; gap: 6px; }
-select { min-width: 180px; padding: 7px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; }
+select { min-width: 180px; padding: 7px; border: 1px solid var(--app-border-strong); border-radius: 4px; background: #fff; }
 button { border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; }
 button:disabled { opacity: .55; cursor: not-allowed; }
-.primary-button { color: #fff; background: #2563eb; margin: 8px 8px 0 0; }
-.secondary-button { color: #374151; background: #e5e7eb; }
-.result-box { margin-top: 12px; padding: 10px; background: #eff6ff; border-radius: 4px; line-height: 1.8; }
-.ok { color: #15803d; }
-.error { color: #b91c1c; }
+.primary-button { color: #fff; background: var(--app-primary); margin: 8px 8px 0 0; }
+.secondary-button { color: var(--app-text-primary); background: var(--app-border); }
+.result-box { margin-top: 12px; padding: 10px; background: var(--app-primary-light); border-radius: 4px; line-height: 1.8; }
+.ok { color: var(--app-success-active); }
+.error { color: var(--app-danger-active); }
 @media (max-width: 800px) { .selection-grid { grid-template-columns: 1fr; } .page-header { gap: 12px; flex-direction: column; } }
 </style>

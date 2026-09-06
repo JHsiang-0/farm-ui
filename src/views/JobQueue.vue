@@ -691,11 +691,11 @@ onMounted(() => {
 }
 
 .job-queue-page {
-  --queue-primary: #1677ff;
-  --queue-primary-hover: #0958d9;
-  --queue-border: #e5e7eb;
-  --queue-text: #1f2937;
-  --queue-muted: #6b7280;
+  --queue-primary: var(--app-primary);
+  --queue-primary-hover: var(--app-primary-active);
+  --queue-border: var(--app-border);
+  --queue-text: var(--app-text-primary);
+  --queue-muted: var(--app-text-secondary);
   min-width: 0;
 }
 
@@ -727,7 +727,7 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  color: #d1d5db;
+  color: var(--app-border-strong);
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -738,10 +738,10 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.job-queue-summary__item--blue { color: #0958d9; background: #e6f4ff; }
-.job-queue-summary__item--amber { color: #ad6800; background: #fff7e6; }
-.job-queue-summary__item--orange { color: #d46b08; background: #fff2e8; }
-.job-queue-summary__item--green { color: #087f5b; background: #ecfdf5; }
+.job-queue-summary__item--blue { color: var(--app-primary-active); background: var(--app-primary-light); }
+.job-queue-summary__item--amber { color: var(--app-warning-active); background: var(--app-warning-light); }
+.job-queue-summary__item--orange { color: var(--app-warning-active); background: var(--app-warning-light); }
+.job-queue-summary__item--green { color: var(--app-success-active); background: var(--app-success-light); }
 
 .job-queue-card {
   display: flex;
@@ -802,15 +802,15 @@ onMounted(() => {
   min-width: 1.25rem;
   padding: 0.1rem 0.375rem;
   border-radius: 999px;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
   font-size: 0.6875rem;
   text-align: center;
 }
 
 .job-queue-tab--active .job-queue-tab__count {
   color: var(--queue-primary);
-  background: #e6f4ff;
+  background: var(--app-primary-light);
 }
 
 .job-queue-view-toggle {
@@ -819,12 +819,12 @@ onMounted(() => {
   padding: 0.125rem;
   border: 1px solid var(--queue-border);
   border-radius: 0.375rem;
-  background: #f8fafc;
+  background: var(--app-surface-muted);
 }
 
 .job-queue-view-toggle :deep(.t-button) {
   min-width: 2rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
 }
 
 .job-queue-view-toggle :deep(.job-queue-view-toggle--active) {
@@ -886,7 +886,7 @@ onMounted(() => {
 
 .job-queue-table :deep(.t-table th) {
   color: var(--queue-muted);
-  background: #f8fafc;
+  background: var(--app-surface-muted);
   font-weight: 400;
 }
 
@@ -894,11 +894,11 @@ onMounted(() => {
 .job-queue-table :deep(.t-table th) {
   height: 4.25rem;
   padding: 0.625rem 0.75rem;
-  border-color: #f1f5f9;
+  border-color: var(--app-surface-muted);
 }
 
 .job-queue-table :deep(.t-table__body tr:hover td) {
-  background: #f8fbff;
+  background: var(--app-primary-light);
 }
 
 .job-name-cell {
@@ -915,16 +915,16 @@ onMounted(() => {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   border-radius: 0.375rem;
-  color: #64748b;
-  background: #f8fafc;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
 }
 
 .job-name-cell__icon--warning {
   border-color: #fed7aa;
-  color: #ea580c;
-  background: #fff7ed;
+  color: var(--app-warning-active);
+  background: var(--app-warning-light);
 }
 
 .job-name-cell__content {
@@ -956,7 +956,7 @@ onMounted(() => {
 .job-name-cell__subtext {
   margin-top: 0.25rem;
   overflow: hidden;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
   font-size: 0.6875rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1014,7 +1014,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  color: #9ca3af;
+  color: var(--app-text-placeholder);
 }
 
 .job-queue-state p {
@@ -1117,11 +1117,11 @@ onMounted(() => {
 }
 
 .job-queue-footer__divider {
-  color: #e5e7eb;
+  color: var(--app-border);
 }
 
 .job-queue-footer__health strong {
-  color: #059669;
+  color: var(--app-success);
   font-weight: 600;
 }
 

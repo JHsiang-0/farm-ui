@@ -71,7 +71,7 @@ onUnmounted(() => {
   height: 100dvh;
   min-height: 100%;
   overflow: hidden;
-  background: #f3f4f6;
+  background: var(--app-page-background);
 }
 
 .fullscreen-dashboard__actions {

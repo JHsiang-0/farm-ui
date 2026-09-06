@@ -36,7 +36,7 @@
 
     <!-- 独立车间看板容器 - 响应式布局，与状态栏对齐 -->
     <div class="relative w-full flex-1 px-4 pb-4 bg-gray-100 overflow-auto"
-      style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent; min-height: 0;">
+      style="scrollbar-width: thin; scrollbar-color: var(--app-border-strong) transparent; min-height: 0;">
 
       <!-- 厂房网格布局 - 与DashboardHeader保持相同最大宽度 -->
       <div class="w-full max-w-[1920px] mx-auto bg-gray-100 border border-gray-200 rounded-xl shadow-sm p-4">
@@ -557,24 +557,24 @@ onUnmounted(() => {
 /* 编辑模式：工程网格背景 */
 .is-edit-mode :deep(.workshop-canvas) {
   background-image:
-    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+    linear-gradient(to right, var(--app-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--app-border) 1px, transparent 1px);
   background-size: 20px 20px;
   background-position: center center;
   border-radius: 6px;
-  background-color: #f3f4f6;
+  background-color: var(--app-page-background);
 }
 
 /* 编辑模式：行标签和列标题高亮 */
 .is-edit-mode :deep(.row-label) {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--app-primary-light-hover);
+  color: var(--app-primary-active);
   font-weight: 700;
 }
 
 .is-edit-mode :deep(.col-header) {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--app-primary-light-hover);
+  color: var(--app-primary-active);
   font-weight: 700;
 }
 
@@ -602,14 +602,14 @@ onUnmounted(() => {
 }
 
 :deep(.workshop-canvas-wrapper::-webkit-scrollbar-thumb) {
-  background: #d1d5db;
+  background: var(--app-border-strong);
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 :deep(.workshop-canvas-wrapper::-webkit-scrollbar-thumb:hover) {
-  background: #9ca3af;
+  background: var(--app-text-placeholder);
 }
 
 :deep(.workshop-canvas-wrapper::-webkit-scrollbar-corner) {

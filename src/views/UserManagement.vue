@@ -100,14 +100,16 @@
           <span>暂无用户数据</span>
         </div>
 
-        <div v-else-if="viewMode === 'list'" class="user-management-table-scroll">
-          <TdTable
-            class="user-management-table"
-            :data="visibleUsers"
-            :loading="loading"
-            row-key="id"
-            @selection-change="handleSelectionChange"
-          >
+        <div v-else-if="viewMode === 'list'" class="user-management-table-area">
+          <div ref="tableScrollRef" class="user-management-table-scroll">
+            <div ref="tableContentScrollRef" class="user-management-table-content-scroll" @scroll="handleTableHorizontalScroll">
+              <TdTable
+                class="user-management-table"
+                :data="visibleUsers"
+                :loading="loading"
+                row-key="id"
+                @selection-change="handleSelectionChange"
+              >
             <TdTableColumn type="selection" width="48" align="center" />
             <TdTableColumn label="ID" width="82">
               <template #default="{ row }"><span class="user-management-id">#{{ row.id }}</span></template>
@@ -159,7 +161,9 @@
                 </div>
               </template>
             </TdTableColumn>
-          </TdTable>
+              </TdTable>
+            </div>
+          </div>
         </div>
 
         <div v-else class="user-management-grid-view">
@@ -182,15 +186,20 @@
       </div>
 
       <footer class="user-management-footer">
-        <span>共 <strong>{{ displayTotal }}</strong> 条数据</span>
-        <t-pagination
-          v-model:current="pagination.pageNum"
-          :page-size="pagination.pageSize"
-          :total="displayTotal"
-          :show-page-size="false"
-          :total-content="false"
-          @change="handlePageChange"
-        />
+        <div v-if="viewMode === 'list'" ref="horizontalScrollRef" class="user-management-horizontal-scroll" aria-label="横向滚动条" @scroll="handleHorizontalScroll">
+          <div class="user-management-horizontal-scroll__content" />
+        </div>
+        <div class="user-management-footer__main">
+          <span>共 <strong>{{ displayTotal }}</strong> 条数据</span>
+          <t-pagination
+            v-model:current="pagination.pageNum"
+            :page-size="pagination.pageSize"
+            :total="displayTotal"
+            :show-page-size="false"
+            :total-content="false"
+            @change="handlePageChange"
+          />
+        </div>
       </footer>
     </section>
 
@@ -258,6 +267,9 @@ const editingUserId = ref(null)
 const query = reactive({ username: '', role: '', status: '' })
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const form = reactive({ username: '', password: '', role: 'OPERATOR', email: '' })
+const tableScrollRef = ref(null)
+const tableContentScrollRef = ref(null)
+const horizontalScrollRef = ref(null)
 
 const visibleUsers = computed(() => {
   if (query.status === 'ACTIVE') return users.value.filter(user => user.enabled)
@@ -337,6 +349,20 @@ const handleSelectionChange = rows => {
   selectedUserIds.value = rows.map(row => row.id ?? row)
 }
 
+const handleHorizontalScroll = event => {
+  const tableContent = tableContentScrollRef.value
+  if (tableContent && tableContent.scrollLeft !== event.currentTarget.scrollLeft) {
+    tableContent.scrollLeft = event.currentTarget.scrollLeft
+  }
+}
+
+const handleTableHorizontalScroll = event => {
+  const horizontalScroll = horizontalScrollRef.value
+  if (horizontalScroll && horizontalScroll.scrollLeft !== event.currentTarget.scrollLeft) {
+    horizontalScroll.scrollLeft = event.currentTarget.scrollLeft
+  }
+}
+
 const resetForm = () => Object.assign(form, { username: '', password: '', role: 'OPERATOR', email: '' })
 
 const openCreate = () => {
@@ -414,69 +440,77 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalShortcut
 </script>
 
 <style scoped>
-.user-management-page { gap: 1rem; padding: 1.25rem 1.5rem; }
+.user-management-page { gap: 1rem; height: 100%; padding: 1.25rem 1.5rem; }
 .user-management-header { display: flex; align-items: center; flex: 0 0 auto; justify-content: space-between; gap: 1rem; }
-.user-management-header h1 { margin: 0; color: #0f172a; font-size: 1.625rem; letter-spacing: -0.02em; }
+.user-management-header h1 { margin: 0; color: var(--app-text-primary); font-size: 1.625rem; letter-spacing: -0.02em; }
 .user-management-header__actions { display: flex; align-items: center; gap: 0.75rem; }
-.user-management-tabs-row { display: flex; align-items: center; flex: 0 0 auto; justify-content: space-between; border-bottom: 1px solid #e2e8f0; }
+.user-management-tabs-row { display: flex; align-items: center; flex: 0 0 auto; justify-content: space-between; border-bottom: 1px solid var(--app-border); }
 .user-management-tabs { display: flex; align-items: stretch; gap: 1.5rem; }
-.user-management-tab { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 0.15rem; border: 0; background: transparent; color: #64748b; cursor: pointer; font-size: 0.875rem; }
+.user-management-tab { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 0.15rem; border: 0; background: transparent; color: var(--app-text-secondary); cursor: pointer; font-size: 0.875rem; }
 .user-management-tab::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: transparent; content: ''; }
-.user-management-tab--active { color: #059669; font-weight: 600; }
-.user-management-tab--active::after { background: #059669; }
-.user-management-tab__count { padding: 0.125rem 0.45rem; border-radius: 999px; background: #f1f5f9; color: #64748b; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; }
-.user-management-tab--active .user-management-tab__count { background: #ecfdf5; color: #047857; }
-.user-management-more { color: #64748b; }
-.user-management-filter-card, .user-management-table-card { border: 1px solid #e2e8f0; border-radius: 0.625rem; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
+.user-management-tab--active { color: var(--app-primary); font-weight: 600; }
+.user-management-tab--active::after { background: var(--app-primary); }
+.user-management-tab__count { padding: 0.125rem 0.45rem; border-radius: 999px; background: var(--app-surface-muted); color: var(--app-text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; }
+.user-management-tab--active .user-management-tab__count { background: var(--app-primary-light); color: var(--app-primary-active); }
+.user-management-more { color: var(--app-text-secondary); }
+.user-management-filter-card, .user-management-table-card { border: 1px solid var(--app-border); border-radius: 0.625rem; background: var(--app-surface); box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
 .user-management-filter-card { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 1rem; padding: 1rem; }
 .user-management-filter-main, .user-management-filter-summary, .user-management-filter-field, .user-management-user-cell, .user-management-email, .user-management-actions, .user-management-status { display: flex; align-items: center; }
 .user-management-filter-main { flex-wrap: wrap; gap: 0.75rem; min-width: 0; }
 .user-management-search { width: min(20rem, 25vw); }
-.user-management-shortcut { color: #94a3b8; font-size: 0.625rem; }
-.user-management-filter-field { gap: 0.4rem; color: #64748b; font-size: 0.75rem; white-space: nowrap; }
+.user-management-shortcut { color: var(--app-text-placeholder); font-size: 0.625rem; }
+.user-management-filter-field { gap: 0.4rem; color: var(--app-text-secondary); font-size: 0.75rem; white-space: nowrap; }
 .user-management-filter-select { width: 10.5rem; }
-.user-management-filter-summary { flex-shrink: 0; gap: 0.625rem; color: #64748b; font-size: 0.75rem; white-space: nowrap; }
-.user-management-filter-summary strong { color: #1e293b; font-weight: 600; }
-.user-management-divider { width: 1px; height: 1rem; background: #cbd5e1; }
-.user-management-view-toggle { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.15rem; border: 1px solid #e2e8f0; border-radius: 0.375rem; background: #f8fafc; }
-.user-management-view-toggle button { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.5rem; padding: 0; border: 0; border-radius: 0.25rem; background: transparent; color: #94a3b8; cursor: pointer; }
-.user-management-view-toggle button:hover, .user-management-view-toggle__button--active { background: #fff; color: #059669 !important; box-shadow: 0 1px 2px rgb(15 23 42 / 8%); }
-.user-management-table-card { display: flex; flex: 1 1 0%; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
-.user-management-content { display: flex; flex: 1 1 0%; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.user-management-filter-summary { flex-shrink: 0; gap: 0.625rem; color: var(--app-text-secondary); font-size: 0.75rem; white-space: nowrap; }
+.user-management-filter-summary strong { color: var(--app-text-primary); font-weight: 600; }
+.user-management-divider { width: 1px; height: 1rem; background: var(--app-border-strong); }
+.user-management-view-toggle { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.15rem; border: 1px solid var(--app-border); border-radius: 0.375rem; background: var(--app-surface-muted); }
+.user-management-view-toggle button { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.5rem; padding: 0; border: 0; border-radius: 0.25rem; background: transparent; color: var(--app-text-placeholder); cursor: pointer; }
+.user-management-view-toggle button:hover, .user-management-view-toggle__button--active { background: var(--app-surface); color: var(--app-primary) !important; box-shadow: 0 1px 2px rgb(15 23 42 / 8%); }
+.user-management-table-card { position: relative; display: flex; flex: 1 1 0%; flex-direction: column; width: 100%; height: 0; min-width: 0; min-height: 0; overflow: hidden; }
+.user-management-content { display: flex; flex: 1 1 0%; flex-direction: column; width: 100%; height: 0; min-width: 0; min-height: 0; padding-bottom: 5rem; overflow: hidden; }
+.user-management-table-area { display: flex; flex: 1 1 0%; flex-direction: column; width: 100%; height: 0; min-width: 0; min-height: 0; }
 .user-management-table-scroll, .user-management-grid-view { flex: 1 1 0%; min-width: 0; min-height: 0; overflow: auto; }
-.user-management-table { min-width: 73rem; }
-.user-management-table :deep(th) { height: 2.75rem; background: #f8fafc; color: #64748b; font-size: 0.75rem; font-weight: 500; }
-.user-management-table :deep(td) { height: 4.5rem; padding: 0.625rem 1rem; color: #475569; font-size: 0.75rem; }
-.user-management-table :deep(tr:hover td) { background: #f8fafc; }
+.user-management-table-scroll { height: 0; overflow-x: hidden; overflow-y: scroll; scrollbar-gutter: stable; }
+.user-management-table-content-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.user-management-table-content-scroll::-webkit-scrollbar { display: none; }
+.user-management-table { width: 73rem; min-width: 73rem; }
+.user-management-horizontal-scroll { flex: 0 0 auto; height: 0.75rem; overflow-x: auto; overflow-y: hidden; background: var(--app-surface); }
+.user-management-horizontal-scroll::-webkit-scrollbar { height: 0.75rem; }
+.user-management-horizontal-scroll__content { width: 73rem; min-width: 100%; height: 1px; }
+.user-management-table :deep(th) { height: 2.75rem; background: var(--app-surface-muted); color: var(--app-text-secondary); font-size: 0.75rem; font-weight: 500; }
+.user-management-table :deep(td) { height: 4.5rem; padding: 0.625rem 1rem; color: var(--app-text-secondary); font-size: 0.75rem; }
+.user-management-table :deep(tr:hover td) { background: var(--app-surface-muted); }
 .user-management-id, .user-management-last-login, .user-management-user-cell small, .user-management-grid-card__bottom { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-.user-management-id { color: #475569; font-size: 0.6875rem; font-weight: 600; }
+.user-management-id { color: var(--app-text-secondary); font-size: 0.6875rem; font-weight: 600; }
 .user-management-user-cell { gap: 0.75rem; min-width: 0; }
 .user-management-user-cell > div { display: flex; flex-direction: column; min-width: 0; gap: 0.2rem; }
-.user-management-user-cell strong { color: #0f172a; font-size: 0.8125rem; font-weight: 600; }
-.user-management-user-cell small { color: #94a3b8; font-size: 0.625rem; }
-.user-management-avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2rem; height: 2rem; border: 1px solid #a7f3d0; border-radius: 50%; background: #d1fae5; color: #047857; font-size: 0.6875rem; font-weight: 700; }
-.user-management-avatar--operator { border-color: #e2e8f0; background: #f1f5f9; color: #64748b; }
-.user-management-role { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.2rem; background: #0f172a; color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.03em; }
-.user-management-role--operator { background: #059669; }
-.user-management-email { gap: 0.4rem; color: #475569; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; white-space: nowrap; }
-.user-management-email :deep(svg) { color: #94a3b8; }
-.user-management-status { justify-content: center; gap: 0.4rem; width: fit-content; margin: 0 auto; padding: 0.3rem 0.6rem; border: 1px solid #a7f3d0; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: 0.6875rem; font-weight: 500; white-space: nowrap; }
-.user-management-status i { width: 0.375rem; height: 0.375rem; border-radius: 50%; background: #10b981; }
-.user-management-status--disabled { border-color: #e2e8f0; background: #f8fafc; color: #94a3b8; }
-.user-management-status--disabled i { background: #94a3b8; }
-.user-management-last-login { color: #64748b; font-size: 0.6875rem; white-space: nowrap; }
+.user-management-user-cell strong { color: var(--app-text-primary); font-size: 0.8125rem; font-weight: 600; }
+.user-management-user-cell small { color: var(--app-text-placeholder); font-size: 0.625rem; }
+.user-management-avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2rem; height: 2rem; border: 1px solid var(--app-success-light); border-radius: 50%; background: var(--app-success-light); color: var(--app-success-active); font-size: 0.6875rem; font-weight: 700; }
+.user-management-avatar--operator { border-color: var(--app-border); background: var(--app-surface-muted); color: var(--app-text-secondary); }
+.user-management-role { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.2rem; background: var(--app-text-primary); color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.03em; }
+.user-management-role--operator { background: var(--app-success); }
+.user-management-email { gap: 0.4rem; color: var(--app-text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; white-space: nowrap; }
+.user-management-email :deep(svg) { color: var(--app-text-placeholder); }
+.user-management-status { justify-content: center; gap: 0.4rem; width: fit-content; margin: 0 auto; padding: 0.3rem 0.6rem; border: 1px solid var(--app-success-light); border-radius: 999px; background: var(--app-success-light); color: var(--app-success-active); font-size: 0.6875rem; font-weight: 500; white-space: nowrap; }
+.user-management-status i { width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--app-success); }
+.user-management-status--disabled { border-color: var(--app-border); background: var(--app-surface-muted); color: var(--app-text-placeholder); }
+.user-management-status--disabled i { background: var(--app-text-placeholder); }
+.user-management-last-login { color: var(--app-text-secondary); font-size: 0.6875rem; white-space: nowrap; }
 .user-management-actions { justify-content: flex-end; gap: 0.35rem; white-space: nowrap; }
-.user-management-actions > span { color: #e2e8f0; }
-.user-management-footer { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; min-height: 4.25rem; padding: 0.75rem 1rem; border-top: 1px solid #f1f5f9; color: #64748b; font-size: 0.75rem; }
-.user-management-footer strong { color: #1e293b; font-weight: 600; }
+.user-management-actions > span { color: var(--app-border); }
+.user-management-footer { position: absolute; right: 0; bottom: 0; left: 0; z-index: 3; display: flex; flex-direction: column; width: 100%; height: 5rem; min-height: 5rem; padding: 0 1rem; border-top: 1px solid var(--app-surface-muted); background: var(--app-surface); color: var(--app-text-secondary); font-size: 0.75rem; }
+.user-management-footer__main { display: flex; align-items: center; justify-content: space-between; flex: 1 1 auto; min-height: 4.25rem; width: 100%; }
+.user-management-footer strong { color: var(--app-text-primary); font-weight: 600; }
 .user-management-footer :deep(.t-pagination) { margin: 0; }
 .user-management-footer :deep(.t-pagination__total) { display: none; }
 .user-management-grid-view { display: grid; align-content: start; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0.75rem; padding: 1rem; }
-.user-management-grid-card { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; }
+.user-management-grid-card { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; border: 1px solid var(--app-border); border-radius: 0.5rem; }
 .user-management-grid-card__top, .user-management-grid-card__bottom { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.user-management-grid-card__email { overflow: hidden; color: #64748b; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; text-overflow: ellipsis; white-space: nowrap; }
-.user-management-grid-card__bottom { color: #94a3b8; font-size: 0.625rem; }
-.user-management-state { display: flex; align-items: center; justify-content: center; flex: 1 1 auto; flex-direction: column; gap: 0.75rem; color: #94a3b8; font-size: 0.8125rem; }
+.user-management-grid-card__email { overflow: hidden; color: var(--app-text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.6875rem; text-overflow: ellipsis; white-space: nowrap; }
+.user-management-grid-card__bottom { color: var(--app-text-placeholder); font-size: 0.625rem; }
+.user-management-state { display: flex; align-items: center; justify-content: center; flex: 1 1 auto; flex-direction: column; gap: 0.75rem; color: var(--app-text-placeholder); font-size: 0.8125rem; }
 .is-loading { animation: user-management-spin 1s linear infinite; }
 @keyframes user-management-spin { to { transform: rotate(360deg); } }
 @media (max-width: 1150px) {

@@ -23,20 +23,39 @@ body,
 
 body {
   overflow: hidden;
+  color: var(--app-text-primary);
+  background: var(--app-page-background);
 }
 
 :root {
-  --app-page-background: #f3f4f6;
-  --app-surface: #fff;
-  --app-surface-muted: #f5f7fa;
-  --app-border: #e7e7e7;
-  --app-text-primary: #1f2329;
-  --app-text-secondary: #646a73;
-  --app-text-placeholder: #8f959e;
-  --app-primary: #0052d9;
-  --app-success: #2ba471;
-  --app-warning: #e37318;
-  --app-danger: #d54941;
+  /* 统一复用 TDesign 默认浅色主题，页面不再维护各自的品牌色。 */
+  --app-page-background: var(--td-bg-color-page, #eee);
+  --app-surface: var(--td-bg-color-container, #fff);
+  --app-surface-muted: var(--td-bg-color-secondarycontainer, #f3f3f3);
+  --app-surface-hover: var(--td-bg-color-container-hover, #f3f3f3);
+  --app-border: var(--td-border-level-1-color, #e8e8e8);
+  --app-border-strong: var(--td-border-level-2-color, #ddd);
+  --app-text-primary: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  --app-text-secondary: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  --app-text-tertiary: var(--td-text-color-tertiary, rgba(0, 0, 0, 0.4));
+  --app-text-placeholder: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  --app-text-disabled: var(--td-text-color-disabled, rgba(0, 0, 0, 0.26));
+  --app-primary: var(--td-brand-color-7, #0052d9);
+  --app-primary-hover: var(--td-brand-color-6, #366ef4);
+  --app-primary-active: var(--td-brand-color-8, #003cab);
+  --app-primary-light: var(--td-brand-color-1, #f2f3ff);
+  --app-primary-light-hover: var(--td-brand-color-2, #d9e1ff);
+  --app-success: var(--td-success-color-5, #2ba471);
+  --app-success-active: var(--td-success-color-6, #008858);
+  --app-success-light: var(--td-success-color-1, #e3f9e9);
+  --app-warning: var(--td-warning-color-5, #e37318);
+  --app-warning-active: var(--td-warning-color-6, #be5a00);
+  --app-warning-light: var(--td-warning-color-1, #fff1e9);
+  --app-danger: var(--td-error-color-6, #d54941);
+  --app-danger-active: var(--td-error-color-7, #ad352f);
+  --app-danger-light: var(--td-error-color-1, #fff0ed);
+  --app-scrollbar: var(--td-scrollbar-color, rgba(0, 0, 0, 0.1));
+  --app-shadow-1: var(--td-shadow-1, 0 1px 10px rgba(0, 0, 0, 0.05));
   --app-page-title-size: 1.5rem;
   --app-page-title-line-height: 1.35;
 }
