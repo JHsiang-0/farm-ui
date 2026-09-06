@@ -1,8 +1,56 @@
 # FabMatrix 独立前端 UI 整改设计
 
-版本：v1.0  
+版本：v1.1
 对应需求：.kiro/specs/farm-ui-remediation/requirements.md  
 视觉基线：FRONTEND_UI_SPECIFICATION.md
+
+## 9. UI-002 Electron 优先设计补充
+
+### 9.1 验收优先级
+
+UI-002 采用“Electron 实机窗口 → 页面工作流 → 状态矩阵 → 浏览器回归”的顺序。Electron 使用当前项目的实际主进程和隔离用户目录；`desktop-mock` 只用于稳定复现前端状态，不能替代真实后端联调。
+
+### 9.2 Electron 页面壳
+
+Electron 窗口不改变业务页面的信息架构。统一结构仍为：
+
+`t-layout → Aside/Menu → Header → Content → PageHeader → QueryToolbar → DataRegion`
+
+约束：
+
+- `Content View` 是页面纵向滚动 owner。
+- `Table` 只有内容区横向/局部纵向滚动，分页位于滚动内容之外。
+- 文件树、Drawer Body 可以独立滚动，但每个区域只能有一个实际滚动容器。
+- 800px 宽度下隐藏低优先级表格列或允许明确横向滚动，不压缩核心操作到不可点击。
+- Drawer Header/Footer 不随 Body 内容滚动；关闭后恢复触发按钮焦点。
+
+### 9.3 打印机详情数据流
+
+`OpenAPI/API_HANDOFF → printers API → Printer Store/selector → detail view model → TDesign Drawer`
+
+列表只提供标识和摘要。详情组件先根据稳定 ID 打开 Drawer，再在 Body 内展示 detail loading、success、empty 或 error。实时 Store 只能覆盖契约允许的实时字段；不能使用列表数据拼装静态详情，也不能用 0、epoch 或空字符串伪造后端未返回的值。
+
+### 9.4 文件库数据工作台
+
+文件库采用左右工作台：左侧目录上下文，右侧 PageHeader/Toolbar/DataRegion。Table 与 Grid 共享：当前目录、搜索词、材质筛选、选中项、分页和刷新状态。文件夹行只展示打开/删除等正式操作；文件行展示详情、打印、删除等正式操作。空目录、无结果和上传失败都在数据区原位表达。
+
+### 9.5 任务与批量派发
+
+任务中心将正式状态集合映射到三个用户工作区：待派发、活动任务、历史。详情和动作通过状态适配器决定显示。活动进度使用 TDesign Progress，状态使用统一 Tag，缺失时间使用语义空值。
+
+批量派发使用 Steps + 单一当前工作区 + 稳定操作栏。已完成步骤只保留摘要；预览只读；确认执行以后展示服务端返回的计划、确认和逐项结果，不增加前端自造的结果状态。
+
+### 9.6 样式收口
+
+- 业务页面使用 TDesign 组件和 `--app-*` 语义 token。
+- Tailwind 仅用于不改变视觉语义的布局辅助类。
+- `TdTable` 只用于现有列插槽迁移，新增表格优先使用 TDesign 原生 Table。
+- 页面 CSS 不再重复定义 TDesign Button、Tag、Alert、Card 的主色和交互状态。
+- 每次涉及 `height`、`overflow`、定位或 Loading 父级的修改，都必须附带 Electron 三窗口尺寸滚动回归。
+
+### 9.7 证据格式
+
+每个 UI-002 子任务完成记录必须包含：影响页面、契约来源、Loading/Empty/Error、Electron 窗口尺寸、操作步骤、截图或失败证据、测试/lint/build 命令、提交哈希和剩余限制。
 
 ## 1. 设计原则
 
@@ -145,4 +193,3 @@ Drawer 先打开结构，再在 Body 内显示 detail loading、success、empty 
 视口：375×812、768×1024、1024×768、1440×900、1920×855。
 
 Electron 验收使用实际 Electron 壳和构建产物，检查窗口尺寸、缩放、滚动、快捷键、API/WebSocket 地址解析和主要业务流程。
-

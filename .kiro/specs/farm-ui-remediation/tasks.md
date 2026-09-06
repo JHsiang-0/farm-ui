@@ -299,3 +299,160 @@ git diff --check：
 ## 4. 总体验收结论
 
 只有所有必选子任务完成、主要业务页面统一采用 TDesign 默认语言、真实 API 数据与页面状态一致、主要视口和 Electron 通过验收、每个子任务有独立提交后，才可将 UI-001 标记为完成。
+
+## 5. UI-002 Electron 优先二次整改
+
+任务批次：UI-002
+前置资料：`FRONTEND_UI_SPECIFICATION.md`、本 Spec 的 `requirements.md` 与 `design.md`、`API_HANDOFF.md`、运行时 `/v3/api-docs`  以及 `test-results/electron-ui-audit/ELECTRON_FRONTEND_UI_UX_AUDIT.md`
+
+范围：只整改当前 Electron 桌面应用及其共享业务页面，不更换技术栈，不修改 `farm-ui-v2`，不重做登录页和首次管理员初始化页的既有主视觉。
+
+统一门禁：
+
+- 每个 UI-002 子任务单独完成、单独验证、单独本地提交。
+- 涉及 Vue/JavaScript 时执行相关测试、`npm run lint` 和 `npm run build`；lint 自动修复产生的改动必须人工检查。
+- 提交前执行 `git status --short`、`git diff --check`，只暂存当前子任务文件，禁止 `git add .`。
+- 不得新增或猜测 API、字段、状态、业务数据；契约冲突时暂停并记录。
+- 不执行 `git push`，不修改或引用 `src/stores/printerStore.js.backup`。
+- 每项记录 Loading、Empty、Error、状态同步、Electron 窗口尺寸和未验证的真实环境限制。
+
+### [ ] UI-002.0 Electron 运行基线与版本一致性
+
+优先级：P0
+范围：`electron/main.cjs`、`electron/preload.cjs`、`vite.config.js`、`playwright.config.js`、`tests/e2e/electron.spec.js`、桌面启动文档（如需）
+
+工作内容：
+
+- 记录 Electron 开发、desktop-mock、打包产物分别加载的 URL/Bundle、API 目标、WebSocket 目标和用户数据目录。
+- 核对窗口标题、品牌名称、最小/默认窗口尺寸和全屏 IPC 状态同步。
+- 增加不依赖生产凭据的 Electron 运行诊断或测试证据，不能以静态字符串伪造运行结果。
+
+验收：
+
+- Electron 不使用过期开发服务器或旧 Bundle。
+- 800×560、1024×640、1200×760 可启动并进入登录/主工作区。
+- 开发 Mock 与真实后端边界记录清楚；真实后端未验证时明确标记。
+- 完成后提交：`docs: 建立 Electron UI-002 运行基线`（若包含代码测试，则按代码任务门禁执行）。
+
+### [ ] UI-002.1 App Shell 与滚动所有权复验
+
+优先级：P0
+范围：`src/layout`、`src/styles`、公共布局/状态组件、相关 Electron E2E
+
+工作内容：
+
+- 在 Electron 三个窗口尺寸复验 Sidebar、Header、Content、PageHeader、数据区和 Drawer。
+- 收敛 `body`、App Shell、Content View、Table、文件树和 Drawer 的 overflow 责任。
+- 验证登录页和首次初始化页不发生视觉回归。
+
+验收：
+
+- 页面底部、表格分页、固定操作列、Drawer Footer 均可通过滚动访问。
+- 不新增绝对定位或多层 `overflow:hidden` 掩盖布局问题。
+- 真实滚轮、Shift+滚轮/横向滚动、Tab、Escape 均有可重复测试。
+- 完成后提交：`fix: 收敛 Electron 应用壳滚动模型`。
+
+### [ ] UI-002.2 打印机管理与详情 Drawer 闭环
+
+优先级：P0
+范围：`src/views/PrinterManage.vue`、`src/components/device/DeviceDetailDrawer.vue`、打印机 API/Store/状态适配器、相关测试
+
+工作内容：
+
+- 先核对正式 OpenAPI 详情、历史、统计和控制接口，再调整 UI；接口不明确时暂停。
+- 让详情入口稳定可见，列表以核心字段为主，低频字段进入详情。
+- 修复详情加载、标题回退、切换设备、空字段、失败重试、固定 Footer 和焦点返回。
+- 修复小窗口下表格横向滚动、固定操作列、最后一行和分页可达性。
+
+验收：
+
+- 不出现 `undefined`、epoch 零时间、伪造温度或伪造设备详情。
+- 详情确实来自正式详情请求，列表行不拼装详情。
+- ADMIN/OPERATOR 操作显隐与后端权限一致。
+- 删除、重连或控制失败后重新同步服务端状态。
+- 完成后提交：`fix: 闭环 Electron 打印机详情工作流`。
+
+### [ ] UI-002.3 文件库工作台统一
+
+优先级：P1
+范围：`src/views/FileLibrary.vue`、文件树/文件详情/上传组件、文件 API/Store、相关测试
+
+工作内容：
+
+- 保持 TDesign Table 为默认视图，Grid 作为同一数据状态的可选视图。
+- 统一目录上下文、搜索、材质筛选、选择集、分页、刷新和上传状态。
+- 重新梳理文件夹与文件的打开、详情、打印、删除、创建任务入口。
+- 消除旧界面残留的卡片层级、重复标题和无意义固定高度。
+
+验收：
+
+- Electron 800×560 下仍能完成上传/创建文件夹/打开目录/创建任务路径。
+- 目录树和文件列表滚动边界清晰，不相互抢滚轮。
+- 空目录、无结果、上传部分失败、刷新失败均提供原位状态和下一步。
+- 文件详情不展示内部存储字段，所有字段来自正式契约。
+- 完成后提交：`fix: 重构 Electron 文件库工作台`。
+
+### [ ] UI-002.4 任务中心与批量派发工作流
+
+优先级：P1
+范围：`src/views/JobQueue.vue`、`src/views/JobHistory.vue`、`src/views/BatchDispatch.vue`、任务详情/状态适配器、相关测试
+
+工作内容：
+
+- 复核 QUEUED、活动任务和历史的正式数据集与状态机。
+- 固定详情为显式入口，将低频动作收进更多菜单，按状态控制动作。
+- 修复缺失时间的展示语义、分页可达性、任务详情 Drawer 和 409/422 恢复。
+- 将批量派发收敛为“Steps + 当前步骤单工作区 + 稳定操作栏”。
+
+验收：
+
+- 不展示 `1970-01-01` 等无意义 epoch 值。
+- 预览不创建任务；确认执行后保留计划/确认/逐项结果契约。
+- 只有 `retryable=true` 的失败项显示重试。
+- 小数据量不使用空白撑满内容；底部操作和分页可达。
+- 完成后提交：`fix: 优化 Electron 任务工作流`。
+
+### [ ] UI-002.5 全局反馈与桌面交互语义
+
+优先级：P1
+范围：`src/components/layout/AppHeader.vue`、`src/utils`、`src/views/RouteResult.vue`、各页面异步状态、相关测试
+
+工作内容：
+
+- 覆盖 401、403、404、409、422、503、网络失败、WebSocket 断开/陈旧/恢复。
+- 让错误在页面或 Drawer 原位展示，保留已有数据和用户上下文。
+- 对尚未实现的帮助、设置、通知入口明确 disabled 或移除，不用 Toast 冒充功能。
+- 统一 ESC、Dialog/Drawer 关闭、焦点返回和键盘操作。
+
+验收：
+
+- 状态不只依靠颜色表达，Status Tag 文案、主题和图标一致。
+- 重试动作不会重复提交或污染其他页面状态。
+- 页面刷新、返回、重新登录和实时恢复后的数据状态一致。
+- 完成后提交：`fix: 完善 Electron 全局状态反馈`。
+
+### [ ] UI-002.6 Electron 视觉回归与发布门禁
+
+优先级：P0
+范围：`tests/e2e/electron.spec.js`、新增 Electron 视觉/交互测试、审查报告和任务记录
+
+工作内容：
+
+- 对 UI-002.0 至 UI-002.5 的主流程做 Electron 最终回归。
+- 覆盖登录、服务器连接、打印机列表/详情、文件库、任务队列/历史、批量派发、个人中心和全屏看板。
+- 对成功、空、错误、403、409、503、断线恢复至少记录可复现结果；真实环境限制单独列出。
+- 生成稳定状态截图，并人工检查 TDesign 视觉层级、滚动、焦点和操作可达性。
+
+验收：
+
+- Electron 800×560、1024×640、1200×760 全部通过核心操作和无页面级水平溢出检查。
+- `npm test`、相关 Playwright 浏览器/Electron 测试、`npm run lint`、`npm run build` 均通过。
+- 提交前 `git status --short`、`git diff --check` 通过，提交只包含本子任务文件。
+- 完成后提交：`test: 完成 Electron UI-002 视觉回归`。
+- 只有所有 UI-002 子任务完成且真实环境限制已记录，才可在本批次末尾添加总结性完成记录；不自动修改 UI-001 历史状态。
+
+## 6. UI-002 执行顺序
+
+`UI-002.0 → UI-002.1 → UI-002.2 → UI-002.3 → UI-002.4 → UI-002.5 → UI-002.6`
+
+任何子任务发现 OpenAPI、API_HANDOFF、Mock 或运行时数据冲突时，暂停该子任务并记录冲突，不得用前端假字段或静态数据继续推进。
