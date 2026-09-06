@@ -4,7 +4,7 @@ const { pathToFileURL } = require('node:url')
 const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
 
 const APP_ID = 'com.example.farmui'
-const DEV_SERVER_URL = 'http://127.0.0.1:5176'
+const DEV_SERVER_URL = process.env.FARM_ELECTRON_DEV_SERVER_URL || 'http://127.0.0.1:5176'
 const DIST_INDEX_PATH = path.join(__dirname, '..', 'dist', 'index.html')
 const WINDOW_SIZE = {
   minWidth: 800,

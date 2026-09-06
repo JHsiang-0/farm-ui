@@ -40,8 +40,8 @@ export default defineConfig({
       timeout: 120000
     },
     {
-      command: 'npx.cmd vite --mode desktop-mock --host 127.0.0.1 --port 5176',
-      url: 'http://127.0.0.1:5176',
+      command: 'npx.cmd vite --mode desktop-mock --host 127.0.0.1 --port 5177',
+      url: 'http://127.0.0.1:5177',
       reuseExistingServer: true,
       timeout: 120000
     }

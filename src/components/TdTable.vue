@@ -91,12 +91,14 @@ const tableAttrs = computed(() => {
 .td-table-adapter {
   display: block;
   width: 100%;
+  height: 100%;
   min-width: 0;
   overflow: visible;
 }
 
 .td-table-adapter :deep(.t-table) {
   display: block;
+  height: 100%;
   min-width: 0;
   overflow: visible;
 }
@@ -104,6 +106,7 @@ const tableAttrs = computed(() => {
 .td-table-adapter :deep(.t-table__content) {
   min-width: 0;
   overflow-x: auto;
+  overflow-y: auto;
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   scrollbar-width: thin;
 }

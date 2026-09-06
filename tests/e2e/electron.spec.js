@@ -4,6 +4,8 @@ import path from 'node:path'
 import { _electron as electron } from 'playwright'
 import { expect, test } from '@playwright/test'
 
+const E2E_DESKTOP_URL = 'http://127.0.0.1:5177'
+
 test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', async () => {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fabmatrix-electron-e2e-'))
   const electronApp = await electron.launch({
@@ -12,7 +14,8 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
       ...process.env,
       ELECTRON_ENABLE_LOGGING: '1',
       FARM_ELECTRON_E2E: '1',
-      FARM_ELECTRON_E2E_USER_DATA: userDataDir
+      FARM_ELECTRON_E2E_USER_DATA: userDataDir,
+      FARM_ELECTRON_DEV_SERVER_URL: E2E_DESKTOP_URL
     }
   })
 
@@ -25,7 +28,7 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     expect(mainRuntime.appId).toBe('com.example.farmui')
     expect(mainRuntime.isPackaged).toBe(false)
     expect(mainRuntime.rendererMode).toBe('dev-server')
-    expect(mainRuntime.rendererSource).toBe('http://127.0.0.1:5176')
+    expect(mainRuntime.rendererSource).toBe(E2E_DESKTOP_URL)
     expect(mainRuntime.userDataPath).toContain('fabmatrix-electron-e2e-')
     expect(mainRuntime.window.minSize).toEqual([800, 560])
     expect(mainRuntime.window.maxSize).toEqual([1200, 760])
@@ -43,7 +46,7 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await page.getByLabel('用户名', { exact: true }).fill('admin')
     await page.getByLabel('密码', { exact: true }).fill('Admin123')
     await page.getByRole('button', { name: '登录', exact: true }).click()
-    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard/)
+    await expect(page).toHaveURL(/127\.0\.0\.1:5177\/#\/dashboard/)
     await expect(page.getByRole('heading', { name: '概览仪表盘' })).toBeVisible()
 
     for (const size of [[800, 560], [1024, 640], [1200, 760]]) {
@@ -61,11 +64,11 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     }
 
     await page.getByRole('button', { name: '实时设备看板', exact: true }).click()
-    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard\/fullscreen/)
+    await expect(page).toHaveURL(/127\.0\.0\.1:5177\/#\/dashboard\/fullscreen/)
     await expect(page.getByRole('banner', { name: '应用标题栏' })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'FabMatrix 3D 打印控制系统' })).toBeVisible()
     await page.getByRole('button', { name: '退出全屏', exact: true }).click()
-    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/printers/)
+    await expect(page).toHaveURL(/127\.0\.0\.1:5177\/#\/printers/)
     await expect(page.getByRole('banner', { name: '应用标题栏' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
     await expect(page.getByRole('button', { name: '删除打印机' }).first()).toBeVisible()
@@ -84,12 +87,12 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await page.getByRole('button', { name: '关闭打印机详情', exact: true }).click()
     await expect(page.getByText('设备信息', { exact: true })).toHaveCount(0)
 
-    await page.goto('http://127.0.0.1:5176/#/server-connection')
+    await page.goto(`${E2E_DESKTOP_URL}/#/server-connection`)
     await expect(page.getByRole('heading', { name: '连接生产服务器' })).toBeVisible()
     await expect(page.getByRole('button', { name: '测试', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '保存并连接', exact: true })).toBeVisible()
 
-    await page.goto('http://127.0.0.1:5176/#/files')
+    await page.goto(`${E2E_DESKTOP_URL}/#/files`)
     await expect(page.getByRole('heading', { name: '文件库' })).toBeVisible()
     await expect(page.locator('.file-library-layout')).toBeVisible()
     await expect(page.locator('.file-table-view')).toBeVisible({ timeout: 10000 })
@@ -140,7 +143,8 @@ test('Electron App Shell 在三个桌面窗口尺寸下保持单一滚动模型'
     env: {
       ...process.env,
       FARM_ELECTRON_E2E: '1',
-      FARM_ELECTRON_E2E_USER_DATA: userDataDir
+      FARM_ELECTRON_E2E_USER_DATA: userDataDir,
+      FARM_ELECTRON_DEV_SERVER_URL: E2E_DESKTOP_URL
     }
   })
 
@@ -150,7 +154,7 @@ test('Electron App Shell 在三个桌面窗口尺寸下保持单一滚动模型'
     await page.getByLabel('用户名', { exact: true }).fill('admin')
     await page.getByLabel('密码', { exact: true }).fill('Admin123')
     await page.getByRole('button', { name: '登录', exact: true }).click()
-    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard/)
+    await expect(page).toHaveURL(/127\.0\.0\.1:5177\/#\/dashboard/)
 
     for (const size of [[800, 560], [1024, 640], [1200, 760]]) {
       await electronApp.evaluate(({ BrowserWindow }, nextSize) => {
@@ -190,7 +194,7 @@ test('Electron App Shell 在三个桌面窗口尺寸下保持单一滚动模型'
       expect(layoutMetrics.contentView.clientHeight).toBeGreaterThan(0)
     }
 
-    await page.goto('http://127.0.0.1:5176/#/printers')
+    await page.goto(`${E2E_DESKTOP_URL}/#/printers`)
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
     await electronApp.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.setContentSize(800, 560)
@@ -214,7 +218,8 @@ test('Electron UI-002 主业务页面在三种窗口尺寸下可达并生成稳�
     env: {
       ...process.env,
       FARM_ELECTRON_E2E: '1',
-      FARM_ELECTRON_E2E_USER_DATA: userDataDir
+      FARM_ELECTRON_E2E_USER_DATA: userDataDir,
+      FARM_ELECTRON_DEV_SERVER_URL: E2E_DESKTOP_URL
     }
   })
 
@@ -235,7 +240,7 @@ test('Electron UI-002 主业务页面在三种窗口尺寸下可达并生成稳�
     await page.getByLabel('用户名', { exact: true }).fill('admin')
     await page.getByLabel('密码', { exact: true }).fill('Admin123')
     await page.getByRole('button', { name: '登录', exact: true }).click()
-    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard/)
+    await expect(page).toHaveURL(/127\.0\.0\.1:5177\/#\/dashboard/)
 
     for (const size of [[800, 560], [1024, 640], [1200, 760]]) {
       await electronApp.evaluate(({ BrowserWindow }, nextSize) => {
@@ -244,7 +249,7 @@ test('Electron UI-002 主业务页面在三种窗口尺寸下可达并生成稳�
       await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual(size)
 
       for (const route of pages) {
-        await page.goto(`http://127.0.0.1:5176/#${route.path}`)
+        await page.goto(`${E2E_DESKTOP_URL}/#${route.path}`)
         await expect(page.getByRole('heading', { name: route.heading, exact: true })).toBeVisible()
         if (route.key === 'files') {
           await expect(page.locator('.file-table-view')).toBeVisible({ timeout: 10000 })

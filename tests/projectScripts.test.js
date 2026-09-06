@@ -18,6 +18,7 @@ test('项目验证门禁覆盖测试、lint、浏览器和桌面构建', async (
   assert.match(scripts['desktop:run'], /electron \. --farm-dist/)
   assert.match(scripts['desktop:run:mock'], /electron \. --farm-dist/)
   assert.match(mainSource, /frame: false/)
+  assert.match(mainSource, /FARM_ELECTRON_DEV_SERVER_URL/)
   assert.match(mainSource, /farm-window:toggle-maximize/)
   assert.match(preloadSource, /contextBridge\.exposeInMainWorld\('farmDesktop'/)
   assert.match(preloadSource, /farm-window:close/)

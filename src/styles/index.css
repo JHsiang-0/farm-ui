@@ -47,7 +47,8 @@ body {
 }
 
 .app-page-card {
-  display: block;
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
@@ -55,8 +56,8 @@ body {
   overflow: hidden;
 }
 
-.app-page-card > .t-loading__parent,
-.app-page-card > .t-card__body {
+.app-page-card .t-loading__parent,
+.app-page-card .t-card__body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;

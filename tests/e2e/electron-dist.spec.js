@@ -54,14 +54,29 @@ test('Electron desktop 构建产物加载 dist-file 并保留运行诊断', asyn
     await page.getByRole('button', { name: '还原窗口' }).click()
     await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isMaximized())).toBe(false)
 
-    const windowMetrics = await page.evaluate(() => ({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      documentWidth: document.documentElement.scrollWidth
-    }))
-    expect(windowMetrics.width).toBeGreaterThanOrEqual(800)
-    expect(windowMetrics.height).toBeGreaterThanOrEqual(560)
-    expect(windowMetrics.documentWidth).toBeLessThanOrEqual(windowMetrics.width + 1)
+    for (const [requestedWidth, requestedHeight] of [[800, 560], [1024, 640], [1200, 760], [1920, 1032]]) {
+      await electronApp.evaluate(({ BrowserWindow }, size) => {
+        BrowserWindow.getAllWindows()[0]?.setContentSize(size[0], size[1])
+      }, [requestedWidth, requestedHeight])
+
+      await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([requestedWidth, requestedHeight])
+
+      const windowMetrics = await page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        documentWidth: document.documentElement.scrollWidth,
+        documentHeight: document.documentElement.scrollHeight,
+        bodyHeight: document.body.scrollHeight
+      }))
+      expect(windowMetrics.width).toBeGreaterThanOrEqual(800)
+      expect(windowMetrics.height).toBeGreaterThanOrEqual(560)
+      expect(windowMetrics.width).toBeLessThanOrEqual(requestedWidth)
+      expect(windowMetrics.height).toBeLessThanOrEqual(requestedHeight)
+      expect(windowMetrics.documentWidth).toBeLessThanOrEqual(windowMetrics.width + 1)
+      expect(windowMetrics.bodyHeight).toBeLessThanOrEqual(windowMetrics.height + 1)
+    }
+
+    await page.screenshot({ path: 'test-results/playwright/electron-dist-titlebar.png' })
   } finally {
     await electronApp.close()
     fs.rmSync(userDataDir, { recursive: true, force: true })

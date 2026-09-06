@@ -759,7 +759,7 @@ git diff --check：通过。
 
 提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 和 `git diff --cached --check` 通过。提交：`style: 统一 Electron 滚动条视觉`。
 
-### 7.5 UI-003.4 Electron 视觉回归与发布门禁
+### [x] UI-003.4 Electron 视觉回归与发布门禁
 
 优先级：P0
 范围：Electron/浏览器 Playwright 测试、截图、审查记录和本任务记录
@@ -779,6 +779,30 @@ git diff --check：通过。
 - 提交前执行 `git status --short`、`git diff --check` 和 `git diff --cached --check`；每个子任务只暂存自己的文件，不使用 `git add .`。
 - 不执行 git push；真实环境限制必须写入本任务完成记录。
 - 完成后提交：`test: 完成 Electron 窗口与滚动回归`。
+
+完成记录：完成 Electron 自绘标题栏、窗口最小化/最大化/还原、全屏路由、打印机表格真实滚轮、文件库窄窗口布局、文件/任务/历史/批量派发/个人中心/仪表盘和服务器连接页面回归。修复 TDesign Card Body 未进入可收缩 Flex 链导致表格被裁剪的问题；文件库在 800×560 下改为上下分区，保留目录与结果区的局部滚动，避免窄窗口筛选区把结果表压成零高度；桌面 Mock E2E 与用户正在使用的 5176 Vite 实例隔离到 5177，避免加载过期开发服务器。
+
+修改文件：`electron/main.cjs`、`playwright.config.js`、`src/components/TdTable.vue`、`src/styles/index.css`、`src/styles/theme.css`、`src/views/FileLibrary.vue`、`tests/e2e/electron.spec.js`、`tests/e2e/electron-dist.spec.js`、`tests/projectScripts.test.js`、本任务记录。
+
+用户流程影响：Electron 无原生旧标题栏残留；主业务页面在小窗口可继续访问标题、筛选、表格、分页和操作；打印机表格和文件表格由指定内容区承接滚轮；页面没有新增全局或无语义滚动条。登录、注册/初始化既有主视觉未改动。
+
+API/OpenAPI 核对：本子任务未新增接口、字段、Mock 业务数据或状态；仅调整 Electron 渲染源隔离、布局、滚动和自动化验证，继续使用既有正式 API/desktop-mock 契约。
+
+Loading/Empty/Error：沿用既有页面 AsyncState、TDesign Empty/Error、Drawer 和表格 Loading 状态；本轮验证了正常数据、加载完成、页面级横向溢出、打印机/文件滚动、详情 Drawer、全屏切换和窗口控制。真实后端错误矩阵、真实局域网发现、物理打印机和安装包签名仍需生产环境单独验收。
+
+响应式视口：浏览器 Playwright 覆盖 375/768/1440/1920；Electron desktop-mock 覆盖实际 BrowserWindow 800×560、1024×640、1200×760；dist-file 测试通过 `setContentSize` 等待并覆盖 800×560、1024×640、1200×760、1920×1032，检查页面宽度、文档宽度和 Body 高度无意外溢出。稳定截图生成于 `test-results/playwright/`，已人工检查自绘标题栏、滚动区域和 TDesign 层级。
+
+测试：`npm test`（142/142）、`npm run test:e2e`（9/9）、`npm run test:electron`（3/3）、`npm run test:electron:dist`（1/1，含 `npm run build:desktop`）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 动静态导入提示和大 chunk 警告，不影响退出码。
+
+git status --short：提交前仅包含本子任务文件；用户已运行的 5176 Vite 进程未终止或修改。
+
+git diff --check：通过；暂存后另行执行 `git diff --cached --check`。
+
+提交：完成最终检查后创建独立本地提交 `test: 完成 Electron 窗口与滚动回归`，不执行 push。
 
 ### 7.6 UI-003 执行顺序与统一约束
 

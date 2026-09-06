@@ -145,11 +145,13 @@ select {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--app-spacing-4);
   margin-bottom: var(--app-spacing-5);
 }
 
 .app-page-header__heading {
+  flex: 1 1 280px;
   min-width: 0;
 }
 
@@ -174,6 +176,7 @@ select {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  max-width: 100%;
   gap: var(--app-spacing-3);
   flex-shrink: 0;
 }
