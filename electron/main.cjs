@@ -38,6 +38,19 @@ const getPlannedRenderer = () => shouldUseDistRenderer()
 
 const getRenderer = () => activeRenderer || getPlannedRenderer()
 
+const getWindowState = () => ({
+  isMaximized: Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isMaximized()),
+  isFullscreen: Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFullScreen())
+})
+
+const notifyWindowStateChange = () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  const state = getWindowState()
+  mainWindow.webContents.send('farm-window:state-changed', state)
+  mainWindow.webContents.send('farm-window:fullscreen-changed', state.isFullscreen)
+}
+
 const getRuntimeInfo = () => {
   const contentSize = mainWindow && !mainWindow.isDestroyed()
     ? mainWindow.getContentSize()
@@ -97,7 +110,33 @@ ipcMain.handle('farm-window:set-fullscreen', (_event, fullscreen) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false
 
   mainWindow.setFullScreen(Boolean(fullscreen))
-  return mainWindow.isFullScreen()
+  notifyWindowStateChange()
+  return getWindowState().isFullscreen
+})
+
+ipcMain.handle('farm-window:get-state', () => getWindowState())
+
+ipcMain.handle('farm-window:minimize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return getWindowState()
+
+  mainWindow.minimize()
+  return getWindowState()
+})
+
+ipcMain.handle('farm-window:toggle-maximize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return getWindowState()
+
+  if (mainWindow.isMaximized()) mainWindow.unmaximize()
+  else mainWindow.maximize()
+  notifyWindowStateChange()
+  return getWindowState()
+})
+
+ipcMain.handle('farm-window:close', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false
+
+  mainWindow.close()
+  return true
 })
 
 ipcMain.handle('farm-runtime:get-info', () => getRuntimeInfo())
@@ -137,6 +176,7 @@ if (!hasSingleInstanceLock) {
       minHeight: WINDOW_SIZE.minHeight,
       center: true,
       resizable: true,
+      frame: false,
       show: false,
       autoHideMenuBar: true,
       icon: getAppIconPath(),
@@ -152,13 +192,10 @@ if (!hasSingleInstanceLock) {
       mainWindow.show()
     })
 
-    const notifyFullscreenChange = () => {
-      if (!mainWindow || mainWindow.isDestroyed()) return
-      mainWindow.webContents.send('farm-window:fullscreen-changed', mainWindow.isFullScreen())
-    }
-
-    mainWindow.on('enter-full-screen', notifyFullscreenChange)
-    mainWindow.on('leave-full-screen', notifyFullscreenChange)
+    mainWindow.on('maximize', notifyWindowStateChange)
+    mainWindow.on('unmaximize', notifyWindowStateChange)
+    mainWindow.on('enter-full-screen', notifyWindowStateChange)
+    mainWindow.on('leave-full-screen', notifyWindowStateChange)
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       if (/^https?:\/\//i.test(url)) {

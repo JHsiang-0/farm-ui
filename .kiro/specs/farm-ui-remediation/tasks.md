@@ -667,7 +667,7 @@ git diff --check：通过。
 
 提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 通过。提交：`test: 建立 Electron 窗口渲染基线`。
 
-### 7.2 UI-003.1 Electron 无边框窗口与自绘标题栏
+### [x] UI-003.1 Electron 无边框窗口与自绘标题栏
 
 优先级：P0
 范围：`electron/main.cjs`、`electron/preload.cjs`、`src/App.vue`、新增 `src/components/layout/DesktopTitleBar.vue`、相关样式和 Electron 测试
@@ -687,6 +687,16 @@ git diff --check：通过。
 - 双击标题栏、窗口最大化变化、全屏切换和路由切换不会造成页面跳动或额外滚动。
 - 浏览器预览保持可用，不依赖 Electron API；登录与首次管理员初始化页面视觉主结构保持不变。
 - 完成后提交：`feat: 完成 Electron 自绘标题栏`。
+
+完成记录：BrowserWindow 已启用 `frame: false`，新增 FabMatrix 自绘 DesktopTitleBar；标题栏按钮使用 TDesign Button 和 `tdesign-icons-vue-next` 官方图标。preload 只暴露窗口控制、状态读取和状态订阅方法，未暴露原始 `ipcRenderer`。普通应用路由显示标题栏，全屏看板路由隐藏标题栏，窗口最大化/还原状态通过 IPC 事件同步。
+
+修改文件：`electron/main.cjs`、`electron/preload.cjs`、`src/App.vue`、`src/components/layout/DesktopTitleBar.vue`、`src/styles/theme.css`、相关 Electron/项目脚本测试、本任务记录。
+
+验证记录：`npm test` 141/141 通过；`npm run test:electron:dist` 1/1 通过，验证标题栏无障碍名称、最小化/最大化/还原/关闭入口和最大化状态 IPC；`npm run lint` 通过；`npm run build` 与 `npm run build:desktop` 通过。构建仍有既有动态导入和大 chunk 警告，不影响退出码。
+
+环境限制：当前 5176 由用户启动的真实 `desktop` Vite 实例占用，本轮不杀死或覆盖该进程，因此没有对该实例运行依赖 `desktop-mock` 的常规 Electron E2E；dist Electron 验证在隔离用户目录中完成。登录和首次管理员初始化的主体视觉结构未改；未新增 API、字段、业务状态、Mock 数据或真实凭据。
+
+提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 和 `git diff --cached --check` 通过。提交：`feat: 完成 Electron 自绘标题栏`。
 
 ### 7.3 UI-003.2 App Shell 高度与滚动所有权重构
 

@@ -62,9 +62,11 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
 
     await page.getByRole('button', { name: '实时设备看板', exact: true }).click()
     await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard\/fullscreen/)
+    await expect(page.getByRole('banner', { name: '应用标题栏' })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'FabMatrix 3D 打印控制系统' })).toBeVisible()
     await page.getByRole('button', { name: '退出全屏', exact: true }).click()
     await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/printers/)
+    await expect(page.getByRole('banner', { name: '应用标题栏' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
     await expect(page.getByRole('button', { name: '删除打印机' }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: '详情', exact: true }).first()).toBeVisible()

@@ -43,6 +43,17 @@ test('Electron desktop 构建产物加载 dist-file 并保留运行诊断', asyn
       wsUrl: 'ws://localhost:8080/ws/farm-status'
     })
 
+    await expect(page.getByRole('banner', { name: '应用标题栏' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '最小化窗口' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '最大化窗口' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '关闭窗口' })).toBeVisible()
+
+    await page.getByRole('button', { name: '最大化窗口' }).click()
+    await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isMaximized())).toBe(true)
+    await expect(page.getByRole('button', { name: '还原窗口' })).toBeVisible()
+    await page.getByRole('button', { name: '还原窗口' }).click()
+    await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isMaximized())).toBe(false)
+
     const windowMetrics = await page.evaluate(() => ({
       width: window.innerWidth,
       height: window.innerHeight,
