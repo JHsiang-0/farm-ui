@@ -22,7 +22,10 @@
       <t-content class="app-content">
         <div class="app-content__inner">
           <AppBreadcrumb />
-          <div class="app-content__view">
+      <div
+        class="app-content__view"
+        :class="{ 'app-content__view--page-scroll': route.meta.pageScroll }"
+      >
             <router-view v-slot="{ Component }">
               <transition name="fade-transform" mode="out-in">
                 <component :is="Component" />
@@ -128,12 +131,35 @@ onUnmounted(() => {
 }
 
 .app-content__view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.app-content__view--page-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-content__view--page-scroll > * {
+  flex: 0 0 auto;
+  min-height: 100%;
+}
+
+.app-content__view--page-scroll > .app-page-shell {
+  height: auto;
+  overflow: visible;
+}
+
+.app-content__view > * {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .fade-transform-leave-active,

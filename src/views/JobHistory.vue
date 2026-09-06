@@ -230,7 +230,7 @@ const detailLoading = computed(() => jobStore.detailLoading)
 const detailErrorText = computed(() => jobStore.detailError?.message || '')
 const tableData = ref([])
 const historyTableHeight = computed(() => tableData.value.length > 8
-  ? 'clamp(320px, calc(100vh - 330px), 720px)'
+  ? '100%'
   : undefined)
 const detailDrawerVisible = ref(false)
 const selectedJob = ref(null)
@@ -418,9 +418,11 @@ fetchData()
 <style scoped>
 .history-workspace {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
+  overflow: hidden;
   padding: var(--app-spacing-5);
   background: var(--app-surface);
   border: 1px solid var(--app-border);
@@ -432,7 +434,10 @@ fetchData()
 }
 
 .history-table {
+  flex: 1 1 auto;
   display: block;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

@@ -25,7 +25,8 @@ test('responsive shell keeps desktop dimensions in semantic tokens', () => {
   assert.match(themeSource, /--app-content-padding:\s*var\(--app-spacing-6\)/)
   assert.match(layoutSource, /\.app-content \{[\s\S]*overflow: hidden/)
   assert.match(layoutSource, /\.app-content__inner \{[\s\S]*overflow: visible/)
-  assert.match(layoutSource, /\.app-content__view \{[\s\S]*overflow-x: hidden[\s\S]*overflow-y: auto/)
+  assert.match(layoutSource, /\.app-content__view \{[\s\S]*overflow: hidden/)
+  assert.match(layoutSource, /\.app-content__view--page-scroll \{[\s\S]*overflow-x: hidden[\s\S]*overflow-y: auto/)
 })
 
 test('navigation follows the T208-1 information architecture', () => {

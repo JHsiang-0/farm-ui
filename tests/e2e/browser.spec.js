@@ -189,7 +189,7 @@ test('打印机和文件结果区拥有明确的滚动容器', async ({ browser 
       clientHeight: element.clientHeight
     }))
     expect(['auto', 'scroll']).toContain(printerScrollMetrics.overflowX)
-    expect(['auto', 'scroll']).toContain(pageScrollMetrics.overflowY)
+    expect(pageScrollMetrics.overflowY).toBe('hidden')
     expect(printerScrollMetrics.clientHeight).toBeGreaterThan(0)
     expect(pageScrollMetrics.clientHeight).toBeGreaterThan(0)
 

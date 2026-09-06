@@ -91,7 +91,7 @@
           v-if="tableData.length"
           :data="displayTableData"
           :loading="loading"
-          height="clamp(320px, calc(100vh - 320px), 720px)"
+          height="100%"
           style="width: 100%"
           class="printer-table"
           @row-click="handleRowClick"
@@ -1045,8 +1045,15 @@ const handleBatchAdd = async () => {
 }
 
 .printer-manage-card__table {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
+
+.printer-table { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 
 .printer-table-row :deep(td) {
   cursor: pointer;

@@ -698,7 +698,7 @@ git diff --check：通过。
 
 提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 和 `git diff --cached --check` 通过。提交：`feat: 完成 Electron 自绘标题栏`。
 
-### 7.3 UI-003.2 App Shell 高度与滚动所有权重构
+### [x] UI-003.2 App Shell 高度与滚动所有权重构
 
 优先级：P0
 范围：`src/App.vue`、`src/layout/index.vue`、`src/styles/index.css`、`src/styles/theme.css`、页面壳和相关页面样式
@@ -718,6 +718,16 @@ git diff --check：通过。
 - 打印机、文件、任务、历史、批量派发、个人中心、仪表盘和全屏看板在 Loading、Empty、Error、正常数据下均保持滚动模型一致。
 - 通过真实鼠标滚轮、触控板/滚轮事件和键盘焦点检查，不以脚本直接设置 `scrollTop` 代替用户操作。
 - 完成后提交：`fix: 重构 Electron 页面滚动所有权`。
+
+完成记录：App Shell 现在由固定视口 Flex 链路承接可用高度，`app-content__view` 默认不滚动，仅由路由 `meta.pageScroll` 明确开启页面滚动。打印机、任务队列、打印历史、用户管理和操作日志的表格高度改为父级 `100%`，文件库布局改为父级 `100%`，保留目录树、文件结果区和 TDesign Table Body 的局部滚动。移除了本批页面对 `calc(100vh - ...)` 的依赖，并修正 Electron 测试对滚动所有者的断言。
+
+修改文件：`src/layout/index.vue`、`src/styles/index.css`、`src/router/index.js`、打印机/任务/历史/用户/日志/文件库页面样式、浏览器与 Electron 滚动测试、本任务记录。
+
+验证记录：`npm test` 141/141 通过；`npm run test:e2e` 9/9 通过（375、768、1440、1920 视口及真实滚轮交互）；`npm run test:electron:dist` 1/1 通过；`npm run lint`、`npm run build`、`npm run build:desktop` 均通过。构建仍有既有动态导入和大 chunk 警告，不影响退出码。
+
+环境限制：当前 5176 由用户启动的真实 `desktop` Vite 实例占用，本轮不杀死或覆盖该进程，因此没有对该实例运行依赖 `desktop-mock` 的常规 Electron E2E；浏览器 Mock 与隔离 dist Electron 已完成滚动模型验证。未新增 API、字段、业务状态、Mock 数据或真实凭据。
+
+提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 和 `git diff --cached --check` 通过。提交：`fix: 重构 Electron 页面滚动所有权`。
 
 ### 7.4 UI-003.3 滚动条样式与旧版样式清理
 

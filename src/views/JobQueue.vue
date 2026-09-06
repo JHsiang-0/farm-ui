@@ -420,10 +420,10 @@ const {
 const queueLoading = computed(() => jobStore.queueLoading)
 const loading = computed(() => jobStore.queueLoading || jobStore.activeLoading)
 const queueTableHeight = computed(() => queueData.value.length > 8
-  ? 'clamp(320px, calc(100vh - 270px), 720px)'
+  ? '100%'
   : undefined)
 const activeTableHeight = computed(() => activePageData.value.length > 8
-  ? 'clamp(320px, calc(100vh - 270px), 720px)'
+  ? '100%'
   : undefined)
 const detailErrorText = computed(() => detailError.value?.message || '')
 const fetchActive = () => jobStore.fetchActive()
@@ -853,14 +853,31 @@ onMounted(() => {
 
 <style scoped>
 .job-queue-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
+
+.job-queue-tabs :deep(.t-tabs__content),
+.job-queue-tabs :deep(.t-tab-panel) {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.job-queue-tabs :deep(.t-tabs__content) { flex-direction: column; }
+.job-queue-tabs :deep(.t-tab-panel) { flex-direction: column; }
 
 .job-panel {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
+  height: 100%;
+  overflow: hidden;
   padding: var(--app-spacing-5);
   background: var(--app-surface);
   border: 1px solid var(--app-border);
@@ -868,8 +885,11 @@ onMounted(() => {
 }
 
 .job-table {
+  flex: 1 1 auto;
   display: block;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @keyframes rotate {

@@ -104,7 +104,7 @@ const dialogError = ref('')
 const formRef = ref(null)
 const users = ref([])
 const usersTableHeight = computed(() => users.value.length > 8
-  ? 'clamp(320px, calc(100vh - 320px), 720px)'
+  ? '100%'
   : undefined)
 const query = reactive({ username: '', email: '', role: '', enabled: undefined })
 const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })

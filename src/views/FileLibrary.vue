@@ -1391,7 +1391,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   width: 100%;
-  height: clamp(360px, calc(100vh - 244px), 780px);
+  height: 100%;
   min-width: 0;
   min-height: 0;
 }

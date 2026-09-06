@@ -36,10 +36,10 @@ test('打印机删除显示关联任务风险并保留逐项执行状态', () =>
 })
 
 test('打印机列表使用局部滚动和显式详情入口，不再以绝对定位裁剪内容', () => {
-  assert.match(source, /height="clamp\(320px, calc\(100vh - 320px\), 720px\)"/)
+  assert.match(source, /height="100%"/)
   assert.match(source, /@click\.stop="handleRowClick\(scope\.row\)"/)
   assert.doesNotMatch(source, /printer-manage-card__table[\s\S]*position: absolute/)
-  assert.doesNotMatch(source, /printer-manage-card__table[\s\S]*overflow: hidden/)
+  assert.match(source, /printer-manage-card__table[\s\S]*overflow: hidden/)
   assert.match(source, /<t-alert v-if="loadError && tableData\.length"/)
 })
 

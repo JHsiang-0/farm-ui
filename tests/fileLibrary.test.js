@@ -43,7 +43,7 @@ test('文件库默认使用可滚动列表并保留网格切换和显式详情�
   assert.match(source, /<QueryToolbar class="file-library-filter-row"/)
   assert.match(source, /height="100%"[\s\S]*@selection-change/)
   assert.match(source, /@click\.stop="openFileDetail\(row\)"/)
-  assert.match(source, /\.file-library-layout[\s\S]*height: clamp\(360px, calc\(100vh - 244px\), 780px\)/)
+  assert.match(source, /\.file-library-layout[\s\S]*height: 100%/)
   assert.match(source, /\.file-library-tree[\s\S]*overflow-y: auto/)
   assert.match(source, /\.file-table-view :deep\(\.t-table__content\)[\s\S]*overflow-y: auto/)
   assert.doesNotMatch(source, /viewMode = ref\('grid'\)/)

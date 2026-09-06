@@ -197,10 +197,10 @@ test('Electron App Shell 在三个桌面窗口尺寸下保持单一滚动模型'
     })
     await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([800, 560])
 
-    const contentView = page.locator('.app-content__view')
-    await contentView.hover()
+    const printerTableContent = page.locator('.printer-table .t-table__content').first()
+    await printerTableContent.hover()
     await page.mouse.wheel(0, 500)
-    await expect.poll(() => contentView.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+    await expect.poll(() => printerTableContent.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
   } finally {
     await electronApp.close()
     fs.rmSync(userDataDir, { recursive: true, force: true })

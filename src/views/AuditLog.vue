@@ -138,7 +138,7 @@ const loading = ref(false)
 const loadError = ref('')
 const logs = ref([])
 const logsTableHeight = computed(() => logs.value.length > 12
-  ? 'clamp(360px, calc(100vh - 360px), 720px)'
+  ? '100%'
   : undefined)
 const detailVisible = ref(false)
 const selectedLog = ref(null)

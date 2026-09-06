@@ -57,7 +57,7 @@ const router = createRouter({
           path: 'dashboard',
           name: 'dashboard-overview',
           component: () => import('../views/Dashboard.vue'),
-          meta: { title: '概览仪表盘', hideBreadcrumb: true }
+          meta: { title: '概览仪表盘', hideBreadcrumb: true, pageScroll: true }
         },
         {
           path: 'printers',
@@ -81,7 +81,7 @@ const router = createRouter({
           path: 'profile',
           name: 'profile',
           component: () => import('../views/Profile.vue'),
-          meta: { title: '个人中心', hideBreadcrumb: true }
+          meta: { title: '个人中心', hideBreadcrumb: true, pageScroll: true }
         },
         {
           path: 'files',
@@ -113,7 +113,7 @@ const router = createRouter({
           path: 'batch-dispatch',
           name: 'batch-dispatch',
           component: () => import('../views/BatchDispatch.vue'),
-          meta: { title: '批量手动派发', hideBreadcrumb: true }
+          meta: { title: '批量手动派发', hideBreadcrumb: true, pageScroll: true }
         }
       ]
     },
