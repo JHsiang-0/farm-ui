@@ -34,7 +34,7 @@
       </template>
     </PageHeader>
 
-    <t-card class="file-library-card app-page-card" bordered>
+    <DataRegion class="file-library-workspace" label="文件工作台">
       <div class="file-library-layout">
         <aside class="file-library-sidebar" aria-label="文件目录">
           <div class="file-library-panel-heading">
@@ -48,13 +48,19 @@
           </div>
           <div class="file-library-tree">
             <AsyncState
-              v-if="treeLoading || treeError || fileTree.length === 0"
+              v-if="treeLoading || treeError"
               :loading="treeLoading"
               :error="treeError"
-              :empty="fileTree.length === 0"
-              empty-description="暂无可见文件或文件夹"
               @retry="loadFileTree"
             />
+            <t-empty v-else-if="fileTree.length === 0" description="暂无可见文件或文件夹">
+              <template #operation>
+                <t-space>
+                  <t-button size="small" variant="outline" @click="openCreateFolderDialog">新建文件夹</t-button>
+                  <t-button size="small" theme="primary" @click="handleUpload">上传文件</t-button>
+                </t-space>
+              </template>
+            </t-empty>
             <t-tree
               v-else
               :data="fileTree"
@@ -85,7 +91,10 @@
               </t-breadcrumb>
             </div>
             <div class="file-library-toolbar__filters">
-              <t-switch v-model="isBatchMode" :label="['批量操作', '详情查看']" />
+              <t-radio-group v-model="isBatchMode" variant="default-filled" size="small" aria-label="文件操作模式">
+                <t-radio-button :value="false">浏览详情</t-radio-button>
+                <t-radio-button :value="true">批量选择</t-radio-button>
+              </t-radio-group>
               <t-input v-model="searchKeyword" placeholder="搜索文件名..." clearable size="medium"
                 @keyup.enter="handleSearch">
                 <template #prefixIcon>
@@ -108,13 +117,19 @@
             </div>
 
             <AsyncState
-              v-if="fileList.length === 0"
+              v-if="loading || loadError"
               :loading="loading"
               :error="loadError"
-              :empty="!loading && !loadError"
-              empty-description="暂无文件，请上传 G-Code 文件"
               @retry="fetchData"
             />
+            <t-empty v-else-if="fileList.length === 0" description="当前目录暂无文件或文件夹">
+              <template #operation>
+                <t-space>
+                  <t-button size="small" variant="outline" @click="openCreateFolderDialog">新建文件夹</t-button>
+                  <t-button size="small" theme="primary" @click="handleUpload">上传 G-Code 文件</t-button>
+                </t-space>
+              </template>
+            </t-empty>
             <t-alert v-if="loadError && fileList.length" theme="error" :close-btn="false" class="mb-3">
               <template #default>{{ loadError }}</template>
               <template #operation>
@@ -268,7 +283,7 @@
       <div v-else class="file-table-view">
         <TdTable :data="fileList" :loading="loading" height="100%" @selection-change="handleSelectionChange"
           @row-click="handleTableRowClick" border stripe style="width: 100%">
-          <TdTableColumn type="selection" width="50" align="center" />
+          <TdTableColumn v-if="isBatchMode" type="selection" width="50" align="center" />
 
           <TdTableColumn prop="originalName" label="文件名" min-width="200">
             <template #default="{ row }">
@@ -364,7 +379,7 @@
           </div>
         </section>
       </div>
-    </t-card>
+    </DataRegion>
 
     <!-- 文件上传对话框 -->
     <t-dialog v-model:visible="uploadDialogVisible" header="批量上传切片文件" width="600px" :footer="false">
@@ -582,6 +597,7 @@ import { formatDuration, formatFileSize } from '@/utils/formatters'
 import FileDetailDrawer from '@/components/file/FileDetailDrawer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import QueryToolbar from '@/components/layout/QueryToolbar.vue'
+import DataRegion from '@/components/layout/DataRegion.vue'
 import IconFolder from '@/components/icons/IconFolder.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import TdTable from '@/components/TdTable.vue'
@@ -605,7 +621,7 @@ const fileTree = ref([])
 const selectedIds = ref([])
 const searchKeyword = ref('')
 const materialFilter = ref('')
-// 后端当前不支持标签筛选，避免向接口发送未定义参数。
+// 材质筛选使用后端 PrintFileQueryDTO 的 materialType 精确筛选。
 const viewMode = ref('list')
 const uploadDialogVisible = ref(false)
 const createFolderDialogVisible = ref(false)
@@ -1343,22 +1359,39 @@ onMounted(() => {
   align-items: flex-start;
 }
 
-.file-library-card {
-  display: block;
+.file-library-workspace {
+  display: flex;
   width: 100%;
   min-width: 0;
-  overflow: visible;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-large);
 }
 
-.file-library-card :deep(.t-card__body) {
-  display: block;
-  padding: 0;
+.file-library-workspace :deep(.app-data-region__body) {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.file-library-workspace :deep(.t-empty) {
+  padding: var(--app-spacing-8) var(--app-spacing-4);
+}
+
+.file-library-workspace :deep(.t-alert) {
+  flex: 0 0 auto;
 }
 
 .file-library-layout {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  height: clamp(520px, calc(100vh - 260px), 780px);
+  width: 100%;
+  height: clamp(360px, calc(100vh - 244px), 780px);
   min-width: 0;
   min-height: 0;
 }
@@ -1503,7 +1536,16 @@ onMounted(() => {
 }
 
 .file-table-view :deep(.t-table__content) {
+  min-height: 0;
+  height: 100%;
+  scrollbar-gutter: stable;
   overflow-y: auto;
+}
+
+.file-table-view :deep(.td-table-adapter),
+.file-table-view :deep(.t-table) {
+  min-height: 0;
+  height: 100%;
 }
 
 .file-view-toggle {
@@ -1810,6 +1852,7 @@ onMounted(() => {
   .file-library-layout {
     display: flex;
     height: auto;
+    min-height: 0;
     flex-direction: column;
   }
 
@@ -1822,7 +1865,7 @@ onMounted(() => {
   }
 
   .file-library-main {
-    min-height: 520px;
+    min-height: 420px;
     padding: var(--app-spacing-3);
   }
 

@@ -15,6 +15,7 @@ test('文件中心使用真实文件树契约并提供统一目录导航', () =>
   assert.match(source, /class="file-library-layout"/)
   assert.match(source, /class="file-library-results"/)
   assert.match(source, /class="file-library-sidebar"/)
+  assert.match(source, /<DataRegion class="file-library-workspace"/)
   assert.doesNotMatch(source, /class="file-library-content-card"/)
 })
 
@@ -42,8 +43,15 @@ test('文件库默认使用可滚动列表并保留网格切换和显式详情�
   assert.match(source, /<QueryToolbar class="file-library-filter-row"/)
   assert.match(source, /height="100%"[\s\S]*@selection-change/)
   assert.match(source, /@click\.stop="openFileDetail\(row\)"/)
-  assert.match(source, /\.file-library-layout[\s\S]*height: clamp\(520px, calc\(100vh - 260px\), 780px\)/)
+  assert.match(source, /\.file-library-layout[\s\S]*height: clamp\(360px, calc\(100vh - 244px\), 780px\)/)
   assert.match(source, /\.file-library-tree[\s\S]*overflow-y: auto/)
   assert.match(source, /\.file-table-view :deep\(\.t-table__content\)[\s\S]*overflow-y: auto/)
   assert.doesNotMatch(source, /viewMode = ref\('grid'\)/)
+})
+
+test('文件详情抽屉使用 TDesign 关闭同步并避免旧版卡片拼装', () => {
+  assert.match(detailSource, /v-model:visible="drawerVisible"/)
+  assert.match(detailSource, /aria-label="关闭文件详情"/)
+  assert.match(detailSource, /<t-descriptions/)
+  assert.doesNotMatch(detailSource, /class="grid grid-cols|class="bg-white|class="space-y-/)
 })

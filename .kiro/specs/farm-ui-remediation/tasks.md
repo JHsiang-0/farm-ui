@@ -442,7 +442,7 @@ git status --short：提交前仅包含本子任务的打印机 Drawer、打印�
 
 git diff --check：通过。
 
-### [ ] UI-002.3 文件库工作台统一
+### [x] UI-002.3 文件库工作台统一
 
 优先级：P1
 范围：`src/views/FileLibrary.vue`、文件树/文件详情/上传组件、文件 API/Store、相关测试
@@ -461,6 +461,30 @@ git diff --check：通过。
 - 空目录、无结果、上传部分失败、刷新失败均提供原位状态和下一步。
 - 文件详情不展示内部存储字段，所有字段来自正式契约。
 - 完成后提交：`fix: 重构 Electron 文件库工作台`。
+
+完成记录：文件库改为单一 TDesign `DataRegion` 工作台，默认列表视图使用 TDesign Table，网格视图仅作为同一分页数据的可选表达；目录树、面包屑、文件名/材质筛选、批量选择、分页和刷新均共享当前目录上下文。空目录提供新建文件夹和上传下一步，列表失败保留已有数据并提供区域重试，上传结果继续按正式批量上传契约区分成功、可重试失败和不可重试项。文件夹打开、根目录返回、文件详情、打印任务、下载和删除入口统一，详情抽屉改为受控 TDesign Drawer、Descriptions、Alert 和 Table，移除旧版 Tailwind 卡片拼装及内部存储字段展示。
+
+修改文件：`src/views/FileLibrary.vue`、`src/components/file/FileDetailDrawer.vue`、`tests/fileLibrary.test.js`、`tests/e2e/electron.spec.js`、本任务记录。
+
+用户流程影响：Electron 800×560 下可以通过真实点击打开文件库、切换目录并返回根目录、打开上传和新建文件夹对话框、打开文件详情并关闭、从文件进入创建打印任务；列表和目录树拥有各自清晰的滚动边界，页头操作和当前目录上下文保持可见。
+
+API/OpenAPI 核对：未新增接口、字段或业务数据；继续使用 `POST /api/v1/print-files/page` 的 `pageNum`、`pageSize`、`fileName`、`materialType`、`parentId`，`GET /api/v1/print-files/tree`，`POST /api/v1/print-files/folder/create`，单/批量上传，预览、缩略图、关联任务、下载、单项删除和批量删除正式接口；创建打印任务继续使用既有 `fileId`、可选 `printerId`、`priority` 和幂等键。详情只展示 `PrintFilePreviewVO` 的安全字段，不展示 `safeName`、`rustfsKey`、`fileUrl` 等内部字段。
+
+Loading/Empty/Error：目录树和列表分别提供 TDesign Loading、Error/Retry 和 Empty/下一步；刷新失败不清除已有权威结果；缩略图不可用时保留元数据并给出 Warning；上传保留逐项结果、失败原因和 retryable 重试入口；删除和创建任务沿用统一消息与操作中保护。
+
+响应式视口：Electron 实际 BrowserWindow 内容尺寸覆盖 800×560、1024×640、1200×760；文件库回归检查目录树与 Table 内容区局部滚动、窗口级宽度约束，并在 800×560 实际点击上传、创建文件夹、目录导航、详情关闭和创建任务入口。浏览器四视口回归继续覆盖文件库列表/网格滚动。
+
+测试：`npm test`（140/140）、`npm run test:electron`（2/2）、`npm run test:e2e`（9/9）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 分包提示和大 chunk 警告。
+
+git status --short：提交前仅包含本子任务的文件库工作台、文件详情抽屉、Electron/文件库测试和本任务记录。
+
+git diff --check：通过。
+
+提交：完成最终检查后创建独立本地提交 `fix: 重构 Electron 文件库工作台`，不执行 push。
 
 ### [ ] UI-002.4 任务中心与批量派发工作流
 

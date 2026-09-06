@@ -90,6 +90,41 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await page.goto('http://127.0.0.1:5176/#/files')
     await expect(page.getByRole('heading', { name: '文件库' })).toBeVisible()
     await expect(page.locator('.file-library-layout')).toBeVisible()
+    await expect(page.locator('.file-table-view')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: '列表视图', exact: true })).toBeVisible()
+    const fileWorkspaceMetrics = await page.evaluate(() => {
+      const tree = document.querySelector('.file-library-tree')
+      const table = document.querySelector('.file-table-view .t-table__content')
+      return {
+        treeHeight: tree?.clientHeight || 0,
+        treeOverflow: tree ? getComputedStyle(tree).overflowY : '',
+        tableHeight: table?.clientHeight || 0,
+        tableOverflow: table ? getComputedStyle(table).overflowY : ''
+      }
+    })
+    expect(fileWorkspaceMetrics.treeHeight).toBeGreaterThan(0)
+    expect(fileWorkspaceMetrics.tableHeight).toBeGreaterThan(0)
+    expect(['auto', 'scroll']).toContain(fileWorkspaceMetrics.treeOverflow)
+    expect(['auto', 'scroll']).toContain(fileWorkspaceMetrics.tableOverflow)
+    await page.getByRole('button', { name: '新建文件夹', exact: true }).first().click()
+    await expect(page.locator('.t-dialog__header-content').filter({ hasText: '新建文件夹' })).toBeVisible()
+    await page.getByRole('button', { name: '取消', exact: true }).last().click()
+    await expect(page.locator('.t-dialog__header-content').filter({ hasText: '新建文件夹' })).not.toBeVisible()
+    await page.getByRole('button', { name: '上传 G-Code 文件', exact: true }).first().click()
+    await expect(page.locator('.t-dialog__header-content').filter({ hasText: '批量上传切片文件' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.t-dialog__header-content').filter({ hasText: '批量上传切片文件' })).not.toBeVisible()
+    await page.getByRole('button', { name: '打开', exact: true }).first().click()
+    await expect(page.locator('#file-library-results-title')).toHaveText('目录内容')
+    await page.getByText('根目录', { exact: true }).click()
+    await expect(page.locator('#file-library-results-title')).toHaveText('根目录文件')
+    await page.getByRole('button', { name: '详情', exact: true }).first().click()
+    await expect(page.getByRole('button', { name: '关闭文件详情', exact: true })).toBeVisible()
+    await expect(page.getByText('切片摘要', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '关闭文件详情', exact: true }).click()
+    await page.getByRole('button', { name: '打印', exact: true }).first().click()
+    await expect(page.getByText('创建打印任务', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '取消', exact: true }).last().click()
   } finally {
     await electronApp.close()
     fs.rmSync(userDataDir, { recursive: true, force: true })
