@@ -358,7 +358,7 @@ git diff --check：通过。
 
 提交：完成最终检查后创建独立本地提交 `feat: 完成 UI-002.0 Electron 运行基线`，不执行 push。
 
-### [ ] UI-002.1 App Shell 与滚动所有权复验
+### [x] UI-002.1 App Shell 与滚动所有权复验
 
 优先级：P0
 范围：`src/layout`、`src/styles`、公共布局/状态组件、相关 Electron E2E
@@ -375,6 +375,30 @@ git diff --check：通过。
 - 不新增绝对定位或多层 `overflow:hidden` 掩盖布局问题。
 - 真实滚轮、Shift+滚轮/横向滚动、Tab、Escape 均有可重复测试。
 - 完成后提交：`fix: 收敛 Electron 应用壳滚动模型`。
+
+完成记录：为 `app-main-layout` 增加明确的 flex 收缩和最小高度约束，移除 `app-content__inner` 对 `height:100%` 的重复依赖，保留 Content View 作为页面纵向滚动 owner。Electron 测试新增实际 BrowserWindow 尺寸回归和打印机页真实滚轮验证，覆盖 800×560、1024×640、1200×760，并检查 body/App Shell/Main Layout 无额外纵向滚动、页面无水平溢出。
+
+修改文件：`src/layout/index.vue`、`tests/e2e/electron.spec.js`、本任务记录。
+
+用户流程影响：不改变业务页面数据和登录/初始化视觉；Electron 小窗口下页面壳可以收缩，内容滚动、打印机页滚轮和页面底部可达性有自动化门禁。
+
+API/OpenAPI 核对：未新增接口、字段或业务数据；本子任务只调整 Layout CSS 和 Electron 交互测试。
+
+Loading/Empty/Error：未改变业务状态组件；后续打印机、文件、任务子任务继续验证各自局部状态。
+
+响应式视口：Electron 实际 BrowserWindow 内容尺寸覆盖 800×560、1024×640、1200×760；三尺寸检查页面无水平溢出，Content View 使用 `overflow-y:auto`，打印机页通过真实滚轮产生滚动。
+
+测试：`npm test`（139/139）、`npm run test:electron`（2/2）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 分包提示和大 chunk 警告。
+
+git status --short：提交前仅包含 `src/layout/index.vue`、`tests/e2e/electron.spec.js` 和本任务记录。
+
+git diff --check：通过。
+
+提交：完成最终检查后创建独立本地提交 `fix: 收敛 Electron 应用壳滚动模型`，不执行 push。
 
 ### [ ] UI-002.2 打印机管理与详情 Drawer 闭环
 

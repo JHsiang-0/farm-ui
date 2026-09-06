@@ -89,6 +89,11 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.app-main-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .app-sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -115,7 +120,7 @@ onUnmounted(() => {
   flex: 1 1 auto;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-width: 0;
   min-height: 0;
   overflow: visible;

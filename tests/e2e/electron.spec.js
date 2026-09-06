@@ -81,3 +81,77 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     fs.rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Electron App Shell 在三个桌面窗口尺寸下保持单一滚动模型', async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fabmatrix-electron-shell-e2e-'))
+  const electronApp = await electron.launch({
+    args: [path.resolve('.')],
+    env: {
+      ...process.env,
+      FARM_ELECTRON_E2E: '1',
+      FARM_ELECTRON_E2E_USER_DATA: userDataDir
+    }
+  })
+
+  try {
+    const page = await electronApp.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
+    await page.getByLabel('用户名', { exact: true }).fill('admin')
+    await page.getByLabel('密码', { exact: true }).fill('Admin123')
+    await page.getByRole('button', { name: '登录', exact: true }).click()
+    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard/)
+
+    for (const size of [[800, 560], [1024, 640], [1200, 760]]) {
+      await electronApp.evaluate(({ BrowserWindow }, nextSize) => {
+        BrowserWindow.getAllWindows()[0]?.setContentSize(nextSize[0], nextSize[1])
+      }, size)
+      await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual(size)
+
+      const layoutMetrics = await page.evaluate(() => {
+        const getMetrics = selector => {
+          const element = document.querySelector(selector)
+          if (!element) return null
+          const style = getComputedStyle(element)
+          return {
+            clientHeight: element.clientHeight,
+            scrollHeight: element.scrollHeight,
+            overflowY: style.overflowY,
+            overflowX: style.overflowX
+          }
+        }
+
+        return {
+          body: getMetrics('body'),
+          shell: getMetrics('.app-shell'),
+          mainLayout: getMetrics('.app-main-layout'),
+          content: getMetrics('.app-content'),
+          contentView: getMetrics('.app-content__view'),
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth
+        }
+      })
+
+      expect(layoutMetrics.documentWidth).toBeLessThanOrEqual(layoutMetrics.viewportWidth + 1)
+      expect(layoutMetrics.body.overflowY).toBe('hidden')
+      expect(layoutMetrics.shell.scrollHeight).toBeLessThanOrEqual(layoutMetrics.shell.clientHeight + 1)
+      expect(layoutMetrics.mainLayout.scrollHeight).toBeLessThanOrEqual(layoutMetrics.mainLayout.clientHeight + 1)
+      expect(layoutMetrics.contentView.overflowY).toBe('auto')
+      expect(layoutMetrics.contentView.clientHeight).toBeGreaterThan(0)
+    }
+
+    await page.goto('http://127.0.0.1:5176/#/printers')
+    await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setContentSize(800, 560)
+    })
+    await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual([800, 560])
+
+    const contentView = page.locator('.app-content__view')
+    await contentView.hover()
+    await page.mouse.wheel(0, 500)
+    await expect.poll(() => contentView.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  } finally {
+    await electronApp.close()
+    fs.rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
