@@ -204,3 +204,74 @@ test('Electron App Shell 在三个桌面窗口尺寸下保持单一滚动模型'
     fs.rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Electron UI-002 主业务页面在三种窗口尺寸下可达并生成稳定截图', async ({ baseURL }, testInfo) => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fabmatrix-electron-ui002-'))
+  const electronApp = await electron.launch({
+    args: [path.resolve('.')],
+    env: {
+      ...process.env,
+      FARM_ELECTRON_E2E: '1',
+      FARM_ELECTRON_E2E_USER_DATA: userDataDir
+    }
+  })
+
+  const pages = [
+    { key: 'printers', path: '/printers', heading: '打印机管理' },
+    { key: 'files', path: '/files', heading: '文件库' },
+    { key: 'queue', path: '/tasks/queue', heading: '生产调度队列' },
+    { key: 'history', path: '/tasks/history', heading: '打印历史记录' },
+    { key: 'batch', path: '/batch-dispatch', heading: '批量手动派发' },
+    { key: 'profile', path: '/profile', heading: '个人中心' },
+    { key: 'fullscreen', path: '/dashboard/fullscreen', heading: 'FabMatrix 3D 打印控制系统' }
+  ]
+
+  try {
+    expect(baseURL).toBe('http://127.0.0.1:5173')
+    const page = await electronApp.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
+    await page.getByLabel('用户名', { exact: true }).fill('admin')
+    await page.getByLabel('密码', { exact: true }).fill('Admin123')
+    await page.getByRole('button', { name: '登录', exact: true }).click()
+    await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/dashboard/)
+
+    for (const size of [[800, 560], [1024, 640], [1200, 760]]) {
+      await electronApp.evaluate(({ BrowserWindow }, nextSize) => {
+        BrowserWindow.getAllWindows()[0]?.setContentSize(nextSize[0], nextSize[1])
+      }, size)
+      await expect.poll(() => page.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual(size)
+
+      for (const route of pages) {
+        await page.goto(`http://127.0.0.1:5176/#${route.path}`)
+        await expect(page.getByRole('heading', { name: route.heading, exact: true })).toBeVisible()
+        if (route.key === 'files') {
+          await expect(page.locator('.file-table-view')).toBeVisible({ timeout: 10000 })
+        }
+        if (route.key === 'queue') {
+          await expect(page.locator('.job-panel')).toBeVisible({ timeout: 10000 })
+          await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeEnabled({ timeout: 10000 })
+        }
+        if (route.key === 'history') await expect(page.locator('.history-workspace')).toBeVisible()
+        if (route.key === 'history') {
+          await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeEnabled({ timeout: 10000 })
+        }
+        if (route.key === 'batch') {
+          await expect(page.locator('.batch-dispatch-page')).toBeVisible()
+          await expect(page.getByRole('button', { name: '刷新资源', exact: true })).toBeEnabled({ timeout: 10000 })
+        }
+        if (route.key === 'profile') await expect(page.locator('.profile-loading')).toHaveCount(0, { timeout: 10000 })
+        await expect(page.locator('.t-message')).toHaveCount(0, { timeout: 10000 })
+
+        const metrics = await page.evaluate(() => ({
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth
+        }))
+        expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
+        await page.screenshot({ path: testInfo.outputPath(`${route.key}-${size[0]}x${size[1]}.png`) })
+      }
+    }
+  } finally {
+    await electronApp.close()
+    fs.rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

@@ -573,7 +573,7 @@ git diff --check：通过。
 
 提交：完成最终检查后创建独立本地提交 `fix: 完善 Electron 全局状态反馈`，不执行 push。
 
-### [ ] UI-002.6 Electron 视觉回归与发布门禁
+### [x] UI-002.6 Electron 视觉回归与发布门禁
 
 优先级：P0
 范围：`tests/e2e/electron.spec.js`、新增 Electron 视觉/交互测试、审查报告和任务记录
@@ -592,6 +592,28 @@ git diff --check：通过。
 - 提交前 `git status --short`、`git diff --check` 通过，提交只包含本子任务文件。
 - 完成后提交：`test: 完成 Electron UI-002 视觉回归`。
 - 只有所有 UI-002 子任务完成且真实环境限制已记录，才可在本批次末尾添加总结性完成记录；不自动修改 UI-001 历史状态。
+
+完成记录：完成 Electron desktop-mock 最终回归和稳定截图检查，覆盖登录、服务器连接、打印机列表/详情、文件库、任务队列/历史、批量派发、个人中心和全屏看板。新增测试在 800×560、1024×640、1200×760 三种窗口尺寸逐页打开 7 个主业务路由，验证标题可达、关键区域完成加载、刷新/资源操作可用、无页面级水平溢出，并生成对应稳定状态截图；已人工检查队列页面截图，确认无登录成功 Toast、无加载态残留，侧栏/Header、Tabs、工作区、表格和局部滚动层级稳定。既有浏览器回归继续覆盖 375/768/1440/1920 视口、服务器地址双动作、打印机/文件结果区滚动、任务详情 Escape 关闭和移动端导航。
+
+修改文件：`tests/e2e/electron.spec.js`、本任务记录。
+
+API/OpenAPI 核对：本子任务未新增接口、字段或业务数据；所有 Electron 页面继续使用 UI-002.0 至 UI-002.5 已核对的正式 API 模块、Mock 合同和 WebSocket 状态链路。`npm test` 中已有正式错误矩阵覆盖 HTTP/业务错误码、空资源、403 权限、409 冲突、503 服务不可用、断线恢复和任务状态机；这些结果与 UI 回归分开记录，不把接口通过当作 UI 完成。
+
+真实环境限制：本轮使用 `desktop-mock` 和 Playwright Electron 驱动，没有生产账号、真实后端部署、实际局域网发现环境或物理打印机，因此未宣称生产 CORS、真实服务器地址、局域网扫描、设备控制和安装后原生打包行为已验收；这些需在目标环境补做发布验收。
+
+测试：`npm test`（141/141）、`npm run test:e2e`（9/9）、`npm run test:electron`（3/3）；稳定截图输出于 `test-results/playwright/`，生成物未加入提交。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 动态/静态导入提示和超过 500 kB 的 chunk 警告。
+
+git status --short：提交前仅包含 `tests/e2e/electron.spec.js` 和本任务记录。
+
+git diff --check：通过。
+
+提交：完成最终检查后创建独立本地提交 `test: 完成 Electron UI-002 视觉回归`，不执行 push。
+
+批次总结：UI-002.0 至 UI-002.6 均已完成。Electron 应用壳、服务器连接、打印机中心、文件工作台、任务工作流、全局状态反馈和视觉回归门禁均已按 TDesign 规范闭环；UI-001 历史状态未修改。
 
 ## 6. UI-002 执行顺序
 
