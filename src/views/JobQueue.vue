@@ -1109,6 +1109,8 @@ onMounted(() => {
 .job-queue-footer__pagination {
   gap: 1.25rem;
   margin-left: auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .job-queue-footer__pagination > span {

@@ -298,7 +298,6 @@
         <div class="printer-management-table-footer">
           <div class="printer-management-table-summary">
             <span>共 {{ printerSummary.total }} 台设备</span>
-            <span>共 {{ total }} 条数据</span>
           </div>
           <t-pagination
             v-model:current="queryParams.pageNum"
@@ -350,7 +349,6 @@
         <div class="printer-management-table-footer">
           <div class="printer-management-table-summary">
           <span>共 {{ printerSummary.total }} 台设备</span>
-          <span>共 {{ total }} 条数据</span>
           </div>
           <t-pagination
             v-model:current="queryParams.pageNum"

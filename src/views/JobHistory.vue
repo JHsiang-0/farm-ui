@@ -567,8 +567,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalShortcut
 .job-history-grid-card__file { display: flex; align-items: center; gap: 0.5rem; color: var(--app-text-primary); }
 .job-history-grid-card__file strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .job-history-grid-card__meta, .job-history-grid-card__bottom { color: var(--app-text-secondary); font-size: 0.6875rem; }
-.job-history-footer { display: flex; align-items: center; justify-content: space-between; min-height: 4.25rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--app-surface-muted); background: #fff; }
-.job-history-footer__total { color: var(--app-text-secondary); font-size: 0.75rem; }
+.job-history-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; min-height: 4.25rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--app-surface-muted); background: #fff; white-space: nowrap; }
+.job-history-footer__total { flex: 0 0 auto; color: var(--app-text-secondary); font-size: 0.75rem; white-space: nowrap; }
 .job-history-footer__total strong { color: var(--app-text-primary); font-weight: 600; }
 .job-history-footer :deep(.t-pagination) { margin: 0; }
 .job-history-footer :deep(.t-pagination__total) { display: none; }

@@ -501,7 +501,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalShortcut
 .user-management-actions { justify-content: flex-end; gap: 0.35rem; white-space: nowrap; }
 .user-management-actions > span { color: var(--app-border); }
 .user-management-footer { position: absolute; right: 0; bottom: 0; left: 0; z-index: 3; display: flex; flex-direction: column; width: 100%; height: 5rem; min-height: 5rem; padding: 0 1rem; border-top: 1px solid var(--app-surface-muted); background: var(--app-surface); color: var(--app-text-secondary); font-size: 0.75rem; }
-.user-management-footer__main { display: flex; align-items: center; justify-content: space-between; flex: 1 1 auto; min-height: 4.25rem; width: 100%; }
+.user-management-footer__main { display: flex; align-items: center; justify-content: space-between; flex: 1 1 auto; flex-wrap: nowrap; min-height: 4.25rem; width: 100%; white-space: nowrap; }
+.user-management-footer__main > span { flex: 0 0 auto; white-space: nowrap; }
 .user-management-footer strong { color: var(--app-text-primary); font-weight: 600; }
 .user-management-footer :deep(.t-pagination) { margin: 0; }
 .user-management-footer :deep(.t-pagination__total) { display: none; }
