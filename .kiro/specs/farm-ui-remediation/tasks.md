@@ -620,3 +620,137 @@ git diff --check：通过。
 `UI-002.0 → UI-002.1 → UI-002.2 → UI-002.3 → UI-002.4 → UI-002.5 → UI-002.6`
 
 任何子任务发现 OpenAPI、API_HANDOFF、Mock 或运行时数据冲突时，暂停该子任务并记录冲突，不得用前端假字段或静态数据继续推进。
+
+## 7. UI-003 Electron 自绘窗口与滚动所有权重构（独立任务）
+
+任务：UI-003 Electron Window Chrome & Scroll Ownership Remediation
+所属 Spec：farm-ui-remediation
+状态说明：[ ] 待完成；[x] 已完成；[-] 有条件跳过并记录原因
+任务状态：待开始
+任务类型：独立 Electron UI/UX 与运行时布局整改，不属于 farm-ui-v2，不修改 UI-001、UI-002 历史完成状态。
+
+### 7.0 任务目标与边界
+
+- 移除 Windows Electron 原生标题栏，使用 FabMatrix 自绘 DesktopTitleBar；登录页、首次管理员初始化页的既有主视觉不改，只在窗口边缘增加必要的桌面窗口控制。
+- 明确 Electron 根窗口、App Shell、页面、表格、文件树、Drawer 和全屏看板的唯一滚动所有者，消除不应出现的页面级滚动和重复滚动。
+- 不使用 `100vh` 直接推导表格高度；改为基于 App Shell 可用高度的 Flex 布局和明确的局部滚动区域。
+- 统一 Chromium/Electron 与 Firefox 的滚动条表现，只给具有滚动语义的区域应用滚动条样式，不全局覆盖浏览器滚动条。
+- 清理活动页面中的旧版 `overflow-auto`、仅针对 Firefox 的滚动条样式和与新 TDesign 页面壳冲突的高度规则；不修改备份文件。
+- 不新增、伪造或修改后端 API、字段、业务状态、账号和数据；窗口控制只使用 Electron IPC，不经过业务 API。
+
+### 7.1 UI-003.0 Electron 运行实例与窗口基线
+
+优先级：P0
+范围：`electron/main.cjs`、`electron/preload.cjs`、`tests/e2e/electron.spec.js`、`tests/e2e/electron-dist.spec.js`、任务记录
+
+工作内容：
+
+- 区分 `desktop`、`desktop-mock`、开发服务器 `5176` 和 `dist-file` 的实际渲染来源。
+- 增强运行时诊断，使测试可以证明当前 Electron 没有连接到旧的或错误模式的 5176 Vite 进程。
+- 记录窗口 content size、DPI/放大场景、Renderer source、开发/构建模式和单实例锁行为。
+- 为后续无边框窗口与滚动审计建立 800×560、1024×640、1200×760 和 1920×1032 的稳定基线。
+
+验收：
+
+- `desktop:dev` 只加载 `desktop` Vite；`desktop:dev:mock` 只加载 `desktop-mock` Vite；`desktop:run` 在无 5176 服务时加载最新 `dist`，不意外连接旧服务。
+- 运行时诊断能区分 `dev-server` 与 `dist-file`，测试失败时记录实际 renderer source。
+- 不杀死或覆盖用户启动的未知进程；测试使用隔离用户目录并在结束后清理。
+- 完成后提交：`test: 建立 Electron 窗口渲染基线`。
+
+### 7.2 UI-003.1 Electron 无边框窗口与自绘标题栏
+
+优先级：P0
+范围：`electron/main.cjs`、`electron/preload.cjs`、`src/App.vue`、新增 `src/components/layout/DesktopTitleBar.vue`、相关样式和 Electron 测试
+
+工作内容：
+
+- 将 BrowserWindow 改为无边框窗口，保留 Windows 调整大小能力和现有最小/最大窗口约束。
+- 通过受限的 `contextBridge` 暴露最小化、最大化/还原、关闭、最大化状态和窗口状态变化事件；禁止向 Renderer 暴露原始 `ipcRenderer`。
+- 自绘标题栏提供 FabMatrix 标识、当前应用标题、最小化、最大化/还原、关闭按钮；按钮使用真实 TDesign/Icon 语义和无障碍名称。
+- 标题栏拖拽区域使用 `-webkit-app-region: drag`，窗口控制和交互元素使用 `no-drag`；支持双击标题栏最大化/还原，不遮挡页面 Header 操作。
+- 全屏看板、登录、服务器连接和主 App Shell 均正确处理标题栏存在/隐藏状态；不把标题栏高度重复计入页面滚动高度。
+
+验收：
+
+- Electron 中不再出现 Windows 原生标题栏，且自绘标题栏可以最小化、最大化/还原和关闭窗口。
+- 拖拽标题栏可以移动窗口；窗口边缘仍可调整大小；窗口控制按钮可聚焦、可通过键盘触发并有稳定 `aria-label`。
+- 双击标题栏、窗口最大化变化、全屏切换和路由切换不会造成页面跳动或额外滚动。
+- 浏览器预览保持可用，不依赖 Electron API；登录与首次管理员初始化页面视觉主结构保持不变。
+- 完成后提交：`feat: 完成 Electron 自绘标题栏`。
+
+### 7.3 UI-003.2 App Shell 高度与滚动所有权重构
+
+优先级：P0
+范围：`src/App.vue`、`src/layout/index.vue`、`src/styles/index.css`、`src/styles/theme.css`、页面壳和相关页面样式
+
+工作内容：
+
+- 将根节点改为固定视口、可计算剩余高度的 Flex 结构：DesktopTitleBar、App Shell、Header、Content 的高度关系明确，所有中间 Flex 节点设置 `min-height: 0`。
+- 禁止 App Shell、Header 和无内容溢出的页面自动生成滚动；不再依赖页面子节点的 `min-height: 100%` 撑高父容器。
+- 建立页面滚动策略：仪表盘/批量派发在内容确实超过可视区时允许页面滚动；打印机、任务队列、打印历史只允许表格 Body 滚动；文件库只允许目录树和结果区滚动；Drawer 只允许 Body 滚动；全屏看板只允许看板内容区滚动。
+- 将打印机、任务、历史、审计、用户管理和文件库中的 `calc(100vh - ...)` 改为基于父级可用高度的布局，避免 Header、padding 和标题栏重复计算。
+- 保证页面底部工具栏、分页器、Drawer Footer、表格最后一行在 800×560 等最小 Electron 窗口中可达。
+
+验收：
+
+- 800×560、1024×640、1200×760 和 1920×1032 下，核心页面没有意外的页面级纵向滚动或水平溢出。
+- 每个页面最多只有任务定义的滚动区域；滚动一个区域不会带动不相关的外层页面。
+- 打印机、文件、任务、历史、批量派发、个人中心、仪表盘和全屏看板在 Loading、Empty、Error、正常数据下均保持滚动模型一致。
+- 通过真实鼠标滚轮、触控板/滚轮事件和键盘焦点检查，不以脚本直接设置 `scrollTop` 代替用户操作。
+- 完成后提交：`fix: 重构 Electron 页面滚动所有权`。
+
+### 7.4 UI-003.3 滚动条样式与旧版样式清理
+
+优先级：P1
+范围：`src/styles/index.css`、`src/styles/theme.css`、`src/components/FarmDashboard.vue`、页面滚动区域、相关测试
+
+工作内容：
+
+- 新增语义化滚动区域样式，例如 `.app-scroll-region`，同时覆盖 Chromium 的 `::-webkit-scrollbar` 和 Firefox 的 `scrollbar-width/scrollbar-color`。
+- 滚动条颜色、轨道、悬停状态使用 TDesign/应用语义 Token；不对 `html`、`body` 和所有元素强制设置滚动条，保留系统辅助功能和平台行为。
+- 删除或迁移仅对 Firefox 生效的内联滚动条样式，清理活动业务页面中旧版 Tailwind `overflow-auto` 与新布局冲突的规则。
+- 保留必要的 `overflow: hidden`（图片、状态条、拖拽区域等），不得把内容裁剪当作解决滚动的手段。
+- 检查滚动条出现/消失时的布局抖动，必要时只在明确的表格/列表区域使用 `scrollbar-gutter: stable`。
+
+验收：
+
+- Electron Chromium 中指定滚动区不再显示未经设计的原生粗滚动条；无滚动的页面不预留或显示误导性滚动条。
+- 滚动条不遮挡表格固定列、分页器、Drawer Footer、标题栏按钮和焦点环。
+- 不产生新的 Tailwind 与 TDesign 样式覆盖冲突；登录/初始化主视觉回归通过。
+- 完成后提交：`style: 统一 Electron 滚动条视觉`。
+
+### 7.5 UI-003.4 Electron 视觉回归与发布门禁
+
+优先级：P0
+范围：Electron/浏览器 Playwright 测试、截图、审查记录和本任务记录
+
+工作内容：
+
+- 覆盖登录、服务器连接、打印机、文件库、任务队列、历史、批量派发、个人中心、仪表盘和全屏看板。
+- 覆盖普通数据、空数据、Loading、错误、Drawer、表格滚动、窗口最大化/还原、标题栏按钮和全屏切换。
+- 对每个窗口尺寸记录页面级 `scrollWidth/scrollHeight`、指定滚动容器和实际用户滚轮结果。
+- 生成稳定状态截图并人工检查：无旧窗口标题栏、无错误页面滚动、滚动条样式统一、TDesign 层级稳定、焦点可见、底部操作可达。
+- 真实后端、实际安装包、不同 Windows DPI/系统主题和物理打印机行为单独记录限制，不以 Mock 结果代替生产验收。
+
+验收：
+
+- `npm test`、`npm run test:e2e`、`npm run test:electron`、`npm run test:electron:dist`、`npm run lint`、`npm run build`、`npm run build:desktop` 全部通过。
+- Electron 800×560、1024×640、1200×760、1920×1032 四种尺寸完成标题栏和滚动回归。
+- 提交前执行 `git status --short`、`git diff --check` 和 `git diff --cached --check`；每个子任务只暂存自己的文件，不使用 `git add .`。
+- 不执行 git push；真实环境限制必须写入本任务完成记录。
+- 完成后提交：`test: 完成 Electron 窗口与滚动回归`。
+
+### 7.6 UI-003 执行顺序与统一约束
+
+执行顺序：
+
+`UI-003.0 → UI-003.1 → UI-003.2 → UI-003.3 → UI-003.4`
+
+统一约束：
+
+- UI-003 是独立 Electron UI/UX 整改任务，不属于 farm-ui-v2，也不回写 UI-001、UI-002 的历史状态。
+- 任何窗口控制能力必须通过最小化的 preload API 暴露；Renderer 不得直接访问 Node/Electron 内部对象。
+- 任何滚动整改必须先确认滚动所有者，再改 `overflow`；不得通过全局 `overflow: hidden`、绝对定位或裁剪内容伪造“无滚动”。
+- 不新增或猜测 API、字段、业务状态、Mock 数据和真实凭据；窗口状态不是业务数据，不进入后端请求。
+- 每完成一个子任务必须独立测试、lint、build、执行提交前检查并创建一次本地 Git 提交；不执行 push。
+- 发现当前运行实例与源码 Bundle 不一致、真实后端或 Electron 原生行为无法验证时，暂停对应验收并记录限制，不得标记为完成。
