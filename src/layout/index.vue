@@ -23,7 +23,7 @@
         <div class="app-content__inner">
           <AppBreadcrumb />
       <div
-        class="app-content__view"
+        class="app-content__view app-scroll-region"
         :class="{ 'app-content__view--page-scroll': route.meta.pageScroll }"
       >
             <router-view v-slot="{ Component }">

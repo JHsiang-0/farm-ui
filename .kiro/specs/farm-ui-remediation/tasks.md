@@ -729,7 +729,7 @@ git diff --check：通过。
 
 提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 和 `git diff --cached --check` 通过。提交：`fix: 重构 Electron 页面滚动所有权`。
 
-### 7.4 UI-003.3 滚动条样式与旧版样式清理
+### [x] UI-003.3 滚动条样式与旧版样式清理
 
 优先级：P1
 范围：`src/styles/index.css`、`src/styles/theme.css`、`src/components/FarmDashboard.vue`、页面滚动区域、相关测试
@@ -748,6 +748,16 @@ git diff --check：通过。
 - 滚动条不遮挡表格固定列、分页器、Drawer Footer、标题栏按钮和焦点环。
 - 不产生新的 Tailwind 与 TDesign 样式覆盖冲突；登录/初始化主视觉回归通过。
 - 完成后提交：`style: 统一 Electron 滚动条视觉`。
+
+完成记录：新增 `.app-scroll-region` 语义滚动区域及 TDesign Token 驱动的 Chromium/Firefox 滚动条样式；表格适配层、文件表格、打印机详情 Drawer 使用同一套滚动条语义。FarmDashboard 移除旧版 `overflow-auto`、Firefox 内联颜色、无效的 `workshop-canvas-wrapper` 滚动规则和 `100vh` 高度计算，侧栏、文件树、看板、认证页均改为显式滚动区域。未对 `html`、`body` 或全局所有元素覆盖滚动条。
+
+修改文件：`src/styles/theme.css`、`src/components/TdTable.vue`、`src/components/FarmDashboard.vue`、`src/components/device/DeviceDetailDrawer.vue`、`src/components/layout/AppSidebar.vue`、`src/layout/index.vue`、`src/views/Login.vue`、`src/views/ServerConnection.vue`、`src/views/FileLibrary.vue`、滚动相关测试、本任务记录。
+
+验证记录：`npm test` 142/142 通过；`npm run test:e2e` 9/9 通过；`npm run test:electron:dist` 1/1 通过；`npm run lint`、`npm run build`、`npm run build:desktop` 均通过。遗留扫描确认活动源码无 `overflow-auto` 和旧 `100vh - ...` 滚动高度规则；构建仍有既有动态导入和大 chunk 警告，不影响退出码。
+
+环境限制：当前 5176 由用户启动的真实 `desktop` Vite 实例占用，本轮不杀死或覆盖该进程，因此没有对该实例运行依赖 `desktop-mock` 的常规 Electron E2E；浏览器 Mock 与隔离 dist Electron 已完成样式和交互验证。未新增 API、字段、业务状态、Mock 数据或真实凭据。
+
+提交前检查：`git status --short` 仅包含本子任务文件；`git diff --check` 和 `git diff --cached --check` 通过。提交：`style: 统一 Electron 滚动条视觉`。
 
 ### 7.5 UI-003.4 Electron 视觉回归与发布门禁
 

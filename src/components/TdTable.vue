@@ -104,5 +104,28 @@ const tableAttrs = computed(() => {
 .td-table-adapter :deep(.t-table__content) {
   min-width: 0;
   overflow-x: auto;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+.td-table-adapter :deep(.t-table__content::-webkit-scrollbar) {
+  width: 8px;
+  height: 8px;
+}
+
+.td-table-adapter :deep(.t-table__content::-webkit-scrollbar-track) {
+  background: var(--app-scrollbar-track);
+}
+
+.td-table-adapter :deep(.t-table__content::-webkit-scrollbar-thumb) {
+  background: var(--app-scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.td-table-adapter :deep(.t-table__content::-webkit-scrollbar-thumb:hover) {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
 }
 </style>

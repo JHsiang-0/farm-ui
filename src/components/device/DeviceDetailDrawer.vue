@@ -776,6 +776,21 @@ async function handleStartPrint(action) {
    ============================================ */
 .printer-detail-drawer :deep(.t-drawer__body) {
     overflow-y: auto;
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+    scrollbar-width: thin;
+}
+
+.printer-detail-drawer :deep(.t-drawer__body::-webkit-scrollbar) { width: 8px; }
+.printer-detail-drawer :deep(.t-drawer__body::-webkit-scrollbar-track) { background: var(--app-scrollbar-track); }
+.printer-detail-drawer :deep(.t-drawer__body::-webkit-scrollbar-thumb) {
+    background: var(--app-scrollbar-thumb);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+}
+.printer-detail-drawer :deep(.t-drawer__body::-webkit-scrollbar-thumb:hover) {
+    background: var(--app-scrollbar-thumb-hover);
+    background-clip: padding-box;
 }
 
 .printer-detail-drawer__content {

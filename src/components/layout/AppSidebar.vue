@@ -19,7 +19,7 @@
       <span v-if="!props.collapsed || props.isMobile" class="app-brand__name">FabMatrix</span>
     </t-button>
 
-    <t-menu :value="activePath" :collapsed="props.collapsed && !props.isMobile" theme="light" class="app-menu">
+    <t-menu :value="activePath" :collapsed="props.collapsed && !props.isMobile" theme="light" class="app-menu app-scroll-region">
       <t-menu-group v-for="group in visibleGroups" :key="group.key" :title="props.collapsed && !props.isMobile ? '' : group.label">
         <t-menu-item
           v-for="item in group.items"

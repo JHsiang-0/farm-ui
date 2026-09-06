@@ -37,6 +37,7 @@ test('打印机删除显示关联任务风险并保留逐项执行状态', () =>
 
 test('打印机列表使用局部滚动和显式详情入口，不再以绝对定位裁剪内容', () => {
   assert.match(source, /height="100%"/)
+  assert.doesNotMatch(source, /calc\(100vh - 320px\)/)
   assert.match(source, /@click\.stop="handleRowClick\(scope\.row\)"/)
   assert.doesNotMatch(source, /printer-manage-card__table[\s\S]*position: absolute/)
   assert.match(source, /printer-manage-card__table[\s\S]*overflow: hidden/)

@@ -1,5 +1,5 @@
 <template>
-  <main class="login-page">
+  <main class="login-page app-scroll-region">
     <section class="left-section" aria-label="系统介绍">
       <div class="logo-section">
         <a href="/" class="logo-link" @click.prevent>

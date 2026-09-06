@@ -46,7 +46,7 @@
               刷新
             </t-button>
           </div>
-          <div class="file-library-tree">
+          <div class="file-library-tree app-scroll-region">
             <AsyncState
               v-if="treeLoading || treeError"
               :loading="treeLoading"
@@ -138,7 +138,7 @@
             </t-alert>
             <div v-if="fileList.length" class="file-library-list">
       <!-- 网格视图 -->
-      <div v-if="viewMode === 'grid'" class="file-grid-view">
+      <div v-if="viewMode === 'grid'" class="file-grid-view app-scroll-region">
         <!-- 文件夹 -->
         <div
           v-for="file in folderList"
@@ -1539,7 +1539,22 @@ onMounted(() => {
   min-height: 0;
   height: 100%;
   scrollbar-gutter: stable;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
   overflow-y: auto;
+}
+
+.file-table-view :deep(.t-table__content::-webkit-scrollbar) { width: 8px; height: 8px; }
+.file-table-view :deep(.t-table__content::-webkit-scrollbar-track) { background: var(--app-scrollbar-track); }
+.file-table-view :deep(.t-table__content::-webkit-scrollbar-thumb) {
+  background: var(--app-scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.file-table-view :deep(.t-table__content::-webkit-scrollbar-thumb:hover) {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
 }
 
 .file-table-view :deep(.td-table-adapter),

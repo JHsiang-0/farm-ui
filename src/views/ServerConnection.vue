@@ -1,5 +1,5 @@
 <template>
-  <main class="connection-page">
+  <main class="connection-page app-scroll-region">
     <section class="connection-card" aria-labelledby="connection-title">
       <div class="connection-brand">
         <span class="connection-brand__mark">3D</span>

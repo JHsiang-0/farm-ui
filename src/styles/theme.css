@@ -35,6 +35,9 @@
   --app-radius-large: var(--td-radius-large);
   --app-shadow: var(--td-shadow-1);
   --app-shadow-raised: var(--td-shadow-2);
+  --app-scrollbar-thumb: var(--td-border-level-2-color);
+  --app-scrollbar-thumb-hover: var(--td-text-color-placeholder);
+  --app-scrollbar-track: transparent;
   --app-spacing-1: 4px;
   --app-spacing-2: 8px;
   --app-spacing-3: 12px;
@@ -76,6 +79,36 @@ select {
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius);
   box-shadow: var(--app-shadow);
+}
+
+.app-scroll-region {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+.app-scroll-region::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app-scroll-region::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}
+
+.app-scroll-region::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.app-scroll-region::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+.app-scroll-region::-webkit-scrollbar-corner {
+  background: var(--app-scrollbar-track);
 }
 
 .app-page-background {

@@ -44,8 +44,7 @@
     />
 
     <!-- 独立车间看板容器 - 响应式布局，与状态栏对齐 -->
-    <div class="relative w-full flex-1 px-4 pb-4 bg-gray-100 overflow-auto"
-      style="scrollbar-width: thin; scrollbar-color: #d1d5db transparent; min-height: 0;">
+    <div class="dashboard-workshop-scroll app-scroll-region relative w-full flex-1 px-4 pb-4 bg-gray-100">
 
       <!-- 厂房网格布局 - 与DashboardHeader保持相同最大宽度 -->
       <div class="w-full max-w-[1920px] mx-auto bg-gray-100 border border-gray-200 rounded-xl shadow-sm p-4">
@@ -627,51 +626,8 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-/* 滚动条样式 */
-:deep(.workshop-canvas-wrapper::-webkit-scrollbar) {
-  width: 8px;
-  height: 8px;
-}
-
-:deep(.workshop-canvas-wrapper::-webkit-scrollbar-track) {
-  background: transparent;
-  border-radius: 4px;
-}
-
-:deep(.workshop-canvas-wrapper::-webkit-scrollbar-thumb) {
-  background: #d1d5db;
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-:deep(.workshop-canvas-wrapper::-webkit-scrollbar-thumb:hover) {
-  background: #9ca3af;
-}
-
-:deep(.workshop-canvas-wrapper::-webkit-scrollbar-corner) {
-  background: transparent;
-}
-
-/* 响应式适配 */
-@media (max-width: 1400px) {
-  .workshop-canvas-wrapper {
-    height: calc(100vh - 190px);
-  }
-}
-
-@media (max-width: 1200px) {
-  .workshop-canvas-wrapper {
-    height: calc(100vh - 180px);
-    padding: 16px;
-  }
-}
-
-@media (max-width: 768px) {
-  .workshop-canvas-wrapper {
-    height: calc(100vh - 160px);
-    padding: 12px;
-    border-radius: 12px;
-  }
+.dashboard-workshop-scroll {
+  min-height: 0;
+  overflow: auto;
 }
 </style>

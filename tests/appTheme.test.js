@@ -29,6 +29,12 @@ test('responsive shell keeps desktop dimensions in semantic tokens', () => {
   assert.match(layoutSource, /\.app-content__view--page-scroll \{[\s\S]*overflow-x: hidden[\s\S]*overflow-y: auto/)
 })
 
+test('semantic scroll regions share Chromium and Firefox scrollbar tokens', () => {
+  assert.match(themeSource, /\.app-scroll-region \{[\s\S]*scrollbar-color: var\(--app-scrollbar-thumb\)/)
+  assert.match(themeSource, /\.app-scroll-region::-webkit-scrollbar \{[\s\S]*width: 8px/)
+  assert.match(themeSource, /--app-scrollbar-thumb-hover: var\(--td-text-color-placeholder\)/)
+})
+
 test('navigation follows the T208-1 information architecture', () => {
   for (const label of ['工作台', '打印机', '文件', '任务', '批量派发', '管理中心', '个人中心']) {
     assert.match(navigationSource, new RegExp(`label: '${label}'`))
