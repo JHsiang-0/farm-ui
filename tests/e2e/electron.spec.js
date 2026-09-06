@@ -67,6 +67,20 @@ test('Electron desktop-mock 启动、登录、路由和全屏看板冒烟', asyn
     await expect(page).toHaveURL(/127\.0\.0\.1:5176\/#\/printers/)
     await expect(page.getByRole('heading', { name: '打印机管理' })).toBeVisible()
     await expect(page.getByRole('button', { name: '删除打印机' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: '详情', exact: true }).first()).toBeVisible()
+    await page.getByRole('button', { name: '详情', exact: true }).first().click()
+    await expect(page.getByText('设备信息', { exact: true })).toBeVisible()
+    await expect(page.getByText('Printer_C0DA - 详细信息', { exact: true })).toBeVisible()
+    await expect(page.locator('.printer-detail-drawer')).not.toContainText('undefined')
+    const drawerMetrics = await page.locator('.printer-detail-drawer .t-drawer__body').evaluate(element => ({
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+      overflowY: getComputedStyle(element).overflowY
+    }))
+    expect(drawerMetrics.scrollHeight).toBeGreaterThan(drawerMetrics.clientHeight)
+    expect(['auto', 'scroll']).toContain(drawerMetrics.overflowY)
+    await page.getByRole('button', { name: '关闭打印机详情', exact: true }).click()
+    await expect(page.getByText('设备信息', { exact: true })).toHaveCount(0)
 
     await page.goto('http://127.0.0.1:5176/#/server-connection')
     await expect(page.getByRole('heading', { name: '连接生产服务器' })).toBeVisible()

@@ -5,12 +5,33 @@
       - 平板：70% 宽度
       - 桌面：固定最大宽度，防止大屏过度拉伸
     -->
-    <t-drawer :visible="modelValue" :header="drawerTitle"
+    <t-drawer :key="String(device?.id || 'empty')" v-model:visible="drawerVisible"
         :size="drawerSize"
         :destroy-on-close="true"
+        :close-btn="false"
+        :close-on-esc-keydown="true"
         class="printer-detail-drawer"
         :class="{ 'is-mobile': isMobile, 'is-tablet': isTablet }"
-        @update:visible="handleVisibleChange">
+        :on-close="handleClose"
+        :on-close-btn-click="handleClose"
+        :on-esc-keydown="handleClose"
+        :on-overlay-click="handleClose">
+
+        <template #header>
+            <div class="printer-detail-drawer__header">
+                <span class="printer-detail-drawer__title">{{ drawerTitle }}</span>
+                <t-button
+                    theme="default"
+                    variant="text"
+                    shape="square"
+                    size="small"
+                    aria-label="关闭打印机详情"
+                    @click="handleVisibleChange(false)"
+                >
+                    <Close />
+                </t-button>
+            </div>
+        </template>
 
         <!-- 内容区域 - 使用流式内边距 -->
         <div v-if="detailLoading" class="flex min-h-48 items-center justify-center">
@@ -370,6 +391,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import {
+    CloseIcon as Close,
     DeleteIcon as Delete,
     PrintIcon as Printer,
     InfoCircleFilledIcon as InfoFilled,
@@ -387,7 +409,7 @@ import IconSpool from '../icons/IconSpool.vue'
 import { PRINTER_STATUS, PROGRESS_STATUS_MAP } from '@/utils/constants'
 import StatusTag from '@/components/StatusTag.vue'
 import { normalizePrinterStatus } from '@/utils/dataAdapters'
-import { formatTemp, formatDuration, formatFilament } from '@/utils/formatters'
+import { formatTemp, formatDuration, formatFilament, formatDateTime } from '@/utils/formatters'
 import { confirmSafe } from '@/api/printer'
 import { startJob } from '@/api/job'
 import { message } from '@/utils/message'
@@ -531,6 +553,11 @@ const emit = defineEmits([
 
 const historyRangeModel = ref([])
 const historyIncrementNotice = ref(false)
+const drawerVisible = computed({
+    get: () => props.modelValue,
+    set: value => handleVisibleChange(value)
+})
+
 const historyColumns = [
     { colKey: 'status', title: '状态', width: 100 },
     { colKey: 'filename', title: '文件', ellipsis: true },
@@ -571,6 +598,14 @@ watch(() => props.modelValue, visible => {
 function handleVisibleChange(value) {
     emit('update:modelValue', value)
     if (!value) emit('closed')
+}
+
+/**
+ * TDesign Drawer 的关闭事件覆盖 ESC、关闭按钮和遮罩点击。
+ * 组件受控时必须主动同步 v-model，否则 Drawer 会在下一次渲染中被父级重新打开。
+ */
+function handleClose() {
+    if (props.modelValue) handleVisibleChange(false)
 }
 
 function handleHistoryQuery() {
@@ -745,6 +780,23 @@ async function handleStartPrint(action) {
 
 .printer-detail-drawer__content {
     min-width: 0;
+}
+
+.printer-detail-drawer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    gap: var(--app-spacing-3);
+}
+
+.printer-detail-drawer__title {
+    overflow: hidden;
+    color: var(--app-text-primary);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ============================================

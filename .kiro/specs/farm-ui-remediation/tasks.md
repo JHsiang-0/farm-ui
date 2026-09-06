@@ -400,7 +400,7 @@ git diff --check：通过。
 
 提交：完成最终检查后创建独立本地提交 `fix: 收敛 Electron 应用壳滚动模型`，不执行 push。
 
-### [ ] UI-002.2 打印机管理与详情 Drawer 闭环
+### [x] UI-002.2 打印机管理与详情 Drawer 闭环
 
 优先级：P0
 范围：`src/views/PrinterManage.vue`、`src/components/device/DeviceDetailDrawer.vue`、打印机 API/Store/状态适配器、相关测试
@@ -419,6 +419,28 @@ git diff --check：通过。
 - ADMIN/OPERATOR 操作显隐与后端权限一致。
 - 删除、重连或控制失败后重新同步服务端状态。
 - 完成后提交：`fix: 闭环 Electron 打印机详情工作流`。
+
+完成记录：核对并继续使用正式打印机详情、状态历史、统计和控制接口；详情 Drawer 改为标准受控 `v-model:visible`，使用 TDesign Header 与显式关闭按钮，稳定展示真实设备名称并保留 Drawer Body 独立滚动。修复状态历史渲染缺失 `formatDateTime` 导致的 Vue 更新异常，补充无 `undefined`、详情字段、滚动尺寸和关闭操作的 Electron 回归，打印机图标尺寸改为 TDesign 组件要求的字符串属性。
+
+修改文件：`src/components/device/DeviceDetailDrawer.vue`、`src/views/PrinterManage.vue`、`tests/e2e/electron.spec.js`、`tests/printerCenter.test.js`、本任务记录。
+
+用户流程影响：Electron 中从打印机列表打开详情后，可以看到稳定的设备标题、设备信息、实时/历史/统计区域；详情过长时由 Drawer Body 独立滚动，Header 关闭按钮可用，关闭后返回打印机列表上下文。列表仍由 UI-002.1 的 TDesign Table 局部滚动模型承载。
+
+API/OpenAPI 核对：未新增接口、字段或业务数据；详情使用 `GET /api/v1/printers/{id}`，历史使用 `GET /api/v1/printers/{id}/history`，统计使用 `GET /api/v1/printers/{id}/statistics`，控制和安全确认继续复用既有正式 API 与权限约束。未验证真实实体设备控制，仅在 desktop-mock 运行链路验证页面行为。
+
+Loading/Empty/Error：保留详情加载、详情失败重试、统计/历史分别加载与分别失败的 TDesign 状态；缺少实时数据、统计数据或历史数据时继续显示正式字段占位和空状态，不以列表行伪造详情或温度。
+
+响应式视口：Electron 详情回归在实际桌面壳中执行，验证 TDesign Drawer Body 的 `overflow-y:auto` 且内容高度超过可视高度；应用壳 800×560、1024×640、1200×760 的滚动和无水平溢出由 UI-002.1 测试继续覆盖。
+
+测试：`npm test`（139/139）、`npm run test:electron`（2/2）。
+
+lint：`npm run lint` 通过，Oxlint 和 ESLint 均无错误。
+
+build：`npm run build`、`npm run build:desktop` 通过；保留既有 realtimeStore 分包提示和大 chunk 警告。
+
+git status --short：提交前仅包含本子任务的打印机 Drawer、打印机图标告警修复、打印机专项断言和本任务记录。
+
+git diff --check：通过。
 
 ### [ ] UI-002.3 文件库工作台统一
 

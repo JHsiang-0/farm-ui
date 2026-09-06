@@ -106,7 +106,7 @@
         <TdTableColumn prop="name" label="机器名称" min-width="150">
           <template #default="scope">
             <div class="flex items-center gap-2 font-medium">
-              <printer :size="16" :stroke-color="getStatusColor(scope.row.status)" />
+              <printer size="16" :stroke-color="getStatusColor(scope.row.status)" />
               <span>{{ scope.row.name }}</span>
             </div>
           </template>

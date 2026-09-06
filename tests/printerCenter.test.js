@@ -45,6 +45,9 @@ test('打印机列表使用局部滚动和显式详情入口，不再以绝对�
 
 test('打印机详情抽屉标题有稳定回退且详情内容由 Drawer Body 滚动', () => {
   assert.match(detailSource, /return deviceName \? `\$\{deviceName\} - 详细信息` : '打印机详情'/)
+  assert.match(detailSource, /v-model:visible="drawerVisible"/)
+  assert.match(detailSource, /aria-label="关闭打印机详情"/)
+  assert.match(detailSource, /formatDateTime/)
   assert.match(detailSource, /class="printer-detail-drawer__content/)
   assert.match(detailSource, /\.printer-detail-drawer :deep\(\.t-drawer__body\)[\s\S]*overflow-y: auto/)
   assert.doesNotMatch(detailSource, /undefined - 详细信息/)
